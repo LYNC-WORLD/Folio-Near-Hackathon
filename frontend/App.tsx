@@ -73,7 +73,7 @@ function Root() {
     }
     AsyncStorage.getItem(ONBOARDED_KEY)
       .then((v) => setHasOnboarded(v === "true"))
-      // .catch(() => setHasOnboarded(false));
+      .catch(() => setHasOnboarded(false));
   }, [user]);
 
   const completeOnboarding = () => {

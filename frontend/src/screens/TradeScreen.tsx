@@ -66,16 +66,10 @@ import {
 import { TpSlSheet } from "../components/perps/TpSlSheet";
 import { tradeService, unwrap } from "../services/perps/tradeService";
 import { useWalletBalance } from "../hooks/useWalletBalance";
-<<<<<<< HEAD
 import { DEFAULT_PERP_MARKETS } from "../data/perpMarketsDefault";
 import { useSpotToPerpDeposit } from "../hooks/useSpotToPerpDeposit";
 import { LiveOrderSheet } from "../components/perps/LiveOrderSheet";
 import { usePerpToSpotDeposit } from "../hooks/perps/usePerpToSpotDeposit";
-=======
-import { errMsg } from "../services/hyperliquid/format";
-import { DEFAULT_PERP_MARKETS } from "../data/perpMarketsDefault";
-import { useSpotToPerpDeposit } from "../hooks/useSpotToPerpDeposit";
->>>>>>> 05e8792 (feat:tranfer spot-perp)
 
 type PTab = "pos" | "ord" | "book" | "info";
 type TransferOpts = { dir?: "in" | "out"; amt?: number; then?: () => void };
@@ -166,7 +160,6 @@ export function TradeScreen() {
     reset: resetDeposit,
   } = useSpotToPerpDeposit();
 
-<<<<<<< HEAD
   const {
     withdraw,
     phase: withdrawPhase,
@@ -186,8 +179,6 @@ export function TradeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [withdrawPhase]);
 
-=======
->>>>>>> 05e8792 (feat:tranfer spot-perp)
   useEffect(() => {
     if (depositPhase === "done") {
       toast(`Moved ${fmtPx(depositAmount)} to perp`, "TRANSFER CONFIRMED");
@@ -330,7 +321,6 @@ export function TradeScreen() {
               : `Confirming transfer of ${fmtPx(depositAmount)}…`}
           </Text>
         </View>
-<<<<<<< HEAD
       ) : withdrawPhase === "depositing" || withdrawPhase === "confirming" ? (
         <View style={[tradeStyles.depositBanner, { top: insets.top + 6 }]}>
           <ActivityIndicator size="small" color={C.mint} />
@@ -340,8 +330,6 @@ export function TradeScreen() {
               : `Confirming transfer of ${fmtPx(withdrawAmount)}…`}
           </Text>
         </View>
-=======
->>>>>>> 05e8792 (feat:tranfer spot-perp)
       ) : null}
       <ScrollView
         ref={scrollRef}
@@ -842,10 +830,7 @@ export function TradeScreen() {
         <TransferSheet
           dir={sheet.dir}
           onDeposit={deposit}
-<<<<<<< HEAD
           onWithdraw={withdraw}
-=======
->>>>>>> 05e8792 (feat:tranfer spot-perp)
           amt={sheet.amt}
           depositStatus={{
             phase: depositPhase,

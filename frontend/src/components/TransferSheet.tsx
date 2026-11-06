@@ -24,10 +24,16 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path, Rect } from "react-native-svg";
 import { C, FONT } from "../theme";
-import { fmtPx, toast } from "../data/perpsStore";
-import { moveMoney, useBalances } from "../hooks/useBalances";
+import { fmtPx } from "../data/perpsStore";
+import { useWalletBalance } from "../hooks/useWalletBalance";
 import { hTap } from "../lib/haptics";
-import { Btn, CARD, Check, H2, Body, Kv, KvCard, Lbl, Sheet } from "./PerpUi";
+import { Btn, CARD, Check, H2, Body, Lbl, Sheet } from "./PerpUi";
+
+export type TransferStatus = {
+  phase: "idle" | "depositing" | "confirming" | "done" | "error";
+  amount: number;
+  error: string | null;
+};
 
 const clean = (t: string) => {
   const x = t.replace(/[^0-9.]/g, "");
@@ -36,7 +42,7 @@ const clean = (t: string) => {
 };
 const floor2 = (n: number) => Math.floor(n * 100) / 100;
 const fmtIn = (n: number) => (n ? String(n) : "");
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const MIN_AMOUNT = 20;
 
 const WalletIcon = memo(function WalletIcon() {
   return (
@@ -113,11 +119,19 @@ export function TransferSheet({
   amt: amt0,
   onClose,
   onMoved,
+  onDeposit,
+  onWithdraw,
+  depositStatus,
+  withdrawStatus,
 }: {
   dir?: "in" | "out";
   amt?: number;
   onClose: () => void;
   onMoved?: () => void;
+  onDeposit: (amt: number) => Promise<void>;
+  onWithdraw: (amt: number) => Promise<void>;
+  depositStatus?: TransferStatus;
+  withdrawStatus?: TransferStatus;
 }) {
   const wallet = useWalletBalance();
   const spot = wallet.wallet?.usdc.balance ?? 0;
@@ -131,8 +145,7 @@ export function TransferSheet({
     amt0 ?? (src0 < MIN_AMOUNT ? src0 : Math.max(MIN_AMOUNT, defaultAmt)),
   );
   const [txt, setTxt] = useState(fmtIn(amt));
-  const [phase, setPhase] = useState<"form" | "busy" | "done">("form");
-  const [snap, setSnap] = useState<Snap | null>(null);
+  const [phase, setPhase] = useState<"form" | "busy" | "submitted">("form");
   const [err, setErr] = useState("");
 
   const inb = dir === "in",
@@ -206,17 +219,9 @@ export function TransferSheet({
     setErr("");
     resultRef.current = null;
     setPhase("busy");
-    // balances after the move, captured now (the live balances change once it lands)
-    const sn: Snap = {
-      dir,
-      amt,
-      spot: inb ? spot - amt : spot + amt,
-      perp: inb ? perp + amt : perp - amt,
-    };
     try {
-      await wait(900); // mock latency: delete this line when moveMoney is a real network call
-      const res = await Promise.resolve(moveMoney(dir, amt));
-      if (res === false) throw new Error("The transfer didn't go through.");
+      if (inb) await onDeposit(amt);
+      else await onWithdraw(amt);
       if (!alive.current) return;
       // Don't auto-close: the transfer is accepted but not yet confirmed.
       // This screen now watches depositStatus/withdrawStatus itself and will
@@ -248,9 +253,9 @@ export function TransferSheet({
             {fmtPx(amt)} · {inb ? "SPOT → PERP" : "PERP → SPOT"}
           </Text>
         </View>
-      ) : phase === "done" && snap ? (
-        // ---------------------------------------------------------- success
-        <>
+      ) : phase === "submitted" ? (
+        result?.kind === "done" ? (
+          // ---------------------------------------------------------- confirmed
           <View style={[s.center, { gap: 14, paddingTop: 6 }]}>
             <Check />
             <H2 style={{ textAlign: "center" }}>

@@ -1,10 +1,13 @@
 import { ENV } from "../../config";
 
+export type ApiErrorCode = "TIMEOUT" | "NETWORK" | "HTTP";
+
 export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
     public data?: unknown,
+    public code: ApiErrorCode = "HTTP",
   ) {
     super(message);
     this.name = "ApiError";
@@ -18,6 +21,9 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
+// Strip trailing slashes so `${BASE_URL}${path}` never becomes "//api/..."
+const BASE_URL = ENV.API_URL.replace(/\/+$/, "");
+
 export async function request<T>(
   path: string,
   { method = "GET", body, token, timeoutMs = 15000 }: RequestOptions = {},
@@ -26,10 +32,11 @@ export async function request<T>(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(`${ENV.API_URL}${path}`, {
+    const res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers: {
-        "Content-Type": "application/json",
+        // Only set when there is a body, avoids needless CORS preflights on GETs
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -48,17 +55,22 @@ export async function request<T>(
       const message =
         typeof data === "object" && data !== null && "message" in data
           ? String((data as { message: unknown }).message)
-          : `Request failed (${res.status})`;
-      throw new ApiError(message, res.status, data);
+          : typeof data === "string" && data
+            ? data
+            : `Request failed (${res.status})`;
+      throw new ApiError(message, res.status, data, "HTTP");
     }
 
     return data as T;
   } catch (e) {
     if (e instanceof ApiError) throw e;
     if (e instanceof Error && e.name === "AbortError") {
-      throw new ApiError("Request timed out", 0);
+      throw new ApiError("Request timed out", 0, undefined, "TIMEOUT");
     }
-    throw new ApiError("Network error", 0);
+    // On web, CORS blocks and mixed-content blocks land here too,
+    // so log the original error to see the real cause in the console.
+    console.warn("[request] failed:", e);
+    throw new ApiError("Network error", 0, e, "NETWORK");
   } finally {
     clearTimeout(timer);
   }

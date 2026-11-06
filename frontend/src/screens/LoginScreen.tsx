@@ -1,11 +1,6 @@
-// src/screens/LoginScreen.tsx — prototype: #s-signin
-//
-// No entrance animation of its own: on app open it is revealed by the splash
-// crossfade, and after sign-out it is shown with the same 280ms fade.
-// Auth logic is unchanged — this only renders useAuth().
-
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,34 +11,39 @@ import { useAuth } from "../context";
 import { C, FONT, TYPE, em, h1Size } from "../theme";
 import { Button, Mark, Rise } from "../components/ui";
 
+const IS_WEB = Platform.OS === "web";
+
 export function LoginScreen() {
   const { signIn, busy, error } = useAuth();
 
   return (
     <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
       <ScrollView
-        contentContainerStyle={s.page}
+        contentContainerStyle={[s.page, IS_WEB && s.pageWeb]}
         bounces={false}
         showsVerticalScrollIndicator={false}
       >
         {/* Hero — centred in the free space above the button */}
-        <View style={s.hero}>
+        <View style={[s.hero, IS_WEB && s.heroWeb]}>
           <Mark height={86} />
-          <Text style={[TYPE.h1, h1Size(48)]} accessibilityRole="header">
+          <Text
+            style={[TYPE.h1, h1Size(48), IS_WEB && s.centerText]}
+            accessibilityRole="header"
+          >
             Own the{"\n"}world's best{"\n"}companies.
           </Text>
-          <Text style={[TYPE.body, s.body]}>
+          <Text style={[TYPE.body, s.body, IS_WEB && s.bodyWeb]}>
             Stocks, pre-IPOs, gold and treasuries — bought with stablecoins,
             held in a wallet only you control.
           </Text>
         </View>
 
         {/* Actions */}
-        <View style={s.actions}>
+        <View style={[s.actions, IS_WEB && s.actionsWeb]}>
           {error ? (
             <Rise key={error} distance={8} duration={320}>
               <View
-                style={s.error}
+                style={[s.error, IS_WEB && s.errorWeb]}
                 accessibilityRole="alert"
                 accessibilityLiveRegion="polite"
               >
@@ -53,19 +53,22 @@ export function LoginScreen() {
             </Rise>
           ) : null}
 
-          <Button
-            title={busy ? "Signing in…" : "Continue with Google"}
-            onPress={busy ? undefined : signIn}
-            icon={
-              busy ? (
-                <ActivityIndicator size="small" color={C.onMint} />
-              ) : (
-                <View style={s.g}>
-                  <Text style={s.gLetter}>G</Text>
-                </View>
-              )
-            }
-          />
+          {/* On web the button is capped in width so it isn't a huge bar */}
+          <View style={IS_WEB ? s.buttonWrapWeb : undefined}>
+            <Button
+              title={busy ? "Signing in…" : "Continue with Google"}
+              onPress={busy ? undefined : signIn}
+              icon={
+                busy ? (
+                  <ActivityIndicator size="small" color={C.onMint} />
+                ) : (
+                  <View style={s.g}>
+                    <Text style={s.gLetter}>G</Text>
+                  </View>
+                )
+              }
+            />
+          </View>
 
           <Text style={s.legal}>NON-CUSTODIAL · SETTLES ON-CHAIN</Text>
         </View>
@@ -83,11 +86,25 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
+  // Web: a centred column instead of full-bleed
+  pageWeb: {
+    width: "100%",
+    maxWidth: 440,
+    alignSelf: "center",
+    justifyContent: "center",
+  },
 
   hero: { flexGrow: 1, justifyContent: "center", gap: 28, paddingVertical: 12 },
+  heroWeb: { flexGrow: 0, alignItems: "center", paddingVertical: 24 },
   body: { maxWidth: 300 },
+  bodyWeb: { textAlign: "center", alignSelf: "center" },
+  centerText: { textAlign: "center" },
 
   actions: { gap: 16 },
+  actionsWeb: { alignItems: "center", marginTop: 16 },
+
+  // Web: small, centred button
+  buttonWrapWeb: { width: 260, maxWidth: "100%", alignSelf: "center" },
 
   // "G" avatar inside the button: on-mint circle, mint letter
   g: {
@@ -114,6 +131,7 @@ const s = StyleSheet.create({
   },
 
   error: { flexDirection: "row", alignItems: "stretch", gap: 12 },
+  errorWeb: { maxWidth: 320 },
   errorBar: { width: 3, borderRadius: 2, backgroundColor: C.loss },
   errorText: {
     flex: 1,

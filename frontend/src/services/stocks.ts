@@ -2,7 +2,7 @@ import {
   IndexFundsResponse,
   StockDetailResponse,
   StocksResponse,
-} from "../types";
+} from "@/types";
 import { request } from "./api/client";
 
 export type StockCategory = "us-stock" | "pre-ipo";

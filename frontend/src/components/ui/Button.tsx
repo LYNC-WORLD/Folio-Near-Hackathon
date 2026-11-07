@@ -5,9 +5,9 @@
 //   danger  — loss red (cancel a recurring buy)
 import { type ReactNode } from "react";
 import { ActivityIndicator, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
-import { C } from "../../theme/colors";
-import { FONT, em } from "../../theme/fonts";
-import { hTap } from "../../lib/haptics";
+import { C } from "@/theme/colors";
+import { FONT, em } from "@/theme/fonts";
+import { hTap } from "@/lib/haptics";
 import { PressScale } from "./PressScale";
 
 export type ButtonVariant = "primary" | "ghost" | "quiet" | "link" | "light" | "danger";

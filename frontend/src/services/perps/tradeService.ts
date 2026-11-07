@@ -2,7 +2,7 @@
 // POST https://api.hyperliquid.xyz/exchange (order, cancel, modify, updateLeverage,
 // updateIsolatedMargin) and attaches Folio's builder fee. The app never holds the agent key.
 
-import { request } from "../api/client";
+import { request } from "@/services/api/client";
 
 export interface PlaceOrderBase {
   stockSymbol: string;

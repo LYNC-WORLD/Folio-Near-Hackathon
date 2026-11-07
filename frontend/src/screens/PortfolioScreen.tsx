@@ -14,50 +14,50 @@ import * as Clipboard from "expo-clipboard";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { useNavigation, useScrollToTop } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { useAuth, type OnboardingProfile } from "../context";
-import { useWallet } from "../context/WalletContext";
-import { useIndexFunds, useStocks } from "../hooks";
-import { useRecurringBuys } from "../hooks/useTrade";
-import { useUserTransactions } from "../hooks/useUserRecords";
-import { usePortfolioSeries } from "../hooks/usePortfolioSeries";
-import { useCountUp } from "../hooks/useCountUp";
-import { useWalletBalance } from "../hooks/useWalletBalance";
-import { useTransfers } from "../hooks/useTransfers";
-import { getOnboardingProfile } from "../lib";
-import type { TabParamList } from "../navigation/RootTabs";
-import { useTabBarSpace } from "../navigation/TabBar";
-import { C, FONT, TYPE, em } from "../theme";
-import { Chip, IconButton, PressScale, Rise } from "../components/ui";
-import { GearIcon, HistoryIcon, ShareIcon } from "../components/Icons";
-import { AssetAvatar } from "../components/AssetAvatar";
-import { useSheet } from "../components/Sheet";
-import { useToast } from "../components/Toast";
-import { useSplashDone } from "../components/SplashIntro";
-import { TransferSheet } from "../components/TransferSheet";
-import { PerpToast } from "../components/perps/PerpToast";
-import { PortfolioChart } from "../components/folio/PortfolioChart";
-import { ShareSheet } from "../components/ShareSheet";
-import { WithdrawFlow } from "../components/WithdrawFlow";
+import { useAuth, type OnboardingProfile } from "@/context";
+import { useWallet } from "@/context/WalletContext";
+import { useIndexFunds, useStocks } from "@/hooks";
+import { useRecurringBuys } from "@/hooks/useTrade";
+import { useUserTransactions } from "@/hooks/useUserRecords";
+import { usePortfolioSeries } from "@/hooks/usePortfolioSeries";
+import { useCountUp } from "@/hooks/useCountUp";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useTransfers } from "@/hooks/useTransfers";
+import { getOnboardingProfile } from "@/lib";
+import type { TabParamList } from "@/navigation/RootTabs";
+import { useTabBarSpace } from "@/navigation/TabBar";
+import { C, FONT, TYPE, em } from "@/theme";
+import { Chip, IconButton, PressScale, Rise } from "@/components/ui";
+import { GearIcon, HistoryIcon, ShareIcon } from "@/components/Icons";
+import { AssetAvatar } from "@/components/AssetAvatar";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { useSplashDone } from "@/components/SplashIntro";
+import { TransferSheet } from "@/components/TransferSheet";
+import { PerpToast } from "@/components/perps/PerpToast";
+import { PortfolioChart } from "@/components/folio/PortfolioChart";
+import { ShareSheet } from "@/components/ShareSheet";
+import { WithdrawFlow } from "@/components/WithdrawFlow";
 import {
   ActivitySheet,
   DepositFlow,
   shortAddr,
-} from "../components/folio/FolioSheets";
+} from "@/components/folio/FolioSheets";
 import {
   PerpPositionList,
   PerpSummaryLine,
   PerpsHeader,
-} from "../components/perps/PerpsPortfolio";
-import { useFollowing } from "../lib/follows";
-import { dayChange, money, pct } from "../lib/format";
-import { fundPositions, useFundLots } from "../lib/fundHoldings";
-import { toFund } from "../lib/indexFunds";
-import { dayDate } from "../lib/trade";
-import { hSelect, hTap } from "../lib/haptics";
+} from "@/components/perps/PerpsPortfolio";
+import { useFollowing } from "@/lib/follows";
+import { dayChange, money, pct } from "@/lib/format";
+import { fundPositions, useFundLots } from "@/lib/fundHoldings";
+import { toFund } from "@/lib/indexFunds";
+import { dayDate } from "@/lib/trade";
+import { hSelect, hTap } from "@/lib/haptics";
 import Animated, { FadeIn } from "react-native-reanimated";
-import type { ChartPeriod } from "../hooks";
-import { usePerpPositions, type PerpCategory } from "../hooks/usePerpPositions";
-import { useAllPositions } from "../hooks/perps";
+import type { ChartPeriod } from "@/hooks";
+import { usePerpPositions, type PerpCategory } from "@/hooks/usePerpPositions";
+import { useAllPositions } from "@/hooks/perps";
 
 type Nav = BottomTabNavigationProp<TabParamList, "Portfolio">;
 

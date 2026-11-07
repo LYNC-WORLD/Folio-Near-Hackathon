@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useWallet } from "../context/WalletContext";
+import { useWallet } from "@/context/WalletContext";
 
 export function useBalances() {
   const {

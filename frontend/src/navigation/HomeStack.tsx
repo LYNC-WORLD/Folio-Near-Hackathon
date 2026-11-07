@@ -6,9 +6,9 @@ import {
   PreIpoScreen,
   StockDetail,
   StocksScreen,
-} from "../screens";
+} from "@/screens";
 import { stackOptions } from "./stackOptions";
-import { PerpMarketsScreen } from "../screens/PerpMarketsScreen";
+import { PerpMarketsScreen } from "@/screens/PerpMarketsScreen";
 
 export type HomeStackParamList = {
   HomeMain: undefined;

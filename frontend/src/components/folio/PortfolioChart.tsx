@@ -20,10 +20,10 @@ import Svg, {
   Rect,
   Stop,
 } from "react-native-svg";
-import { C } from "../../theme";
-import { timing } from "../../theme/motion";
-import { hSelect } from "../../lib/haptics";
-import type { SeriesPoint } from "../../hooks/usePortfolioSeries";
+import { C } from "@/theme";
+import { timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
+import type { SeriesPoint } from "@/hooks/usePortfolioSeries";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const H = 200;

@@ -1,7 +1,7 @@
 // Tiny mono tag: "PRE-IPO", "#1 THIS QUARTER".
 import { StyleSheet, Text, View } from "react-native";
-import { C } from "../../theme/colors";
-import { FONT, em } from "../../theme/fonts";
+import { C } from "@/theme/colors";
+import { FONT, em } from "@/theme/fonts";
 
 export function Badge({ label, variant = "default" }: { label: string; variant?: "default" | "mint" | "solid" }) {
   return (

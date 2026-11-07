@@ -21,10 +21,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
-import { C, FONT, TYPE } from "../theme";
-import { timing } from "../theme/motion";
-import { hSelect } from "../lib/haptics";
-import { CHART_PERIODS, useStockChart, type Candle, type ChartPeriod } from "../hooks";
+import { C, FONT, TYPE } from "@/theme";
+import { timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
+import { CHART_PERIODS, useStockChart, type Candle, type ChartPeriod } from "@/hooks";
 import { Skeleton } from "./ui/Skeleton";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);

@@ -1,8 +1,8 @@
 // Square-ish tile with the asset's logo, or its mint ticker code (prototype .av).
 import { useState } from "react";
 import { Image, Text, View } from "react-native";
-import { C, FONT } from "../theme";
-import { assetCode } from "../lib/format";
+import { C, FONT } from "@/theme";
+import { assetCode } from "@/lib/format";
 
 type Props = { symbol: string; imageUrl?: string | null; size?: number; radius?: number };
 

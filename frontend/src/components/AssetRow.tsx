@@ -2,9 +2,9 @@
 // price and today's move on the right. Same props as before, plus optional
 // change / kind, so existing screens keep working.
 import { StyleSheet, Text, View } from "react-native";
-import { C, FONT, TYPE } from "../theme";
-import { money, pct } from "../lib/format";
-import { hTap } from "../lib/haptics";
+import { C, FONT, TYPE } from "@/theme";
+import { money, pct } from "@/lib/format";
+import { hTap } from "@/lib/haptics";
 import { PressScale } from "./ui/PressScale";
 import { AssetAvatar } from "./AssetAvatar";
 

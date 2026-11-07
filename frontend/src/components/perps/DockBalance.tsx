@@ -1,9 +1,9 @@
 // src/components/perps/DockBalance.tsx — "PERP ACCOUNT $200.00 ......... [⇄ Transfer]" above Long / Short
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { C, FONT } from "../../theme";
-import { hTap } from "../../lib/haptics";
-import { fmtPx } from "../../data/perpsStore";
+import { C, FONT } from "@/theme";
+import { hTap } from "@/lib/haptics";
+import { fmtPx } from "@/data/perpsStore";
 
 export function DockBalance({
   perp,

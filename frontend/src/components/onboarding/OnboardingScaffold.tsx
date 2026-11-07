@@ -24,8 +24,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { C, TYPE } from "../../theme";
-import { Rise } from "../ui/Enter";
+import { C, TYPE } from "@/theme";
+import { Rise } from "@/components/ui/Enter";
 import { ProgressBar } from "./ProgressBar";
 
 export const HEADER_STEP = 55; // ms between header lines

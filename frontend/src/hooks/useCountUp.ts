@@ -3,7 +3,7 @@
 // later changes count from the previous value.
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "react-native-reanimated";
-import { DUR } from "../theme/motion";
+import { DUR } from "@/theme/motion";
 
 export function useCountUp(
   to: number,

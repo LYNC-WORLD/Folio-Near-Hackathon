@@ -19,9 +19,9 @@ import Animated, {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
-import { C, FONT, TYPE, em } from "../theme";
-import { timing } from "../theme/motion";
-import { hSelect } from "../lib/haptics";
+import { C, FONT, TYPE, em } from "@/theme";
+import { timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
 
 export type PctOption = { label: string; value: number };
 

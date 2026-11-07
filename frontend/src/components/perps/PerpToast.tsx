@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { usePerps } from "../../data/perpsStore";
-import { tradeStyles } from "../../screens/TradeScreen";
+import { usePerps } from "@/data/perpsStore";
+import { tradeStyles } from "@/screens/TradeScreen";
 
 export function PerpToast() {
   const { toast: t } = usePerps();

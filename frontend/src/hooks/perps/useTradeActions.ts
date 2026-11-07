@@ -2,9 +2,9 @@
 // (rounded sizes/prices, slippage cap, client order id) and sends them to our backend.
 
 import { useCallback, useState } from "react";
-import { MARKET_SLIPPAGE, MIN_NOTIONAL_USD } from "../../services/hyperliquid/config";
-import { errMsg, newCloid, roundPx, roundSz, toCoin } from "../../services/hyperliquid/format";
-import { tradeService, unwrap, type OrderResult, type PlaceOrderPayload } from "../../services/perps/tradeService";
+import { MARKET_SLIPPAGE, MIN_NOTIONAL_USD } from "@/services/hyperliquid/config";
+import { errMsg, newCloid, roundPx, roundSz, toCoin } from "@/services/hyperliquid/format";
+import { tradeService, unwrap, type OrderResult, type PlaceOrderPayload } from "@/services/perps/tradeService";
 import type { UiOrder, UiPosition } from "./useAccount";
 import { getMarket, type PerpMarket } from "./useMarkets";
 

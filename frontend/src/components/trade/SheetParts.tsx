@@ -2,9 +2,9 @@
 import { type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { C, FONT, TYPE, em, h1Size } from "../../theme";
-import { ProcBar } from "../ui/ProcBar";
-import { SuccessTick } from "../ui/SuccessTick";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { ProcBar } from "@/components/ui/ProcBar";
+import { SuccessTick } from "@/components/ui/SuccessTick";
 
 /** Each sheet step fades in when it replaces the previous one. */
 export function Step({ children, id }: { children: ReactNode; id: string }) {

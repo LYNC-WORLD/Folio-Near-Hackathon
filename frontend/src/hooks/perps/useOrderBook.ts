@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { toCoin, toRows, type BookRow } from "../../services/hyperliquid/format";
-import type { L2Book } from "../../services/hyperliquid/types";
+import { toCoin, toRows, type BookRow } from "@/services/hyperliquid/format";
+import type { L2Book } from "@/services/hyperliquid/types";
 import { useHlSubscription } from "./useHlSubscription";
 
 /**

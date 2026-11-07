@@ -6,10 +6,10 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { C } from "../../theme/colors";
-import { FONT, em } from "../../theme/fonts";
-import { timing } from "../../theme/motion";
-import { hSelect } from "../../lib/haptics";
+import { C } from "@/theme/colors";
+import { FONT, em } from "@/theme/fonts";
+import { timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
 import { PressScale } from "./PressScale";
 
 type Props = {

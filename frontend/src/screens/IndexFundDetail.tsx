@@ -40,20 +40,20 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useIndexFunds } from "../hooks";
-import { useWallet } from "../context/WalletContext";
-import type { HomeStackParamList } from "../navigation/HomeStack";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { Bar, Button, PressScale, Rise, Skeleton } from "../components/ui";
-import { AmountField } from "../components/AmountField";
-import { useSheet } from "../components/Sheet";
-import { useToast } from "../components/Toast";
-import { IndexBuyFlow } from "../components/trade/IndexBuyFlow";
-import { money, pct } from "../lib/format";
-import { fundPositions, useFundLots } from "../lib/fundHoldings";
-import { toFund, type FundHolding } from "../lib/indexFunds";
-import { cleanAmt, fmtIn } from "../lib/trade";
-import { hTap } from "../lib/haptics";
+import { useIndexFunds } from "@/hooks";
+import { useWallet } from "@/context/WalletContext";
+import type { HomeStackParamList } from "@/navigation/HomeStack";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { Bar, Button, PressScale, Rise, Skeleton } from "@/components/ui";
+import { AmountField } from "@/components/AmountField";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { IndexBuyFlow } from "@/components/trade/IndexBuyFlow";
+import { money, pct } from "@/lib/format";
+import { fundPositions, useFundLots } from "@/lib/fundHoldings";
+import { toFund, type FundHolding } from "@/lib/indexFunds";
+import { cleanAmt, fmtIn } from "@/lib/trade";
+import { hTap } from "@/lib/haptics";
 import { tracks } from "./IndexFundsScreen";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "IndexFundDetail">;

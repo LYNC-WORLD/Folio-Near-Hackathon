@@ -1,8 +1,8 @@
 // Horizontal row of day-of-month chips (1–30), selected one in mint.
 import { useRef } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
-import { C, FONT } from "../theme";
-import { hSelect } from "../lib/haptics";
+import { C, FONT } from "@/theme";
+import { hSelect } from "@/lib/haptics";
 import { PressScale } from "./ui/PressScale";
 
 const DAYS = Array.from({ length: 30 }, (_, i) => i + 1);

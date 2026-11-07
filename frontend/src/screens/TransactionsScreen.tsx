@@ -4,17 +4,17 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
-import { useAuth } from "../context";
-import { useUserTransactions } from "../hooks/useUserRecords";
-import { useTabBarSpace } from "../navigation/TabBar";
-import { C, FONT, TYPE } from "../theme";
-import { Button, Rise, Skeleton } from "../components/ui";
-import { BackLink } from "../components/BackLink";
-import { AssetAvatar } from "../components/AssetAvatar";
-import { money } from "../lib/format";
-import { units } from "../lib/trade";
-import { isSell, txUsd } from "../lib/transactions";
-import type { UserTransaction } from "../services/user";
+import { useAuth } from "@/context";
+import { useUserTransactions } from "@/hooks/useUserRecords";
+import { useTabBarSpace } from "@/navigation/TabBar";
+import { C, FONT, TYPE } from "@/theme";
+import { Button, Rise, Skeleton } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
+import { AssetAvatar } from "@/components/AssetAvatar";
+import { money } from "@/lib/format";
+import { units } from "@/lib/trade";
+import { isSell, txUsd } from "@/lib/transactions";
+import type { UserTransaction } from "@/services/user";
 
 export function TransactionsScreen() {
   const nav = useNavigation();

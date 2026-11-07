@@ -2,8 +2,8 @@
 import { type ReactNode } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { DUR, timing } from "../../theme/motion";
-import { hTap } from "../../lib/haptics";
+import { DUR, timing } from "@/theme/motion";
+import { hTap } from "@/lib/haptics";
 
 type Props = { label: string; onPress?: () => void; children: ReactNode };
 

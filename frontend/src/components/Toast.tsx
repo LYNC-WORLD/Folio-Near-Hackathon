@@ -9,9 +9,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { C, FONT, em } from "../theme";
-import { DUR, timing } from "../theme/motion";
-import { hSuccess } from "../lib/haptics";
+import { C, FONT, em } from "@/theme";
+import { DUR, timing } from "@/theme/motion";
+import { hSuccess } from "@/lib/haptics";
 import { Mark } from "./ui/Mark";
 
 type ToastFn = (title: string, sub?: string, opts?: { haptic?: boolean }) => void;

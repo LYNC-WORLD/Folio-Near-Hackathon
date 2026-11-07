@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import Animated, { useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path } from "react-native-svg";
-import { C } from "../../theme/colors";
-import { timing } from "../../theme/motion";
-import { hSuccess } from "../../lib/haptics";
+import { C } from "@/theme/colors";
+import { timing } from "@/theme/motion";
+import { hSuccess } from "@/lib/haptics";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);

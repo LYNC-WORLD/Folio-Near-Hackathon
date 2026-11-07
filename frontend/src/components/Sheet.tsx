@@ -29,8 +29,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { C } from "../theme";
-import { DUR, timing } from "../theme/motion";
+import { C } from "@/theme";
+import { DUR, timing } from "@/theme/motion";
 
 type SheetOptions = {
   /** called once the sheet starts closing, however it was closed */

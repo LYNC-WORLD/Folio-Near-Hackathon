@@ -9,14 +9,14 @@ import { Easing } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
-import { PortfolioScreen, SignalsScreen } from "../screens";
+import { PortfolioScreen, SignalsScreen } from "@/screens";
 import { GroupsStack, type GroupsStackParamList } from "./GroupsStack";
 
 import { HomeStack, type HomeStackParamList } from "./HomeStack";
 import { ProfileStack } from "./ProfileStack";
 import { LeadersStack, type LeadersStackParamList } from "./LeadersStack";
 import { TabBar } from "./TabBar";
-import { TradeScreen } from "../screens/TradeScreen";
+import { TradeScreen } from "@/screens/TradeScreen";
 
 export type TabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;

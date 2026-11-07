@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { getPerpMarkets, PerpMarketApi } from "../services/perps";
-import { PERP_MARKETS, type PerpMarket } from "../data/perps";
-import { DEFAULT_PERP_MARKETS } from "../data/perpMarketsDefault";
+import { getPerpMarkets, PerpMarketApi } from "@/services/perps";
+import { PERP_MARKETS, type PerpMarket } from "@/data/perps";
+import { DEFAULT_PERP_MARKETS } from "@/data/perpMarketsDefault";
 
 export type TradablePerp = PerpMarket & {
   assetId: string;

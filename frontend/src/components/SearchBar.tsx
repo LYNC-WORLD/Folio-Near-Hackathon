@@ -5,8 +5,8 @@ import { forwardRef, useEffect } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path } from "react-native-svg";
-import { C, FONT } from "../theme";
-import { timing } from "../theme/motion";
+import { C, FONT } from "@/theme";
+import { timing } from "@/theme/motion";
 import { Pop } from "./ui/Enter";
 
 type Props = {

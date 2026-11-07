@@ -14,14 +14,14 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useScrollToTop } from "@react-navigation/native";
 
-import { useAuth } from "../context";
-import { useLeaderboard } from "../context/LeaderboardContext";
-import { useTabBarSpace } from "../navigation/TabBar";
-import { C, FONT, TYPE, em } from "../theme";
-import { Badge, Button, PressScale, Rise, Segmented } from "../components/ui";
-import { useSplashDone } from "../components/SplashIntro";
-import { useToast } from "../components/Toast";
-import { PerpLeaderboardEntry } from "../services";
+import { useAuth } from "@/context";
+import { useLeaderboard } from "@/context/LeaderboardContext";
+import { useTabBarSpace } from "@/navigation/TabBar";
+import { C, FONT, TYPE, em } from "@/theme";
+import { Badge, Button, PressScale, Rise, Segmented } from "@/components/ui";
+import { useSplashDone } from "@/components/SplashIntro";
+import { useToast } from "@/components/Toast";
+import { PerpLeaderboardEntry } from "@/services";
 
 type Section = "leaders" | "groups";
 

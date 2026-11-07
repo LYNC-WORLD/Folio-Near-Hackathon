@@ -1,4 +1,4 @@
-import { Stock } from "../types";
+import { Stock } from "@/types";
 import { request } from "./api/client";
 
 export type UserTransaction = {

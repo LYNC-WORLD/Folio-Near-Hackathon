@@ -10,19 +10,19 @@ import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
-import type { HomeStackParamList } from "../navigation/HomeStack";
-import type { TabParamList } from "../navigation/types"; // ← fix path to where TabParamList lives
-import { C, FONT, TYPE } from "../theme";
-import { Chip, PressScale, Rise } from "../components/ui";
-import { money, pct } from "../lib/format";
-import { hTap } from "../lib/haptics";
+import type { HomeStackParamList } from "@/navigation/HomeStack";
+import type { TabParamList } from "@/navigation/types"; // ← fix path to where TabParamList lives
+import { C, FONT, TYPE } from "@/theme";
+import { Chip, PressScale, Rise } from "@/components/ui";
+import { money, pct } from "@/lib/format";
+import { hTap } from "@/lib/haptics";
 import {
   PERP_CATEGORIES,
   PERP_MARKETS,
   perpLabel,
   type PerpCategory,
   type PerpMarket,
-} from "../data/perps";
+} from "@/data/perps";
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<HomeStackParamList>,

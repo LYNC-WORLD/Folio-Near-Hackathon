@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getStockBySymbol, type StockCategory } from "../services";
-import { useAuth } from "../context";
+import { getStockBySymbol, type StockCategory } from "@/services";
+import { useAuth } from "@/context";
 
 export function useStockDetail(category: StockCategory, symbol: string) {
   const { idToken } = useAuth();

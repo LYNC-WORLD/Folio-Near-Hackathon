@@ -45,20 +45,20 @@ import Svg, {
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useScrollToTop } from "@react-navigation/native";
 
-import { useAuth, type OnboardingProfile } from "../context";
-import { useWallet } from "../context/WalletContext";
-import { useStocks } from "../hooks";
-import { useRecurringBuys } from "../hooks/useTrade";
-import { getOnboardingProfile } from "../lib";
-import { hSelect } from "../lib/haptics";
-import { TAB_BAR_HEIGHT } from "../navigation/TabBar";
-import { C, FONT, TYPE, em } from "../theme";
-import { Chip, Rise, Skeleton } from "../components/ui";
-import { PressScale } from "../components/ui/PressScale";
-import { useSplashDone } from "../components/SplashIntro";
-import { TypingDots } from "../components/TypingDots";
+import { useAuth, type OnboardingProfile } from "@/context";
+import { useWallet } from "@/context/WalletContext";
+import { useStocks } from "@/hooks";
+import { useRecurringBuys } from "@/hooks/useTrade";
+import { getOnboardingProfile } from "@/lib";
+import { hSelect } from "@/lib/haptics";
+import { TAB_BAR_HEIGHT } from "@/navigation/TabBar";
+import { C, FONT, TYPE, em } from "@/theme";
+import { Chip, Rise, Skeleton } from "@/components/ui";
+import { PressScale } from "@/components/ui/PressScale";
+import { useSplashDone } from "@/components/SplashIntro";
+import { TypingDots } from "@/components/TypingDots";
 
-import { dayChange, money, pct } from "../lib/format";
+import { dayChange, money, pct } from "@/lib/format";
 import {
   AnalystAction,
   AnalystAsset,
@@ -69,8 +69,8 @@ import {
   cleanName,
   pulseNote,
   starters,
-} from "../lib/analyst";
-import { FolioAIMark } from "../components/FolioAIMark";
+} from "@/lib/analyst";
+import { FolioAIMark } from "@/components/FolioAIMark";
 
 // ⚠️ Point this at your asset detail screen. Used by pulse tiles and
 // "Open NVIDIA"-style chips. If the detail screen lives in another tab's

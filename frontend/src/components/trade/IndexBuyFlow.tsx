@@ -3,16 +3,16 @@
 // /api/trade/stock-buy per stock, with the USDC split by weight (splitBuy).
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { useBuyStock } from "../../hooks/useTrade";
-import { useWallet } from "../../context/WalletContext";
-import { C, FONT } from "../../theme";
-import { money } from "../../lib/format";
-import { recordFundBuy } from "../../lib/fundHoldings";
-import { splitBuy, type Fund, type Leg } from "../../lib/indexFunds";
-import { units } from "../../lib/trade";
-import { hError } from "../../lib/haptics";
-import { useSheet } from "../Sheet";
-import { Button } from "../ui/Button";
+import { useBuyStock } from "@/hooks/useTrade";
+import { useWallet } from "@/context/WalletContext";
+import { C, FONT } from "@/theme";
+import { money } from "@/lib/format";
+import { recordFundBuy } from "@/lib/fundHoldings";
+import { splitBuy, type Fund, type Leg } from "@/lib/indexFunds";
+import { units } from "@/lib/trade";
+import { hError } from "@/lib/haptics";
+import { useSheet } from "@/components/Sheet";
+import { Button } from "@/components/ui/Button";
 import { Heading, Note, Row, Step, Success, Working } from "./SheetParts";
 
 export type IndexBuyOutcome = "folio" | "stay";

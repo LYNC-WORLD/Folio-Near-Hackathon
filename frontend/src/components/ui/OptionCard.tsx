@@ -3,10 +3,10 @@
 import { useEffect, type ReactNode } from "react";
 import { StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { C } from "../../theme/colors";
-import { TYPE } from "../../theme/type";
-import { timing } from "../../theme/motion";
-import { hSelect } from "../../lib/haptics";
+import { C } from "@/theme/colors";
+import { TYPE } from "@/theme/type";
+import { timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
 import { PressScale } from "./PressScale";
 
 type Props = {

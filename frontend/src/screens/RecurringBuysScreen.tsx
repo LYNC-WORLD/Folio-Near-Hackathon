@@ -20,20 +20,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useRecurringBuys } from "../hooks/useTrade";
-import type { ProfileStackParamList } from "../navigation/ProfileStack";
-import { useTabBarSpace } from "../navigation/TabBar";
-import { useCountUp } from "../hooks/useCountUp";
-import { C, FONT, TYPE, em } from "../theme";
-import { Button, PressScale, Rise, Skeleton } from "../components/ui";
-import { BackLink } from "../components/BackLink";
-import { AssetAvatar } from "../components/AssetAvatar";
-import { AssetPickerSheet } from "../components/AssetPickerSheet";
-import { CancelRecurringFlow } from "../components/trade/CancelRecurringFlow";
-import { useSheet } from "../components/Sheet";
-import { money, money0 } from "../lib/format";
-import { dayDate } from "../lib/trade";
-import { hTap } from "../lib/haptics";
+import { useRecurringBuys } from "@/hooks/useTrade";
+import type { ProfileStackParamList } from "@/navigation/ProfileStack";
+import { useTabBarSpace } from "@/navigation/TabBar";
+import { useCountUp } from "@/hooks/useCountUp";
+import { C, FONT, TYPE, em } from "@/theme";
+import { Button, PressScale, Rise, Skeleton } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
+import { AssetAvatar } from "@/components/AssetAvatar";
+import { AssetPickerSheet } from "@/components/AssetPickerSheet";
+import { CancelRecurringFlow } from "@/components/trade/CancelRecurringFlow";
+import { useSheet } from "@/components/Sheet";
+import { money, money0 } from "@/lib/format";
+import { dayDate } from "@/lib/trade";
+import { hTap } from "@/lib/haptics";
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, "RecurringBuys">;
 

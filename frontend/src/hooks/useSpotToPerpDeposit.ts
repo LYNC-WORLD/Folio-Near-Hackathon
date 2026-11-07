@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "../context/AuthContext";
-import { checkDepositStatus, depositSpotToPerp } from "../services/wallet";
+import { useAuth } from "@/context/AuthContext";
+import { checkDepositStatus, depositSpotToPerp } from "@/services/wallet";
 
 export type DepositPhase =
   | "idle"

@@ -7,9 +7,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../context";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { Button, Mark, Rise } from "../components/ui";
+import { useAuth } from "@/context";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { Button, Mark, Rise } from "@/components/ui";
 
 const IS_WEB = Platform.OS === "web";
 

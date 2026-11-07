@@ -2,8 +2,8 @@
 import { useEffect } from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import { C } from "../../theme/colors";
-import { DUR, timing } from "../../theme/motion";
+import { C } from "@/theme/colors";
+import { DUR, timing } from "@/theme/motion";
 
 type Props = { value: number; height?: number; color?: string; delay?: number; style?: StyleProp<ViewStyle> };
 

@@ -4,8 +4,8 @@
 // is involved anywhere in this flow.
 
 import { useCallback, useEffect, useState } from "react";
-import { tradeService, unwrap } from "../../services/perps/tradeService";
-import { errMsg } from "../../services/hyperliquid/format";
+import { tradeService, unwrap } from "@/services/perps/tradeService";
+import { errMsg } from "@/services/hyperliquid/format";
 export function usePerpsOnboarding(opts: { idToken?: string | null }) {
   const { idToken } = opts;
   const [agentOk, setAgentOk] = useState(false);

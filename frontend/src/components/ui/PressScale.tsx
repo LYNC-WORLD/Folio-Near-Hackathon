@@ -12,7 +12,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { DUR, timing } from "../../theme/motion";
+import { DUR, timing } from "@/theme/motion";
 
 type Props = Omit<PressableProps, "style" | "children"> & {
   style?: StyleProp<ViewStyle>;

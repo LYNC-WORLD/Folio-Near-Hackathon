@@ -8,8 +8,8 @@ import Animated, {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
-import { C } from "../../theme";
-import { timing } from "../../theme/motion";
+import { C } from "@/theme";
+import { timing } from "@/theme/motion";
 
 export function ProgressBar({
   step,

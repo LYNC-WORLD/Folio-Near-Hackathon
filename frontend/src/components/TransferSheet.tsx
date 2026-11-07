@@ -23,10 +23,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Path, Rect } from "react-native-svg";
-import { C, FONT } from "../theme";
-import { fmtPx } from "../data/perpsStore";
-import { useWalletBalance } from "../hooks/useWalletBalance";
-import { hTap } from "../lib/haptics";
+import { C, FONT } from "@/theme";
+import { fmtPx } from "@/data/perpsStore";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { hTap } from "@/lib/haptics";
 import { Btn, CARD, Check, H2, Body, Lbl, Sheet } from "./perps/PerpUi";
 
 export type TransferStatus = {

@@ -22,23 +22,23 @@ import { useNavigation, useScrollToTop } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Svg, { Path } from "react-native-svg";
 
-import type { GroupsStackParamList } from "../navigation/GroupsStack";
-import { useTabBarSpace } from "../navigation/TabBar";
-import { C, EASE, FONT, TYPE, em } from "../theme";
-import { Badge, PressScale, Rise } from "../components/ui";
-import { useSplashDone } from "../components/SplashIntro";
-import { useSheet } from "../components/Sheet";
-import { useToast } from "../components/Toast";
-import { Avatars } from "../components/groups/Avatars";
-import { NewGroupSheet } from "../components/groups/GroupSheets";
+import type { GroupsStackParamList } from "@/navigation/GroupsStack";
+import { useTabBarSpace } from "@/navigation/TabBar";
+import { C, EASE, FONT, TYPE, em } from "@/theme";
+import { Badge, PressScale, Rise } from "@/components/ui";
+import { useSplashDone } from "@/components/SplashIntro";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { Avatars } from "@/components/groups/Avatars";
+import { NewGroupSheet } from "@/components/groups/GroupSheets";
 import {
   GROUPS_ARE_SAMPLE,
   createGroup,
   joinGroup,
   useGroups,
   type Group,
-} from "../data/groupsStore";
-import { hTap } from "../lib/haptics";
+} from "@/data/groupsStore";
+import { hTap } from "@/lib/haptics";
 
 type Nav = NativeStackNavigationProp<GroupsStackParamList, "GroupsMain">;
 const SLIDE = LinearTransition.duration(380).easing(EASE);

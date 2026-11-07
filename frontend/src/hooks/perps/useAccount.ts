@@ -2,16 +2,16 @@
 // REST on mount, then live via clearinghouseState + openOrders WebSocket feeds (dex "xyz").
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { STOCK_DEX } from "../../services/hyperliquid/config";
-import { errMsg, toSym } from "../../services/hyperliquid/format";
-import { hlInfo } from "../../services/hyperliquid/info";
+import { STOCK_DEX } from "@/services/hyperliquid/config";
+import { errMsg, toSym } from "@/services/hyperliquid/format";
+import { hlInfo } from "@/services/hyperliquid/info";
 import type {
   Address,
   ClearinghouseState,
   FrontendOrder,
   WsClearinghouseState,
   WsOpenOrders,
-} from "../../services/hyperliquid/types";
+} from "@/services/hyperliquid/types";
 import { useHlSubscription } from "./useHlSubscription";
 
 export interface UiPosition {

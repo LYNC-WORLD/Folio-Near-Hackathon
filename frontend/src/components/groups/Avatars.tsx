@@ -1,7 +1,7 @@
 // Overlapping member avatars (prototype: 24–26px circles, 2px ring, −8px overlap).
 import { Text, View } from "react-native";
-import { C, FONT } from "../../theme";
-import type { Member } from "../../data/groupsStore";
+import { C, FONT } from "@/theme";
+import type { Member } from "@/data/groupsStore";
 
 export function Avatars({ members, size = 24, ring = C.surface, max = 6 }: { members: Member[]; size?: number; ring?: string; max?: number }) {
   return (

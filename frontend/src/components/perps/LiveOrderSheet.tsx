@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "./PerpUi";
-import { fmtPx, sPct, toast } from "../../data/perpsStore";
-import { C } from "../../theme";
-import { errMsg } from "../../services/hyperliquid/format";
-import type { SymOrder } from "../../hooks/perps/useSymbolTrading";
+import { fmtPx, sPct, toast } from "@/data/perpsStore";
+import { C } from "@/theme";
+import { errMsg } from "@/services/hyperliquid/format";
+import type { SymOrder } from "@/hooks/perps/useSymbolTrading";
 
 const NOTE: Record<SymOrder["role"], string> = {
   tp: "When the price reaches this level, your position closes at market to lock in profit.",

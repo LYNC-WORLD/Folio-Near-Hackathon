@@ -9,11 +9,11 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
-import { useStocks } from "../hooks";
-import type { Stock } from "../types";
-import type { StockCategory } from "../services";
-import { C, FONT, TYPE } from "../theme";
-import { dayChange } from "../lib/format";
+import { useStocks } from "@/hooks";
+import type { Stock } from "@/types";
+import type { StockCategory } from "@/services";
+import { C, FONT, TYPE } from "@/theme";
+import { dayChange } from "@/lib/format";
 import { AssetRow } from "./AssetRow";
 import { Skeleton } from "./ui/Skeleton";
 import { Step } from "./trade/SheetParts";

@@ -20,9 +20,9 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
-import { C, FONT } from "../theme";
-import { timing } from "../theme/motion";
-import { hSelect } from "../lib/haptics";
+import { C, FONT } from "@/theme";
+import { timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 

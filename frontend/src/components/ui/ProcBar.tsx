@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
-import { C } from "../../theme/colors";
+import { C } from "@/theme/colors";
 
 export function ProcBar() {
   const w = useSharedValue(0);

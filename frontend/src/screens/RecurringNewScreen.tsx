@@ -9,18 +9,18 @@ import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTimin
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useWallet } from "../context/WalletContext";
-import type { ProfileStackParamList } from "../navigation/ProfileStack";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { timing } from "../theme/motion";
-import { Button, Chip, Rise } from "../components/ui";
-import { BackLink } from "../components/BackLink";
-import { DayPicker } from "../components/DayPicker";
-import { useSheet } from "../components/Sheet";
-import { useToast } from "../components/Toast";
-import { BuyFlow } from "../components/trade/BuyFlow";
-import { money, money0 } from "../lib/format";
-import { cleanAmt, dayDate, defaultDay, nextOccurrence, thenText } from "../lib/trade";
+import { useWallet } from "@/context/WalletContext";
+import type { ProfileStackParamList } from "@/navigation/ProfileStack";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { timing } from "@/theme/motion";
+import { Button, Chip, Rise } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
+import { DayPicker } from "@/components/DayPicker";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { BuyFlow } from "@/components/trade/BuyFlow";
+import { money, money0 } from "@/lib/format";
+import { cleanAmt, dayDate, defaultDay, nextOccurrence, thenText } from "@/lib/trade";
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, "RecurringNew">;
 const PRESETS = [10, 20, 50, 100];

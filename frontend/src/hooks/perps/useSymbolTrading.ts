@@ -4,7 +4,7 @@ import {
   PositionApi,
   tradeService,
   unwrap,
-} from "../../services/perps/tradeService";
+} from "@/services/perps/tradeService";
 import { UiOrder, UiPosition } from "./useAccount";
 
 const POLL_MS = 5000;

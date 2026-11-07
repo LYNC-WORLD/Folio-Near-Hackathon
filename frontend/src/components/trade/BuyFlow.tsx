@@ -6,10 +6,10 @@ import {
   useBuyStock,
   useStartRecurringBuy,
   useTradeQuote,
-} from "../../hooks/useTrade";
-import type { TradeRequest } from "../../services/trade";
-import { C } from "../../theme";
-import { money } from "../../lib/format";
+} from "@/hooks/useTrade";
+import type { TradeRequest } from "@/services/trade";
+import { C } from "@/theme";
+import { money } from "@/lib/format";
 import {
   dayDate,
   nextOccurrence,
@@ -18,10 +18,10 @@ import {
   thenText,
   units,
   PRE_IPO_LOCKED,
-} from "../../lib/trade";
-import { hError } from "../../lib/haptics";
-import { useSheet } from "../Sheet";
-import { Button } from "../ui/Button";
+} from "@/lib/trade";
+import { hError } from "@/lib/haptics";
+import { useSheet } from "@/components/Sheet";
+import { Button } from "@/components/ui/Button";
 import { Heading, Note, Row, Step, Success, Working } from "./SheetParts";
 
 type Stock = { tokenAddress: string; symbol: string; price: number };

@@ -2,8 +2,8 @@
 // activeAssetCtx WebSocket updates every block; falls back to the polled market store.
 
 import { useEffect, useMemo, useState } from "react";
-import { toCoin } from "../../services/hyperliquid/format";
-import type { PerpAssetCtx, WsActiveAssetCtx } from "../../services/hyperliquid/types";
+import { toCoin } from "@/services/hyperliquid/format";
+import type { PerpAssetCtx, WsActiveAssetCtx } from "@/services/hyperliquid/types";
 import { useHlSubscription } from "./useHlSubscription";
 import { useMarket } from "./useMarkets";
 

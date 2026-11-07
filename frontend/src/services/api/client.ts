@@ -1,4 +1,4 @@
-import { ENV } from "../../config";
+import { ENV } from "@/config";
 
 export type ApiErrorCode = "TIMEOUT" | "NETWORK" | "HTTP";
 

@@ -1,11 +1,11 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { OnboardingProvider } from "../context";
-import { C } from "../theme";
+import { OnboardingProvider } from "@/context";
+import { C } from "@/theme";
 import {
   ProfileSummaryScreen,
   StartingSizeScreen,
   WhatToOwnScreen,
-} from "../screens/onboarding";
+} from "@/screens/onboarding";
 
 export type OnboardingStackParamList = {
   WhatToOwn: undefined;

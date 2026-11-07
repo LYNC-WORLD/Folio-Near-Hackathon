@@ -1,8 +1,8 @@
 // One shape for anything the UI lists (Home, search, collections), built
 // from the API's Stock plus the local pre-IPO reference data.
-import type { Stock } from "../types";
-import type { StockCategory } from "../services";
-import { PREIPO_COMPANIES, type PreIpoCompany } from "../data/mockPreIpoCompanies";
+import type { Stock } from "@/types";
+import type { StockCategory } from "@/services";
+import { PREIPO_COMPANIES, type PreIpoCompany } from "@/data/mockPreIpoCompanies";
 import { dayChange } from "./format";
 
 export type Asset = {

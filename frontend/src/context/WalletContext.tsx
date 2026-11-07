@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getWalletBalance } from "../services/wallet";
+import { getWalletBalance } from "@/services/wallet";
 import { useAuth } from "./AuthContext";
 
 type WalletData = Awaited<ReturnType<typeof getWalletBalance>>["data"];

@@ -10,7 +10,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { C } from "../theme";
+import { C } from "@/theme";
 
 function Dot({ delay }: { delay: number }) {
   const reduced = useReducedMotion();

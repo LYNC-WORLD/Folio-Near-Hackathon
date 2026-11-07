@@ -31,12 +31,12 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useIndexFunds, useStocks, useWalletBalance } from "../hooks";
-import { useCountUp } from "../hooks/useCountUp";
-import { useAuth } from "../context";
-import type { HomeStackParamList } from "../navigation/HomeStack"; // use the file where TabParamList actually lives
-import { useTabBarSpace } from "../navigation/TabBar";
-import { C, FONT, TYPE, em } from "../theme";
+import { useIndexFunds, useStocks, useWalletBalance } from "@/hooks";
+import { useCountUp } from "@/hooks/useCountUp";
+import { useAuth } from "@/context";
+import type { HomeStackParamList } from "@/navigation/HomeStack"; // use the file where TabParamList actually lives
+import { useTabBarSpace } from "@/navigation/TabBar";
+import { C, FONT, TYPE, em } from "@/theme";
 import {
   Badge,
   Chip,
@@ -44,26 +44,26 @@ import {
   PressScale,
   Rise,
   Skeleton,
-} from "../components/ui";
-import { AssetRow } from "../components/AssetRow";
-import { SearchBar } from "../components/SearchBar";
-import { useSplashDone } from "../components/SplashIntro";
+} from "@/components/ui";
+import { AssetRow } from "@/components/AssetRow";
+import { SearchBar } from "@/components/SearchBar";
+import { useSplashDone } from "@/components/SplashIntro";
 import {
   COLLECTIONS,
   THEMES,
   searchAssets,
   toAsset,
   type Asset,
-} from "../lib/assets";
-import { searchFunds, toFund, type Fund } from "../lib/indexFunds";
-import { loadRecents, saveRecents, withRecent } from "../lib/recentSearches";
-import { money, pct } from "../lib/format";
-import { hTap } from "../lib/haptics";
+} from "@/lib/assets";
+import { searchFunds, toFund, type Fund } from "@/lib/indexFunds";
+import { loadRecents, saveRecents, withRecent } from "@/lib/recentSearches";
+import { money, pct } from "@/lib/format";
+import { hTap } from "@/lib/haptics";
 import { Dimensions } from "react-native";
-import { PerpMarket, usePerpMarkets } from "../data/perps";
-import { PerpStrip } from "../components/perps/PerpStrip";
+import { PerpMarket, usePerpMarkets } from "@/data/perps";
+import { PerpStrip } from "@/components/perps/PerpStrip";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { TabParamList } from "../navigation/types";
+import { TabParamList } from "@/navigation/types";
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<HomeStackParamList>,

@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { GroupsScreen } from "../screens/GroupsScreen";
-import { GroupScreen } from "../screens/GroupScreen";
+import { GroupsScreen } from "@/screens/GroupsScreen";
+import { GroupScreen } from "@/screens/GroupScreen";
 import { stackOptions } from "./stackOptions";
 
 export type GroupsStackParamList = {

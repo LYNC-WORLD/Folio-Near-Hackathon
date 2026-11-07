@@ -1,6 +1,6 @@
 // Line icons from the prototype, drawn with react-native-svg.
 import Svg, { Circle, Path } from "react-native-svg";
-import { C } from "../theme";
+import { C } from "@/theme";
 
 type P = { size?: number; color?: string };
 

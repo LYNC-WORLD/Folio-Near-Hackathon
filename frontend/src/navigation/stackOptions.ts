@@ -9,7 +9,7 @@
 
 import { Platform } from "react-native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
-import { C, FONT } from "../theme";
+import { C, FONT } from "@/theme";
 
 export const stackOptions: NativeStackNavigationOptions = {
   animation: Platform.OS === "ios" ? "default" : "slide_from_right",

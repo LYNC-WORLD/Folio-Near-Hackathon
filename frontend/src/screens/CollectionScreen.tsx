@@ -25,16 +25,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useStocks } from "../hooks";
-import type { StockCategory } from "../services";
-import type { HomeStackParamList } from "../navigation/HomeStack";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { Badge, Chip, PressScale, Rise, Skeleton } from "../components/ui";
-import { AssetAvatar } from "../components/AssetAvatar";
-import { COLLECTIONS, toAsset, type Asset } from "../lib/assets";
-import { money, pct } from "../lib/format";
-import { hSelect, hTap } from "../lib/haptics";
-import { PRE_IPO_LOCKED } from "../lib/trade";
+import { useStocks } from "@/hooks";
+import type { StockCategory } from "@/services";
+import type { HomeStackParamList } from "@/navigation/HomeStack";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { Badge, Chip, PressScale, Rise, Skeleton } from "@/components/ui";
+import { AssetAvatar } from "@/components/AssetAvatar";
+import { COLLECTIONS, toAsset, type Asset } from "@/lib/assets";
+import { money, pct } from "@/lib/format";
+import { hSelect, hTap } from "@/lib/haptics";
+import { PRE_IPO_LOCKED } from "@/lib/trade";
 
 type SortMode = "priceDesc" | "priceAsc" | "name";
 const SORT_LABEL: Record<SortMode, string> = {

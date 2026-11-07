@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { LeadersScreen } from "../screens";
-import { InvestorScreen } from "../screens/InvestorScreen";
+import { LeadersScreen } from "@/screens";
+import { InvestorScreen } from "@/screens/InvestorScreen";
 import { stackOptions } from "./stackOptions";
 
 export type LeadersStackParamList = {

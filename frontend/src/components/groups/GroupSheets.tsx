@@ -1,14 +1,14 @@
 // Sheets for Groups: create a group, propose a buy (pick asset → set share).
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { C, FONT, TYPE, em } from "../../theme";
-import { useSheet } from "../Sheet";
-import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
-import { Switch } from "../ui/Switch";
-import { AssetPickerSheet, type PickedAsset } from "../AssetPickerSheet";
-import { Step } from "../trade/SheetParts";
-import { money } from "../../lib/format";
+import { C, FONT, TYPE, em } from "@/theme";
+import { useSheet } from "@/components/Sheet";
+import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { Switch } from "@/components/ui/Switch";
+import { AssetPickerSheet, type PickedAsset } from "@/components/AssetPickerSheet";
+import { Step } from "@/components/trade/SheetParts";
+import { money } from "@/lib/format";
 
 const SHARES = [10, 25, 50, 100];
 

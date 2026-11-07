@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getUserTransactions,
   getUserRecurringBuyAssets,
-} from "../services/user";
+} from "@/services/user";
 
 export function useUserTransactions(token?: string) {
   return useQuery({

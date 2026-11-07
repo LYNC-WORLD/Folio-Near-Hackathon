@@ -19,10 +19,10 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import { C } from "../../theme/colors";
-import { FONT } from "../../theme/fonts";
-import { DUR, timing } from "../../theme/motion";
-import { hSelect } from "../../lib/haptics";
+import { C } from "@/theme/colors";
+import { FONT } from "@/theme/fonts";
+import { DUR, timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
 
 type Props<K extends string> = {
   options: readonly (readonly [K, string])[]; // [key, label]

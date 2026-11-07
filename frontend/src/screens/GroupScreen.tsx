@@ -19,17 +19,17 @@ import Animated, { interpolate, useAnimatedKeyboard, useAnimatedStyle } from "re
 import Svg, { Path } from "react-native-svg";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 
-import type { GroupsStackParamList } from "../navigation/GroupsStack";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { Badge, Bar, Button, PressScale, Rise } from "../components/ui";
-import { BackLink } from "../components/BackLink";
-import { useSheet } from "../components/Sheet";
-import { useToast } from "../components/Toast";
-import { Avatars } from "../components/groups/Avatars";
-import { ProposeSheet } from "../components/groups/GroupSheets";
-import { GROUPS_ARE_SAMPLE, goIn, joinGroup, leaveGroup, propose, sendMessage, useGroup } from "../data/groupsStore";
-import { money } from "../lib/format";
-import { hTap } from "../lib/haptics";
+import type { GroupsStackParamList } from "@/navigation/GroupsStack";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { Badge, Bar, Button, PressScale, Rise } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { Avatars } from "@/components/groups/Avatars";
+import { ProposeSheet } from "@/components/groups/GroupSheets";
+import { GROUPS_ARE_SAMPLE, goIn, joinGroup, leaveGroup, propose, sendMessage, useGroup } from "@/data/groupsStore";
+import { money } from "@/lib/format";
+import { hTap } from "@/lib/haptics";
 
 export function GroupScreen() {
   const nav = useNavigation();

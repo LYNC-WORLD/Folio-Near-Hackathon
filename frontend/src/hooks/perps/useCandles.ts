@@ -10,9 +10,9 @@ import {
   tfToInterval,
   toCoin,
   type HlBar,
-} from "../../services/hyperliquid/format";
-import { hlInfo } from "../../services/hyperliquid/info";
-import type { Candle } from "../../services/hyperliquid/types";
+} from "@/services/hyperliquid/format";
+import { hlInfo } from "@/services/hyperliquid/info";
+import type { Candle } from "@/services/hyperliquid/types";
 import { useHlSubscription } from "./useHlSubscription";
 
 export function useCandles(sym: string, tf: string, count = 300) {

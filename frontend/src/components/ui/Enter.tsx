@@ -7,7 +7,7 @@
 import { useEffect, type ReactNode } from "react";
 import { type StyleProp, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import { DUR, timing } from "../../theme/motion";
+import { DUR, timing } from "@/theme/motion";
 
 type Props = {
   children: ReactNode;

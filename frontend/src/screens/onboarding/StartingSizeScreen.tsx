@@ -1,14 +1,14 @@
 // Question 2 (last question) — prototype #s-onb2 (mono amount on the left, note on the right)
 import { StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { CAPITAL_DEFS, useOnboarding } from "../../context";
-import { FONT, TYPE } from "../../theme";
-import { Button, OptionCard, Rise } from "../../components/ui";
+import { CAPITAL_DEFS, useOnboarding } from "@/context";
+import { FONT, TYPE } from "@/theme";
+import { Button, OptionCard, Rise } from "@/components/ui";
 import {
   AFTER_HEADER,
   OnboardingScaffold,
-} from "../../components/onboarding/OnboardingScaffold";
-import type { OnboardingStackParamList } from "../../navigation";
+} from "@/components/onboarding/OnboardingScaffold";
+import type { OnboardingStackParamList } from "@/navigation";
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "StartingSize">;
 

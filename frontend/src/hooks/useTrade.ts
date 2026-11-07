@@ -5,7 +5,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   getTradeQuote,
   buyStock,
@@ -16,7 +16,7 @@ import {
   getRecurringBuys,
   startRecurringBuy,
   type RecurringBuyRequest,
-} from "../services/trade";
+} from "@/services/trade";
 
 export function useDebouncedValue<T>(value: T, delayMs: number) {
   const [debounced, setDebounced] = useState(value);

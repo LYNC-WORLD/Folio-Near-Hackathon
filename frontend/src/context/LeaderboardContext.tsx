@@ -17,7 +17,7 @@ import {
   getPerpLeaderboard,
   MyPerpLeaderboard,
   PerpLeaderboardEntry,
-} from "../services/leaderboard";
+} from "@/services/leaderboard";
 
 const CACHE_KEY = "folio.perpLeaderboard.v1";
 const STALE_MS = 60_000; // don't refetch on foreground more than once a minute

@@ -35,11 +35,11 @@ import Svg, {
   Rect,
   Stop,
 } from "react-native-svg";
-import { ChartPeriod } from "../hooks";
-import { money, money0 } from "../lib/format";
-import { usePortfolioSeries } from "../hooks/usePortfolioSeries";
-import { C, em, FONT } from "../theme";
-import { hSelect, hTap } from "../lib/haptics";
+import { ChartPeriod } from "@/hooks";
+import { money, money0 } from "@/lib/format";
+import { usePortfolioSeries } from "@/hooks/usePortfolioSeries";
+import { C, em, FONT } from "@/theme";
+import { hSelect, hTap } from "@/lib/haptics";
 import { AssetAvatar } from "./AssetAvatar";
 
 type Tab = "port" | "hold" | "perp";

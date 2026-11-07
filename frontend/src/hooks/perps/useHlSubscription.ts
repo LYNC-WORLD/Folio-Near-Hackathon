@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { hlSocket, subKey, type HlSubscription, type SocketStatus } from "../../services/hyperliquid/ws";
+import { hlSocket, subKey, type HlSubscription, type SocketStatus } from "@/services/hyperliquid/ws";
 
 /** Subscribe to a Hyperliquid WebSocket feed for the lifetime of the component. Pass null to skip. */
 export function useHlSubscription<T>(sub: HlSubscription | null, onData: (data: T) => void) {

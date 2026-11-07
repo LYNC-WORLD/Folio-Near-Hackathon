@@ -1,6 +1,6 @@
 // Kept for backward compatibility — anything still importing PrimaryButton /
 // GhostLink gets the new design. New code should use Button from components/ui.
-import { Button } from "../ui/Button";
+import { Button } from "@/components/ui/Button";
 
 export function PrimaryButton({
   label,

@@ -2,7 +2,7 @@ import type {
   WalletBalanceResponse,
   DepositSpotToPerpResponse,
   DepositStatusResponse,
-} from "../types/wallet";
+} from "@/types/wallet";
 import { request } from "./api/client";
 
 export const getWalletBalance = (token: string) =>

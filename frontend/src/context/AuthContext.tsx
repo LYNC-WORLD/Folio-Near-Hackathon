@@ -12,8 +12,8 @@ import {
   signInWithGoogle,
   signOutGoogle,
   loginWithGoogle,
-} from "../services";
-import type { GoogleSession, GoogleUser, LoginResponse } from "../types";
+} from "@/services";
+import type { GoogleSession, GoogleUser, LoginResponse } from "@/types";
 
 type AuthState = {
   user: GoogleUser | null;

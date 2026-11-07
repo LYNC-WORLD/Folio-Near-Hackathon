@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWalletBalance } from "../services/wallet";
-import { useAuth } from "../context/AuthContext";
+import { getWalletBalance } from "@/services/wallet";
+import { useAuth } from "@/context/AuthContext";
 
 export function useWalletBalance() {
   const { idToken } = useAuth();

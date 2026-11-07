@@ -2,11 +2,11 @@
 // One REST fetch (metaAndAssetCtxs) every 30s + live mids from the allMids WebSocket.
 
 import { useEffect, useSyncExternalStore } from "react";
-import { STOCK_DEX } from "../../services/hyperliquid/config";
-import { errMsg, toCoin, toSym } from "../../services/hyperliquid/format";
-import { hlInfo } from "../../services/hyperliquid/info";
-import { hlSocket } from "../../services/hyperliquid/ws";
-import type { PerpAssetCtx, PerpAssetMeta, WsAllMids } from "../../services/hyperliquid/types";
+import { STOCK_DEX } from "@/services/hyperliquid/config";
+import { errMsg, toCoin, toSym } from "@/services/hyperliquid/format";
+import { hlInfo } from "@/services/hyperliquid/info";
+import { hlSocket } from "@/services/hyperliquid/ws";
+import type { PerpAssetCtx, PerpAssetMeta, WsAllMids } from "@/services/hyperliquid/types";
 
 export interface PerpMarket {
   coin: string; // "xyz:NVDA" (use this for API calls)

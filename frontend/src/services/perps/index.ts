@@ -1,4 +1,4 @@
-import { request } from "../api/client";
+import { request } from "@/services/api/client";
 
 export type PerpMarketApi = {
   id: string;

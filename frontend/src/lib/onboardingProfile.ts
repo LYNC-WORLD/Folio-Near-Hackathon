@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { OnboardingProfile } from "../context";
+import type { OnboardingProfile } from "@/context";
 
 const PROFILE_KEY = "folio_profile_v1";
 

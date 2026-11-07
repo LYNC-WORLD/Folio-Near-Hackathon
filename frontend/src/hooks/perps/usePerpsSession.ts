@@ -2,9 +2,9 @@
 // Until this returns real values, market data (prices, chart, order book) still works;
 // account data and trading stay off.
 
-import { useAuth } from "../../context";
-import type { Address } from "../../services/hyperliquid/types";
-import type { UserWallet } from "../../services/perps/walletService";
+import { useAuth } from "@/context";
+import type { Address } from "@/services/hyperliquid/types";
+import type { UserWallet } from "@/services/perps/walletService";
 
 /**
  * Optional: paste any Hyperliquid address that holds xyz positions to see the

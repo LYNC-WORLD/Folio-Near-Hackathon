@@ -1,9 +1,9 @@
 // "Stop buying NVDA?" confirmation (prototype askCancel).
-import { useCancelRecurringBuy } from "../../hooks/useTrade";
-import { C } from "../../theme";
-import { useSheet } from "../Sheet";
-import { useToast } from "../Toast";
-import { Button } from "../ui/Button";
+import { useCancelRecurringBuy } from "@/hooks/useTrade";
+import { C } from "@/theme";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { Button } from "@/components/ui/Button";
 import { Heading, Note, Step } from "./SheetParts";
 
 type Props = { recurringId: string; symbol: string; label: string; onCancelled?: () => void };

@@ -2,15 +2,15 @@
 // Prototype: openSell / renderSell / confirmSell / runSell.
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
-import { useSellStock, useTradeQuote, useDebouncedValue } from "../../hooks/useTrade";
-import type { TradeRequest } from "../../services/trade";
-import { C, TYPE } from "../../theme";
-import { money } from "../../lib/format";
-import { cleanAmt, floorTo, fmtIn, units } from "../../lib/trade";
-import { hError } from "../../lib/haptics";
-import { useSheet } from "../Sheet";
-import { Button } from "../ui/Button";
-import { AmountField } from "../AmountField";
+import { useSellStock, useTradeQuote, useDebouncedValue } from "@/hooks/useTrade";
+import type { TradeRequest } from "@/services/trade";
+import { C, TYPE } from "@/theme";
+import { money } from "@/lib/format";
+import { cleanAmt, floorTo, fmtIn, units } from "@/lib/trade";
+import { hError } from "@/lib/haptics";
+import { useSheet } from "@/components/Sheet";
+import { Button } from "@/components/ui/Button";
+import { AmountField } from "@/components/AmountField";
 import { Heading, Note, Row, Step, Success, Working } from "./SheetParts";
 
 type Props = {

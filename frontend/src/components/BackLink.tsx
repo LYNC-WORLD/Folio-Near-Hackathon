@@ -1,7 +1,7 @@
 // Mint "‹ Label" link used at the top of pushed screens (prototype .back).
 import { Pressable, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { C, FONT } from "../theme";
+import { C, FONT } from "@/theme";
 
 export function BackLink({ label = "Back", onPress }: { label?: string; onPress: () => void }) {
   return (

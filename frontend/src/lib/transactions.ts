@@ -1,4 +1,4 @@
-import type { UserTransaction } from "../services/user";
+import type { UserTransaction } from "@/services/user";
 
 /**
  * USD value of a transaction. Assumes `amount` is the token quantity and

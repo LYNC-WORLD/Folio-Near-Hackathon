@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getIndexFunds } from "../services";
-import { useAuth } from "../context";
+import { getIndexFunds } from "@/services";
+import { useAuth } from "@/context";
 
 export function useIndexFunds() {
   const { idToken } = useAuth();

@@ -7,7 +7,7 @@
 
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { fetchCandles } from "../services";
+import { fetchCandles } from "@/services";
 import type { Candle, ChartPeriod } from "./index";
 
 export type Holding = { mint: string; balance: number; price: number };

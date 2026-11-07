@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { type DimensionValue, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
-import { C } from "../../theme/colors";
+import { C } from "@/theme/colors";
 
 type Props = { width?: DimensionValue; height: number; radius?: number; style?: StyleProp<ViewStyle> };
 

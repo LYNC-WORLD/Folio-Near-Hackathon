@@ -5,9 +5,9 @@
 // The SDK is loaded lazily, only when one of these is called, so it can never crash app
 // start-up. Also add `import "react-native-get-random-values";` as the first line of index.js.
 
-import "../hyperliquid/polyfills";
+import "@/services/hyperliquid/polyfills";
 import type { ExchangeClient as ExchangeClientT, ExchangeSingleWalletConfig } from "@nktkas/hyperliquid";
-import { BUILDER_ADDRESS, BUILDER_MAX_FEE, HL_ENV, STOCK_DEX, USDC_TOKEN } from "../hyperliquid/config";
+import { BUILDER_ADDRESS, BUILDER_MAX_FEE, HL_ENV, STOCK_DEX, USDC_TOKEN } from "@/services/hyperliquid/config";
 
 /** Anything ExchangeClient accepts as a wallet: viem Account/WalletClient, ethers Signer. */
 export type UserWallet = ExchangeSingleWalletConfig["wallet"];

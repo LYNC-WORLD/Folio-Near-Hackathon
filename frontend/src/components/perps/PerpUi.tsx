@@ -24,9 +24,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Path } from "react-native-svg";
-import { C, FONT } from "../../theme";
-import { hTap } from "../../lib/haptics";
-import { MAXLEV } from "../../data/perpsStore";
+import { C, FONT } from "@/theme";
+import { hTap } from "@/lib/haptics";
+import { MAXLEV } from "@/data/perpsStore";
 
 export const AMBER = "#E8A33D";
 export const ON_MINT = "#06120D";

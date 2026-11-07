@@ -1,11 +1,11 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import type { StockCategory } from "../services";
+import type { StockCategory } from "@/services";
 import {
   ProfileScreen,
   TransactionsScreen,
   RecurringBuysScreen,
-} from "../screens";
-import { RecurringNewScreen } from "../screens/RecurringNewScreen";
+} from "@/screens";
+import { RecurringNewScreen } from "@/screens/RecurringNewScreen";
 import { stackOptions } from "./stackOptions";
 
 export type ProfileStackParamList = {

@@ -40,7 +40,7 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path, Rect } from "react-native-svg";
-import { DepositFlow } from "../components/folio/FolioSheets";
+import { DepositFlow } from "@/components/folio/FolioSheets";
 import {
   useNavigation,
   useRoute,
@@ -48,12 +48,12 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useStockDetail } from "../hooks/useStockDetail";
-import type { Candle, ChartPeriod } from "../hooks";
-import { useWallet } from "../context/WalletContext";
-import type { HomeStackParamList } from "../navigation/HomeStack";
-import { C, EASE, FONT, TYPE, em, h1Size } from "../theme";
-import { timing } from "../theme/motion";
+import { useStockDetail } from "@/hooks/useStockDetail";
+import type { Candle, ChartPeriod } from "@/hooks";
+import { useWallet } from "@/context/WalletContext";
+import type { HomeStackParamList } from "@/navigation/HomeStack";
+import { C, EASE, FONT, TYPE, em, h1Size } from "@/theme";
+import { timing } from "@/theme/motion";
 import {
   Badge,
   Button,
@@ -61,16 +61,16 @@ import {
   Rise,
   Segmented,
   Skeleton,
-} from "../components/ui";
-import { PriceChart, type ChartChange } from "../components/PriceChart";
-import { AmountField } from "../components/AmountField";
-import { DayPicker } from "../components/DayPicker";
-import { useSheet } from "../components/Sheet";
-import { useToast } from "../components/Toast";
-import { BuyFlow, type BuyOutcome } from "../components/trade/BuyFlow";
-import { LockedSell, SellFlow } from "../components/trade/SellFlow";
-import { CancelRecurringFlow } from "../components/trade/CancelRecurringFlow";
-import { money, pct } from "../lib/format";
+} from "@/components/ui";
+import { PriceChart, type ChartChange } from "@/components/PriceChart";
+import { AmountField } from "@/components/AmountField";
+import { DayPicker } from "@/components/DayPicker";
+import { useSheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { BuyFlow, type BuyOutcome } from "@/components/trade/BuyFlow";
+import { LockedSell, SellFlow } from "@/components/trade/SellFlow";
+import { CancelRecurringFlow } from "@/components/trade/CancelRecurringFlow";
+import { money, pct } from "@/lib/format";
 import {
   cleanAmt,
   dayDate,
@@ -82,8 +82,8 @@ import {
   timeAgo,
   units,
   PRE_IPO_LOCKED,
-} from "../lib/trade";
-import { hTap } from "../lib/haptics";
+} from "@/lib/trade";
+import { hTap } from "@/lib/haptics";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "StockDetail">;
 

@@ -4,19 +4,19 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { NOT_SENT, useAuth, useOnboarding } from "../../context";
-import { saveOnboardingProfile } from "../../lib";
-import { submitLoginForm } from "../../services/onboarding";
-import { hError, hSuccess } from "../../lib/haptics";
-import { C, FONT, em, h1Size } from "../../theme";
-import { Button, Rise } from "../../components/ui";
+import { NOT_SENT, useAuth, useOnboarding } from "@/context";
+import { saveOnboardingProfile } from "@/lib";
+import { submitLoginForm } from "@/services/onboarding";
+import { hError, hSuccess } from "@/lib/haptics";
+import { C, FONT, em, h1Size } from "@/theme";
+import { Button, Rise } from "@/components/ui";
 import {
   AFTER_HEADER,
   HEADER_STEP,
   OnboardingScaffold,
   Wash,
-} from "../../components/onboarding/OnboardingScaffold";
-import type { OnboardingStackParamList } from "../../navigation";
+} from "@/components/onboarding/OnboardingScaffold";
+import type { OnboardingStackParamList } from "@/navigation";
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "ProfileSummary">;
 

@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path, SvgUri } from "react-native-svg";
-import { C, FONT } from "../../theme";
-import { hTap } from "../../lib/haptics";
+import { C, FONT } from "@/theme";
+import { hTap } from "@/lib/haptics";
 import {
   MAXLEV,
   TAKER,
@@ -35,8 +35,8 @@ import {
   unlockPerps,
   usePerps,
   type Snap,
-} from "../../data/perpsStore";
-import { perpLabel, searchPerps } from "../../data/perps";
+} from "@/data/perpsStore";
+import { perpLabel, searchPerps } from "@/data/perps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 export const QUIZ_SEEN_KEY = "perps_quiz_completed_v1";
 import {
@@ -51,7 +51,7 @@ import {
   Sheet,
   Tag,
 } from "./PerpUi";
-import { useTradablePerps } from "../../hooks/useTradablePerps";
+import { useTradablePerps } from "@/hooks/useTradablePerps";
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
 const clean = (t: string) => {

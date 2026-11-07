@@ -1,8 +1,8 @@
 // Index fund maths. The API prices a fund as the average of its stocks, so a
 // unit holds 1/N of each one — a stock's weight is its price over the sum of
 // prices, and a buy splits the USDC by those weights.
-import type { IndexFund, Stock } from "../types";
-import type { StockCategory } from "../services";
+import type { IndexFund, Stock } from "@/types";
+import type { StockCategory } from "@/services";
 import { dayChange } from "./format";
 
 export type FundHolding = {

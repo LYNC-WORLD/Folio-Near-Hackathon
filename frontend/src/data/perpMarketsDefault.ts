@@ -1,4 +1,4 @@
-import { PerpMarketApi } from "../services/perps";
+import { PerpMarketApi } from "@/services/perps";
 
 export const DEFAULT_PERP_MARKETS: PerpMarketApi[] = [
   {

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useAuth } from "../context";
+import { useAuth } from "@/context";
 import {
   getMyPerpLeaderboard,
   getPerpLeaderboard,
   MyPerpLeaderboard,
   PerpLeaderboardEntry,
-} from "../services/leaderboard";
+} from "@/services/leaderboard";
 
 export function usePerpLeaderboard(limit = 50) {
   const { idToken } = useAuth();

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { FundLot } from "../lib/fundHoldings";
+import type { FundLot } from "@/lib/fundHoldings";
 
 export type Trade = {
   mint: string;

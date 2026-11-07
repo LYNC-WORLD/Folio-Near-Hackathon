@@ -2,9 +2,9 @@
 import { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { C } from "../../theme/colors";
-import { DUR, timing } from "../../theme/motion";
-import { hSelect } from "../../lib/haptics";
+import { C } from "@/theme/colors";
+import { DUR, timing } from "@/theme/motion";
+import { hSelect } from "@/lib/haptics";
 
 type Props = { value: boolean; onValueChange: (v: boolean) => void; accessibilityLabel?: string };
 

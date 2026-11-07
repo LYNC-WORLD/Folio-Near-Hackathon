@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { InteractionManager } from "react-native";
-import { fetchCandles } from "../services";
+import { fetchCandles } from "@/services";
 
 export const CHART_PERIODS = ["1D", "1W", "1M", "1Y", "All"] as const;
 export type ChartPeriod = (typeof CHART_PERIODS)[number];

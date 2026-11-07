@@ -17,14 +17,14 @@ import {
   type RouteProp,
 } from "@react-navigation/native";
 
-import type { LeadersStackParamList } from "../navigation/LeadersStack";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { Badge, Button, Pop, Rise } from "../components/ui";
-import { BackLink } from "../components/BackLink";
-import { useToast } from "../components/Toast";
-import { useCountUp } from "../hooks/useCountUp";
-import { WATCHING, findInvestor, globalRank } from "../data/mockLeaders";
-import { toggleFollow, useFollowing } from "../lib/follows";
+import type { LeadersStackParamList } from "@/navigation/LeadersStack";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { Badge, Button, Pop, Rise } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
+import { useToast } from "@/components/Toast";
+import { useCountUp } from "@/hooks/useCountUp";
+import { WATCHING, findInvestor, globalRank } from "@/data/mockLeaders";
+import { toggleFollow, useFollowing } from "@/lib/follows";
 
 export function InvestorScreen() {
   const nav = useNavigation();

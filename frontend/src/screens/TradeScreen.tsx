@@ -20,24 +20,24 @@ import {
 } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { TAB_BAR_HEIGHT, useTabBarSpace } from "../navigation/TabBar";
-import { hTap } from "../lib/haptics";
+import { TAB_BAR_HEIGHT, useTabBarSpace } from "@/navigation/TabBar";
+import { hTap } from "@/lib/haptics";
 import {
   MarketPickerSheet,
   MarketStatusSheet,
   UnlockSheet,
   QUIZ_SEEN_KEY,
-} from "../components/perps/PerpSheets";
-import { AMBER, Btn, Kv, ON_MINT, ON_SHORT, Tag } from "../components/perps/PerpUi";
-import { perpLabel } from "../data/perps";
-import { OrderBook } from "../components/perps/OrderBook";
-import { PerpToast } from "../components/perps/PerpToast";
-import { LivePositionSheet } from "../components/perps/LivePositionSheet";
-import { DockBalance } from "../components/perps/DockBalance";
-import { TransferSheet } from "../components/TransferSheet";
-import { ChartStage } from "../components/perps/PerpChart";
-import { OrderTicketSheet } from "../components/perps/OrderTicketSheet";
-import { C, FONT } from "../theme";
+} from "@/components/perps/PerpSheets";
+import { AMBER, Btn, Kv, ON_MINT, ON_SHORT, Tag } from "@/components/perps/PerpUi";
+import { perpLabel } from "@/data/perps";
+import { OrderBook } from "@/components/perps/OrderBook";
+import { PerpToast } from "@/components/perps/PerpToast";
+import { LivePositionSheet } from "@/components/perps/LivePositionSheet";
+import { DockBalance } from "@/components/perps/DockBalance";
+import { TransferSheet } from "@/components/TransferSheet";
+import { ChartStage } from "@/components/perps/PerpChart";
+import { OrderTicketSheet } from "@/components/perps/OrderTicketSheet";
+import { C, FONT } from "@/theme";
 import {
   TAKER,
   fmtPx,
@@ -48,7 +48,7 @@ import {
   sPct,
   sideTxt,
   toast,
-} from "../data/perpsStore";
+} from "@/data/perpsStore";
 import {
   livePnl,
   liveRoe,
@@ -57,19 +57,19 @@ import {
   useMarkets,
   usePerpsSession,
   useSocketStatus,
-} from "../hooks/perps";
+} from "@/hooks/perps";
 import {
   useAllPositions,
   useAllOrders,
   type SymOrder,
-} from "../hooks/perps/useSymbolTrading";
-import { TpSlSheet } from "../components/perps/TpSlSheet";
-import { tradeService, unwrap } from "../services/perps/tradeService";
-import { useWalletBalance } from "../hooks/useWalletBalance";
-import { DEFAULT_PERP_MARKETS } from "../data/perpMarketsDefault";
-import { useSpotToPerpDeposit } from "../hooks/useSpotToPerpDeposit";
-import { LiveOrderSheet } from "../components/perps/LiveOrderSheet";
-import { usePerpToSpotDeposit } from "../hooks/perps/usePerpToSpotDeposit";
+} from "@/hooks/perps/useSymbolTrading";
+import { TpSlSheet } from "@/components/perps/TpSlSheet";
+import { tradeService, unwrap } from "@/services/perps/tradeService";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { DEFAULT_PERP_MARKETS } from "@/data/perpMarketsDefault";
+import { useSpotToPerpDeposit } from "@/hooks/useSpotToPerpDeposit";
+import { LiveOrderSheet } from "@/components/perps/LiveOrderSheet";
+import { usePerpToSpotDeposit } from "@/hooks/perps/usePerpToSpotDeposit";
 
 type PTab = "pos" | "ord" | "book" | "info";
 type TransferOpts = { dir?: "in" | "out"; amt?: number; then?: () => void };

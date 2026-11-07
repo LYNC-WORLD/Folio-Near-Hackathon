@@ -24,14 +24,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useIndexFunds } from "../hooks";
-import type { HomeStackParamList } from "../navigation/HomeStack";
-import { C, FONT, TYPE, em, h1Size } from "../theme";
-import { Badge, Chip, PressScale, Rise, Skeleton } from "../components/ui";
-import { COLLECTIONS } from "../lib/assets";
-import { fundCode, toFund, type Fund } from "../lib/indexFunds";
-import { money, pct } from "../lib/format";
-import { hTap } from "../lib/haptics";
+import { useIndexFunds } from "@/hooks";
+import type { HomeStackParamList } from "@/navigation/HomeStack";
+import { C, FONT, TYPE, em, h1Size } from "@/theme";
+import { Badge, Chip, PressScale, Rise, Skeleton } from "@/components/ui";
+import { COLLECTIONS } from "@/lib/assets";
+import { fundCode, toFund, type Fund } from "@/lib/indexFunds";
+import { money, pct } from "@/lib/format";
+import { hTap } from "@/lib/haptics";
 
 export function IndexFundsScreen() {
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();

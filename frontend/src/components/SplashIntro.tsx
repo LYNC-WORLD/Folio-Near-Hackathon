@@ -26,9 +26,9 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import * as SplashScreen from "expo-splash-screen";
-import { C } from "../theme/colors";
-import { FONT, em } from "../theme/fonts";
-import { timing } from "../theme/motion";
+import { C } from "@/theme/colors";
+import { FONT, em } from "@/theme/fonts";
+import { timing } from "@/theme/motion";
 import { Mark } from "./ui/Mark";
 
 const MIN_MS = 1900; // same as the prototype's boot timer

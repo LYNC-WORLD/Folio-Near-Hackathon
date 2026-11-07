@@ -1,13 +1,13 @@
 // Question 1 — prototype #s-onb1 (multi-select, square dots)
 import { StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ASSET_DEFS, useOnboarding } from "../../context";
-import { Button, OptionCard, Rise } from "../../components/ui";
+import { ASSET_DEFS, useOnboarding } from "@/context";
+import { Button, OptionCard, Rise } from "@/components/ui";
 import {
   AFTER_HEADER,
   OnboardingScaffold,
-} from "../../components/onboarding/OnboardingScaffold";
-import type { OnboardingStackParamList } from "../../navigation";
+} from "@/components/onboarding/OnboardingScaffold";
+import type { OnboardingStackParamList } from "@/navigation";
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "WhatToOwn">;
 

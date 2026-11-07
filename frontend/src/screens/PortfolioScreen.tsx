@@ -39,6 +39,7 @@ import { PerpToast } from "../components/perps/PerpToast";
 import { PortfolioChart } from "../components/folio/PortfolioChart";
 import { ShareSheet } from "../components/ShareSheet";
 import { WithdrawFlow } from "../components/WithdrawFlow";
+import { usePerpToSpotDeposit } from "../hooks/perps/usePerpToSpotDeposit";
 import {
   ActivitySheet,
   DepositFlow,
@@ -102,7 +103,6 @@ export function PortfolioScreen() {
   const sheet = useSheet();
   const toast = useToast();
   const following = useFollowing();
-  const perp = usePerpPositions();
   const walletBal = useWalletBalance();
   const bal = {
     perp: walletBal.perpAvailable,
@@ -144,6 +144,13 @@ export function PortfolioScreen() {
   const pre = useStocks("pre-ipo");
   const idx = useIndexFunds();
   const fundLots = useFundLots();
+  const {
+    withdraw,
+    phase: withdrawPhase,
+    amount: withdrawAmount,
+    error: withdrawError,
+    reset: resetWithdraw,
+  } = usePerpToSpotDeposit();
 
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   useEffect(() => {
@@ -179,10 +186,10 @@ export function PortfolioScreen() {
 
   // Total value = wallet + perp equity (same rule as the prototype's total).
   // The chart series is wallet-only, so perp equity is added on top as a flat offset.
-  const liveTotal = useCountUp(usdValue + perp.equity);
+  const liveTotal = useCountUp(usdValue + walletBal.perpTotal);
   const shownValue =
     scrubIdx != null
-      ? (points[scrubIdx]?.v ?? usdValue) + perp.equity
+      ? (points[scrubIdx]?.v ?? usdValue) + walletBal.perpTotal
       : liveTotal;
   const startV = points[0]?.v ?? usdValue;
   const endV = scrubIdx != null ? (points[scrubIdx]?.v ?? usdValue) : usdValue;
@@ -213,6 +220,18 @@ export function PortfolioScreen() {
       m.set(s.tokenAddress, dayChange(s.price, s.marketOpenPrice));
     return m;
   }, [us.stocks, pre.stocks]);
+
+  useEffect(() => {
+    if (withdrawPhase === "done") {
+      perpToast(`Moved ${money(withdrawAmount)} to spot`, "TRANSFER CONFIRMED");
+      refresh(); // update cash / perp numbers on this screen
+      resetWithdraw();
+    } else if (withdrawPhase === "error" && withdrawError) {
+      perpToast("Transfer issue", withdrawError.toUpperCase());
+      resetWithdraw();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [withdrawPhase]);
 
   useEffect(() => {
     if (depositPhase === "done") {
@@ -370,7 +389,7 @@ export function PortfolioScreen() {
           value: p.value,
           change: p.change,
         }))}
-        perp={{ positions: perp.positions, pnl: perp.pnl }}
+        perp={{ positions: allPos.data, pnl: perpPnl }}
       />,
       { label: "Share" },
     );
@@ -615,9 +634,9 @@ export function PortfolioScreen() {
               </View>
 
               <PerpSummaryLine
-                equity={perp.equity}
-                pnl={perp.pnl}
-                count={perp.positions.length}
+                equity={walletBal.perpTotal}
+                pnl={perpPnl}
+                count={allPos.data.length}
               />
               {/* perp account balance + Transfer (opens the drawer) */}
               <PressScale
@@ -638,7 +657,7 @@ export function PortfolioScreen() {
             <View style={s.posHeadText}>
               {tab === "perp" ? (
                 <PerpsHeader
-                  count={perp.positions.length}
+                  count={allPos.data.length}
                   margin={perpMargin}
                   pnl={perpPnl}
                 />
@@ -946,10 +965,21 @@ export function PortfolioScreen() {
         <TransferSheet
           dir={xferDir}
           onDeposit={deposit}
+          onWithdraw={withdraw}
+          depositStatus={{
+            phase: depositPhase,
+            amount: depositAmount,
+            error: depositError,
+          }}
+          withdrawStatus={{
+            phase: withdrawPhase,
+            amount: withdrawAmount,
+            error: withdrawError,
+          }}
           onClose={() => setXfer(false)}
           onMoved={() => {
             setXfer(false);
-            refresh(); // re-pull wallet balances after money moves
+            refresh();
           }}
         />
       ) : null}

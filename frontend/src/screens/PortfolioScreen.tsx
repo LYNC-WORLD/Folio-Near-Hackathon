@@ -1,17 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Image,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  ActivityIndicator,
-  View,
-} from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
-import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { useNavigation, useScrollToTop } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useAuth, type OnboardingProfile } from "@/context";
@@ -19,23 +9,20 @@ import { useWallet } from "@/context/WalletContext";
 import { useIndexFunds, useStocks } from "@/hooks";
 import { useRecurringBuys } from "@/hooks/useTrade";
 import { useUserTransactions } from "@/hooks/useUserRecords";
-import { usePortfolioSeries } from "@/hooks/usePortfolioSeries";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { useTransfers } from "@/hooks/useTransfers";
+import { useAllPositions } from "@/hooks/perps";
 import { getOnboardingProfile } from "@/lib";
 import type { TabParamList } from "@/navigation/RootTabs";
 import { useTabBarSpace } from "@/navigation/TabBar";
-import { C, FONT, TYPE, em } from "@/theme";
-import { Chip, IconButton, PressScale, Rise } from "@/components/ui";
-import { GearIcon, HistoryIcon, ShareIcon } from "@/components/Icons";
-import { AssetAvatar } from "@/components/AssetAvatar";
+import { C, TYPE } from "@/theme";
+import { Rise } from "@/components/ui";
 import { useSheet } from "@/components/Sheet";
 import { useToast } from "@/components/Toast";
 import { useSplashDone } from "@/components/SplashIntro";
 import { TransferSheet } from "@/components/TransferSheet";
 import { PerpToast } from "@/components/perps/PerpToast";
-import { PortfolioChart } from "@/components/folio/PortfolioChart";
 import { ShareSheet } from "@/components/ShareSheet";
 import { WithdrawFlow } from "@/components/WithdrawFlow";
 import {
@@ -43,46 +30,20 @@ import {
   DepositFlow,
   shortAddr,
 } from "@/components/folio/FolioSheets";
-import {
-  PerpPositionList,
-  PerpSummaryLine,
-  PerpsHeader,
-} from "@/components/perps/PerpsPortfolio";
 import { useFollowing } from "@/lib/follows";
-import { dayChange, money, pct } from "@/lib/format";
+import { dayChange } from "@/lib/format";
 import { fundPositions, useFundLots } from "@/lib/fundHoldings";
 import { toFund } from "@/lib/indexFunds";
-import { dayDate } from "@/lib/trade";
-import { hSelect, hTap } from "@/lib/haptics";
-import Animated, { FadeIn } from "react-native-reanimated";
-import type { ChartPeriod } from "@/hooks";
-import { useAllPositions } from "@/hooks/perps";
+import { hTap } from "@/lib/haptics";
+import { ProfileHeader } from "./portfolio/ProfileHeader";
+import { ValueHero } from "./portfolio/ValueHero";
+import { CashCard } from "./portfolio/CashCard";
+import { HoldingsSection } from "./portfolio/HoldingsSection";
+import { CashMenu } from "./portfolio/CashMenu";
+import { usePortfolioValue } from "./portfolio/usePortfolioValue";
+import { s } from "./portfolio/styles";
 
 type Nav = BottomTabNavigationProp<TabParamList, "Portfolio">;
-
-// prototype ranges → chart periods
-const RANGES: { key: string; period: ChartPeriod; label: string }[] = [
-  { key: "24h", period: "1D", label: "24h" },
-  { key: "7d", period: "1W", label: "7d" },
-  { key: "30d", period: "1M", label: "30d" },
-  { key: "All", period: "All", label: "all time" },
-];
-
-type Tab = "open" | "rec" | "perp";
-const TABS: [Tab, string][] = [
-  ["open", "One-time"],
-  ["rec", "Recurring"],
-  ["perp", "Perps"],
-];
-
-type Cat = "all" | "USStock" | "PreIPO" | "index";
-const CATS: [Cat, string][] = [
-  ["all", "All"],
-  ["USStock", "Stocks"],
-  ["PreIPO", "Pre-IPOs"],
-  ["index", "Index funds"],
-];
-
 
 export function PortfolioScreen() {
   const nav = useNavigation<Nav>();
@@ -106,10 +67,8 @@ export function PortfolioScreen() {
   const { user, idToken } = useAuth();
 
   const allPos = useAllPositions(idToken);
-  const perpMargin = allPos.data.reduce((t, p) => t + p.margin, 0);
   const perpPnl = allPos.data.reduce((t, p) => t + p.pnl, 0);
   const {
-    wallet,
     walletAddress,
     tokens,
     usdcValue,
@@ -132,85 +91,16 @@ export function PortfolioScreen() {
     getOnboardingProfile().then(setProfile);
   }, []);
 
-  // ---------- chart ----------
-  const [range, setRange] = useState(RANGES[3]);
-  const holdings = useMemo(
-    () =>
-      tokens
-        .map((t) => {
-          const price = Number(t.price);
-          const balance = Number(t.balance);
-
-          return {
-            mint: t.mint,
-            balance,
-            price,
-          };
-        })
-        .filter(
-          (t) =>
-            Number.isFinite(t.balance) &&
-            Number.isFinite(t.price) &&
-            t.price >= 0,
-        ),
-    [tokens],
-  );
-
-  // Total value = wallet + perp equity. One source (walletBal.perpTotal) feeds
-  // the hero number, the chart and the delta so they can never disagree.
-  const perpTotal = walletBal.perpTotal;
-  const liveTarget = usdValue + perpTotal; // un-animated, used for delta math
-  const liveTotal = useCountUp(liveTarget);
-
-  const { points: rawPoints } = usePortfolioSeries(
-    holdings,
+  // ---------- value + chart ----------
+  const value = usePortfolioValue({
+    tokens,
     usdcValue,
-    range.period,
-  );
-
-  // Chart = wallet series + flat perp offset, last point pinned to the live total
-  const points = useMemo(() => {
-    if (!rawPoints.length) return rawPoints;
-    const pts = rawPoints.map((p) => ({ ...p, v: p.v + perpTotal }));
-    pts[pts.length - 1] = { ...pts[pts.length - 1], v: liveTarget };
-    return pts;
-  }, [rawPoints, perpTotal, liveTarget]);
-
-  const [scrubIdx, setScrubIdx] = useState<number | null>(null);
-  // the points array changes length with the range, so drop any stale scrub
-  useEffect(() => {
-    setScrubIdx(null);
-  }, [range.key]);
-
-  const safeIdx =
-    scrubIdx != null && scrubIdx >= 0 && scrubIdx < points.length
-      ? scrubIdx
-      : null;
-  const isLatest = safeIdx == null || safeIdx === points.length - 1;
-
-  // hero: animated live total at rest, exact point value while scrubbing
-  const shownValue = isLatest ? liveTotal : points[safeIdx!].v;
-  const startV = points[0]?.v ?? liveTarget;
-  const endV = isLatest ? liveTarget : points[safeIdx!].v;
-  const delta = endV - startV;
-  const deltaLabel = isLatest
-    ? range.label
-    : range.period === "1D"
-      ? new Date(points[safeIdx!].t * 1000).toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : new Date(points[safeIdx!].t * 1000).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-        });
-
+    usdValue,
+    perpTotal: walletBal.perpTotal,
+  });
   const cash = useCountUp(usdcValue);
 
   // ---------- positions ----------
-  const [tab, setTab] = useState<Tab>("open");
-  const [cat, setCat] = useState<Cat>("all");
-
   const moves = useMemo(() => {
     const m = new Map<string, number | null>();
     for (const s of [...us.stocks, ...pre.stocks])
@@ -232,9 +122,6 @@ export function PortfolioScreen() {
         .sort((a, b) => b.value - a.value),
     [tokens, moves],
   );
-  const shownPositions = positions.filter(
-    (p) => cat === "all" || p.stockType === cat,
-  );
 
   // Index funds: the wallet holds the stocks themselves; which of them came
   // from a fund buy is rebuilt from the on-device log (lib/fundHoldings).
@@ -247,28 +134,6 @@ export function PortfolioScreen() {
     for (const f of idx.funds) m.set(f.id, toFund(f).change);
     return m;
   }, [idx.funds]);
-
-  const activeRec = recurringBuys.filter((r) => r.isActive);
-  const due30 = activeRec.reduce(
-    (t, r) =>
-      t +
-      (Number(r.usdcAmount) ||
-        Number(r.stockAmount) * Number(r.stock.price) ||
-        0),
-    0,
-  );
-  const shownRec = [...recurringBuys]
-    .sort((a, b) => Number(b.isActive) - Number(a.isActive))
-    .filter((r) => cat === "all" || r.stock.stockType === cat);
-
-  // filter chips (the Perps tab has none: every perp is a US stock)
-  const chipList: [string, string][] = tab === "perp" ? [] : CATS;
-  const activeChip = cat;
-  const pickChip = (k: string) => {
-    if (k === activeChip) return;
-    hSelect();
-    setCat(k as Cat);
-  };
 
   // ---------- identity ----------
   const name = (user?.name ?? "").trim() || "You";
@@ -313,6 +178,7 @@ export function PortfolioScreen() {
       initial: false,
     });
 
+  // ---------- sheets ----------
   const openActivity = () =>
     sheet.open(<ActivitySheet />, { label: "Activity" });
   const openTransfer = () => {
@@ -356,7 +222,7 @@ export function PortfolioScreen() {
         initial={initial}
         chip={profile?.title ?? ""}
         refCode={(handle || "you").replace("@", "").toUpperCase()}
-        holdings={holdings}
+        holdings={value.holdings}
         usdcValue={usdcValue}
         positions={positions.map((p) => ({
           symbol: p.symbol,
@@ -422,106 +288,22 @@ export function PortfolioScreen() {
         }
       >
         <View style={[s.page, { paddingTop: insets.top + 12 }]}>
-          {/* header: avatar · name · three round buttons */}
-          <Rise {...rise(0)} style={s.head}>
-            <PressScale
-              scaleTo={0.95}
-              onPress={() => {
-                hTap();
-                toAccount();
-              }}
-              style={s.ava}
-              accessibilityRole="button"
-              accessibilityLabel="Edit profile"
-            >
-              {photo ? (
-                <Image source={{ uri: photo }} style={s.avaImg} />
-              ) : (
-                <Text style={s.avaText}>{initial}</Text>
-              )}
-            </PressScale>
-            <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-              <Text style={s.name} numberOfLines={1}>
-                {name}
-              </Text>
-              {handle ? <Text style={s.handle}>{handle}</Text> : null}
-            </View>
-            <View style={s.tools}>
-              <IconButton label="Share your profile" onPress={openShare}>
-                <ShareIcon />
-              </IconButton>
-              <IconButton label="Activity" onPress={openActivity}>
-                <HistoryIcon />
-              </IconButton>
-              <IconButton label="Settings" onPress={toAccount}>
-                <GearIcon />
-              </IconButton>
-            </View>
-          </Rise>
+          <ProfileHeader
+            rise={rise}
+            name={name}
+            initial={initial}
+            handle={handle}
+            photo={photo}
+            title={profile?.title ?? null}
+            following={following.size}
+            owns={owns}
+            tradeCount={tradeCount}
+            onAccount={toAccount}
+            onShare={openShare}
+            onActivity={openActivity}
+          />
 
-          {/* chip · following · followers · owns · trades */}
-          <Rise {...rise(1)} style={s.meta}>
-            {profile ? (
-              <Chip variant="mint" label={profile.title.toUpperCase()} />
-            ) : null}
-            <Text style={s.stat}>
-              <Text style={s.statB}>{following.size}</Text> following
-            </Text>
-            <Text style={s.stat}>
-              <Text style={s.statB}>0</Text> followers
-            </Text>
-            {owns ? <Meta icon="grid" text={owns} /> : null}
-            <Meta
-              icon="swap"
-              text={`${tradeCount} ${tradeCount === 1 ? "trade" : "trades"}`}
-            />
-          </Rise>
-          <View style={s.hr} />
-
-          {/* hero number + ranges */}
-          <Rise {...rise(4)} style={s.heroRow}>
-            <View style={{ flexGrow: 1, flexShrink: 1, minWidth: 160, gap: 8 }}>
-              <HeroMoney value={loading ? 0 : shownValue} />
-              <Text style={s.delta}>
-                <Text style={{ color: delta >= 0 ? C.mint : C.loss }}>
-                  {delta >= 0 ? "+" : "−"}
-                  {money(Math.abs(delta))}
-                </Text>{" "}
-                <Text style={s.deltaLbl}>{deltaLabel}</Text>
-              </Text>
-            </View>
-            <View style={s.rg} accessibilityRole="tablist">
-              {RANGES.map((r) => (
-                <Pressable
-                  key={r.key}
-                  onPress={() => {
-                    if (r.key === range.key) return;
-                    hSelect();
-                    setRange(r);
-                  }}
-                  style={[s.rgBtn, r.key === range.key && s.rgOn]}
-                  hitSlop={{ top: 6, bottom: 6 }}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: r.key === range.key }}
-                >
-                  <Text
-                    style={[s.rgText, r.key === range.key && { color: C.ink1 }]}
-                  >
-                    {r.key}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </Rise>
-
-          <Rise {...rise(5)} style={{ marginTop: 14 }}>
-            <PortfolioChart
-              points={points}
-              onScrub={setScrubIdx}
-              replayKey={range.key}
-            />
-            <Text style={s.chartNote}>BASED ON WHAT YOU HOLD NOW</Text>
-          </Rise>
+          <ValueHero rise={rise} value={value} loading={loading} />
 
           {error ? (
             <Text style={[TYPE.sub, { color: C.loss, marginTop: 10 }]}>
@@ -529,401 +311,38 @@ export function PortfolioScreen() {
             </Text>
           ) : null}
 
-          {/* cash */}
           <Rise {...rise(6)} style={s.cashRow}>
-            <View style={s.cashIco}>
-              <Text style={s.cashIcoText}>$</Text>
-            </View>
-            <View style={{ flex: 1, gap: 6, minWidth: 0 }}>
-              <View style={s.cashTop}>
-                <Text style={s.cashLbl} numberOfLines={1}>
-                  Cash in wallet
-                </Text>
-                <PressScale
-                  scaleTo={0.95}
-                  onPress={() => {
-                    hTap();
-                    sheet.open(<DepositFlow address={walletAddress} />, {
-                      label: "Deposit",
-                    });
-                  }}
-                  style={s.dep}
-                  accessibilityRole="button"
-                  accessibilityLabel="Deposit"
-                >
-                  <Svg
-                    width={15}
-                    height={15}
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke={C.onMint}
-                    strokeWidth={2.4}
-                    strokeLinecap="round"
-                  >
-                    <Path d="M10 4v12M4 10h12" />
-                  </Svg>
-                  <Text style={s.depText}>Deposit</Text>
-                </PressScale>
-                <SqButton label="More" onPress={openMore}>
-                  <Svg width={18} height={18} viewBox="0 0 20 20" fill={C.ink1}>
-                    <Circle cx="4.5" cy="10" r="1.6" />
-                    <Circle cx="10" cy="10" r="1.6" />
-                    <Circle cx="15.5" cy="10" r="1.6" />
-                  </Svg>
-                </SqButton>
-              </View>
-
-              <View style={s.cashBal}>
-                <Text style={s.cash} numberOfLines={1}>
-                  {loading ? "…" : money(cash)}
-                </Text>
-                <PressScale
-                  scaleTo={0.9}
-                  onPress={() => {
-                    hTap();
-                    refresh();
-                  }}
-                  disabled={refreshing}
-                  style={[s.rf, refreshing && { opacity: 0.4 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Refresh balances"
-                >
-                  <Svg
-                    width={16}
-                    height={16}
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke={C.ink3}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <Path d="M16.2 8.2A6.5 6.5 0 0 0 4.4 6.5" />
-                    <Path d="M4 3.5v3.3h3.3" />
-                    <Path d="M3.8 11.8a6.5 6.5 0 0 0 11.8 1.7" />
-                    <Path d="M16 16.5v-3.3h-3.3" />
-                  </Svg>
-                </PressScale>
-              </View>
-
-              <PerpSummaryLine
-                equity={walletBal.perpAvailable}
-                pnl={perpPnl}
-                count={allPos.data.length}
-              />
-              <PressScale
-                scaleTo={0.97}
-                onPress={openTransfer}
-                style={s.perpLine}
-                accessibilityRole="button"
-                accessibilityLabel={`Perp account ${money(bal.perp)}. Transfer`}
-              >
-                <Text style={s.perpTxt}>Perp account {money(bal.perp)}</Text>
-                <Text style={s.perpGo}>Transfer ›</Text>
-              </PressScale>
-            </View>
-          </Rise>
-
-          {/* positions header */}
-          <Rise {...rise(7)} style={s.posHead}>
-            <View style={s.posHeadText}>
-              {tab === "perp" ? (
-                <PerpsHeader
-                  count={allPos.data.length}
-                  margin={perpMargin}
-                  pnl={perpPnl}
-                />
-              ) : (
-                <View style={{ gap: 3 }}>
-                  <Text style={s.posTitle}>
-                    {tab === "open" ? "Positions" : "Recurring"}{" "}
-                    <Text style={{ color: C.ink3 }}>
-                      (
-                      {tab === "open" ? positions.length : recurringBuys.length}
-                      )
-                    </Text>
-                  </Text>
-                  <Text style={s.posSub}>
-                    {tab === "open"
-                      ? `${money(tokensValue)} in positions`
-                      : `${money(due30)} due in 30 days`}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={s.oc} accessibilityRole="tablist">
-              {TABS.map(([k, label]) => (
-                <Pressable
-                  key={k}
-                  onPress={() => {
-                    if (k !== tab) hSelect();
-                    setTab(k);
-                  }}
-                  style={[s.ocBtn, tab === k && s.ocOn]}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: tab === k }}
-                >
-                  <Text style={[s.ocText, tab === k && { color: C.mint }]}>
-                    {label}
-                  </Text>
-                  {tab === k ? <View style={s.ocDot} /> : null}
-                </Pressable>
-              ))}
-            </View>
-          </Rise>
-
-          {chipList.length ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={s.fchipsWrap}
-              contentContainerStyle={s.fchips}
-            >
-              {chipList.map(([k, t]) => (
-                <Pressable
-                  key={k}
-                  onPress={() => pickChip(k)}
-                  style={[s.fchip, activeChip === k && s.fchipOn]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: activeChip === k }}
-                >
-                  <Text
-                    style={[s.fchipText, activeChip === k && { color: C.ink1 }]}
-                  >
-                    {t}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          ) : null}
-
-          {/* rows — keyed by tab + filter so they cascade in on every switch */}
-          <Animated.View
-            key={`${tab}-${activeChip}`}
-            entering={FadeIn.duration(160)}
-            style={{ marginTop: 8 }}
-          >
-            {tab === "perp" ? (
-              allPos.loading ? (
-                <ActivityIndicator
-                  color={C.ink3}
-                  style={{ paddingVertical: 24 }}
-                />
-              ) : allPos.error && !allPos.data.length ? (
-                <Pressable onPress={allPos.refetch} accessibilityRole="button">
-                  <Text style={s.empty}>
-                    Couldn't load perp positions. Tap to retry.
-                  </Text>
-                </Pressable>
-              ) : (
-                <PerpPositionList
-                  positions={allPos.data}
-                  onOpen={openPerp}
-                  onOpenTrade={openPerp}
-                />
-              )
-            ) : tab === "open" && cat === "index" ? (
-              funds.length === 0 ? (
-                <Text style={s.empty}>
-                  No index funds yet. Find one under Collections on Home.
-                </Text>
-              ) : (
-                funds.map((f, i) => {
-                  const move = fundMoves.get(f.fundId) ?? null;
-                  return (
-                    <Rise key={f.fundId} delay={i * 45} duration={400}>
-                      <PressScale
-                        scaleTo={0.985}
-                        onPress={() => {
-                          hTap();
-                          openFund(f.fundId);
-                        }}
-                        style={s.posRow}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${f.fundName} index fund, ${money(f.value)}`}
-                      >
-                        <AssetAvatar
-                          symbol={f.fundName}
-                          size={48}
-                          radius={14}
-                        />
-                        <View style={{ flex: 1, gap: 4 }}>
-                          <Text
-                            style={[TYPE.ttl, { fontSize: 16 }]}
-                            numberOfLines={1}
-                          >
-                            {f.fundName}
-                          </Text>
-                          <Text style={s.qty} numberOfLines={1}>
-                            {f.legs.map((l) => l.symbol).join(" · ")}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: "flex-end", gap: 4 }}>
-                          <Text style={s.val}>{money(f.value)}</Text>
-                          {move != null ? (
-                            <Text
-                              style={[
-                                s.chg,
-                                { color: move >= 0 ? C.mint : C.loss },
-                              ]}
-                            >
-                              <Text style={s.tri}>
-                                {move >= 0 ? "▲ " : "▼ "}
-                              </Text>
-                              {Math.abs(move).toFixed(2)}%
-                            </Text>
-                          ) : f.ret != null ? (
-                            <Text
-                              style={[
-                                s.chg,
-                                { color: f.ret >= 0 ? C.mint : C.loss },
-                              ]}
-                            >
-                              {pct(f.ret)}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </PressScale>
-                    </Rise>
-                  );
+            <CashCard
+              cash={cash}
+              loading={loading}
+              refreshing={refreshing}
+              perpAvailable={bal.perp}
+              perpPnl={perpPnl}
+              perpCount={allPos.data.length}
+              onDeposit={() =>
+                sheet.open(<DepositFlow address={walletAddress} />, {
+                  label: "Deposit",
                 })
-              )
-            ) : tab === "open" ? (
-              shownPositions.length === 0 ? (
-                <Text style={s.empty}>
-                  {cat === "all"
-                    ? "Nothing here yet. Find something to buy on Home."
-                    : "You hold nothing in this category yet."}
-                </Text>
-              ) : (
-                shownPositions.map((p, i) => (
-                  <Rise key={p.mint} delay={i * 45} duration={400}>
-                    <PressScale
-                      scaleTo={0.985}
-                      onPress={() => {
-                        hTap();
-                        openAsset(p.symbol, p.stockType);
-                      }}
-                      style={s.posRow}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${p.symbol}, ${money(p.value)}`}
-                    >
-                      <AssetAvatar
-                        symbol={p.symbol}
-                        imageUrl={p.imageUrl}
-                        size={48}
-                        radius={999}
-                      />
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text
-                          style={[TYPE.ttl, { fontSize: 16 }]}
-                          numberOfLines={1}
-                        >
-                          {p.symbol}
-                        </Text>
-                        <Text style={s.qty}>
-                          {p.balance.toLocaleString("en-US", {
-                            maximumFractionDigits: 4,
-                          })}{" "}
-                          {p.symbol}
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: "flex-end", gap: 4 }}>
-                        <Text style={s.val}>{money(p.value)}</Text>
-                        {p.change != null ? (
-                          <Text
-                            style={[
-                              s.chg,
-                              { color: p.change >= 0 ? C.mint : C.loss },
-                            ]}
-                          >
-                            <Text style={s.tri}>
-                              {p.change >= 0 ? "▲ " : "▼ "}
-                            </Text>
-                            {Math.abs(p.change).toFixed(2)}%
-                          </Text>
-                        ) : null}
-                      </View>
-                    </PressScale>
-                  </Rise>
-                ))
-              )
-            ) : cat === "index" ? (
-              <Text style={s.empty}>
-                Index funds are one-time buys for now. Recurring buys work on
-                single stocks and pre-IPOs.
-              </Text>
-            ) : shownRec.length === 0 ? (
-              <Text style={s.empty}>
-                {recurringBuys.length
-                  ? "No recurring buys in this category."
-                  : "No recurring buys yet. Open any stock or pre-IPO and choose Recurring to buy it on a schedule."}
-              </Text>
-            ) : (
-              <>
-                {shownRec.map((r, i) => (
-                  <Rise key={r.id} delay={i * 45} duration={400}>
-                    <PressScale
-                      scaleTo={0.985}
-                      onPress={() => {
-                        hTap();
-                        openAsset(r.stock.symbol, r.stock.stockType);
-                      }}
-                      style={[s.posRow, !r.isActive && { opacity: 0.55 }]}
-                      accessibilityRole="button"
-                    >
-                      <AssetAvatar
-                        symbol={r.stock.symbol}
-                        imageUrl={r.stock.imageUrl}
-                        size={48}
-                        radius={999}
-                      />
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text
-                          style={[TYPE.ttl, { fontSize: 16 }]}
-                          numberOfLines={1}
-                        >
-                          {r.stock.symbol}
-                        </Text>
-                        <Text style={[TYPE.sub, { fontSize: 12.5 }]}>
-                          Every month ·{" "}
-                          {r.isActive
-                            ? `next ${dayDate(new Date(r.buyDate))}`
-                            : "cancelled"}
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: "flex-end", gap: 5 }}>
-                        <Text style={s.val}>
-                          {r.usdcAmount
-                            ? money(Number(r.usdcAmount))
-                            : `${r.stockAmount} ${r.stock.symbol}`}
-                        </Text>
-                        <View style={s.recStat}>
-                          {r.isActive ? <View style={s.recDot} /> : null}
-                          <Text
-                            style={[
-                              s.recStatText,
-                              r.isActive && { color: C.mint },
-                            ]}
-                          >
-                            {r.isActive ? "ACTIVE" : "CANCELLED"}
-                          </Text>
-                        </View>
-                      </View>
-                    </PressScale>
-                  </Rise>
-                ))}
-                <Pressable
-                  onPress={toOrders}
-                  style={s.manage}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                >
-                  <Text style={s.manageText}>Manage recurring buys ›</Text>
-                </Pressable>
-              </>
-            )}
-          </Animated.View>
+              }
+              onMore={openMore}
+              onRefresh={refresh}
+              onTransfer={openTransfer}
+            />
+          </Rise>
+
+          <HoldingsSection
+            headerRise={rise(7)}
+            positions={positions}
+            tokensValue={tokensValue}
+            funds={funds}
+            fundMoves={fundMoves}
+            recurringBuys={recurringBuys}
+            perp={allPos}
+            onOpenAsset={openAsset}
+            onOpenFund={openFund}
+            onOpenPerp={openPerp}
+            onManageRecurring={toOrders}
+          />
 
           <Text style={s.foot}>
             HELD AT {shortAddr(walletAddress).toUpperCase()} · SELF-CUSTODY
@@ -948,404 +367,3 @@ export function PortfolioScreen() {
     </View>
   );
 }
-
-// ---------- pieces ----------
-
-/** $1,240<.50> — cents dimmed (prototype .heroNum .c) */
-function HeroMoney({ value }: { value: number }) {
-  const [d, c] = money(value).split(".");
-  return (
-    <Text style={s.hero} accessibilityLiveRegion="polite">
-      {d}
-      <Text style={{ color: "#4A515C" }}>.{c}</Text>
-    </Text>
-  );
-}
-
-function SqButton({
-  label,
-  onPress,
-  children,
-}: {
-  label: string;
-  onPress: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <PressScale
-      scaleTo={0.93}
-      onPress={() => {
-        hTap();
-        onPress();
-      }}
-      style={s.sq}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      {children}
-    </PressScale>
-  );
-}
-
-function Meta({ icon, text }: { icon: "grid" | "swap"; text: string }) {
-  return (
-    <View style={s.metaItem}>
-      <Svg
-        width={15}
-        height={15}
-        viewBox="0 0 20 20"
-        fill="none"
-        stroke={C.ink4}
-        strokeWidth={1.7}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {icon === "grid" ? (
-          <>
-            <Rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1.2" />
-            <Rect x="11" y="3.5" width="5.5" height="5.5" rx="1.2" />
-            <Rect x="3.5" y="11" width="5.5" height="5.5" rx="1.2" />
-            <Rect x="11" y="11" width="5.5" height="5.5" rx="1.2" />
-          </>
-        ) : (
-          <Path d="M4 7h11l-3-3M16 13H5l3 3" />
-        )}
-      </Svg>
-      <Text style={s.metaText}>{text}</Text>
-    </View>
-  );
-}
-
-/** The ⋯ drawer: CASH — Move money · Withdraw · Copy address · Activity · Standing orders · Account */
-function CashMenu({
-  spot,
-  perp,
-  address,
-  onMove,
-  onWithdraw,
-  onCopy,
-  onActivity,
-  onOrders,
-  onAccount,
-}: {
-  spot: number;
-  perp: number;
-  address?: string | null;
-  onMove: () => void;
-  onWithdraw: () => void;
-  onCopy: () => void;
-  onActivity: () => void;
-  onOrders: () => void;
-  onAccount: () => void;
-}) {
-  const rows: [string, string, string, () => void][] = [
-    [
-      "move",
-      "Move money",
-      `Spot ${money(spot)} · Perp account ${money(perp)}`,
-      onMove,
-    ],
-    ["wd", "Withdraw", "To a crypto wallet or your bank", onWithdraw],
-    [
-      "addr",
-      "Copy wallet address",
-      `${shortAddr(address!)} · self-custody`,
-      onCopy,
-    ],
-    ["act", "Activity", "Every buy, sale and order", onActivity],
-    ["rec", "Standing orders", "Recurring buys you have set up", onOrders],
-    ["acc", "Account", "Profile, notifications, sign out", onAccount],
-  ];
-  return (
-    <View style={{ gap: 6 }}>
-      <Text style={s.menuLbl}>CASH</Text>
-      <View>
-        {rows.map(([k, title, sub, fn], i) => (
-          <PressScale
-            key={k}
-            scaleTo={0.985}
-            onPress={() => {
-              hTap();
-              fn();
-            }}
-            style={[s.menuRow, i < rows.length - 1 && s.menuHair]}
-            accessibilityRole="button"
-            accessibilityLabel={`${title}. ${sub}`}
-          >
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text style={s.menuTtl}>{title}</Text>
-              <Text style={s.menuSub}>{sub}</Text>
-            </View>
-            <Text style={s.menuChev}>›</Text>
-          </PressScale>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.ground },
-  page: { paddingHorizontal: 20 },
-
-  head: { flexDirection: "row", alignItems: "center", gap: 14 },
-  tools: { flexDirection: "row", gap: 6 },
-  ava: {
-    width: 64,
-    height: 64,
-    borderRadius: 999,
-    backgroundColor: C.mint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avaImg: { width: 64, height: 64, borderRadius: 999 },
-  avaText: {
-    fontFamily: FONT.sans800,
-    fontSize: 26,
-    letterSpacing: em(26, -0.04),
-    color: C.onMint,
-  },
-  name: {
-    fontFamily: FONT.sans800,
-    fontSize: 21,
-    letterSpacing: em(21, -0.035),
-    color: C.ink1,
-  },
-  handle: { fontFamily: FONT.sans400, fontSize: 13, color: C.ink3 },
-
-  meta: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    columnGap: 16,
-    rowGap: 10,
-    marginTop: 16,
-  },
-  stat: { fontFamily: FONT.sans400, fontSize: 15, color: C.ink3 },
-  statB: { fontFamily: FONT.sans800, color: C.ink1 },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { fontFamily: FONT.sans400, fontSize: 14, color: C.ink3 },
-
-  menuLbl: {
-    fontFamily: FONT.mono400,
-    fontSize: 11,
-    letterSpacing: em(11, 0.28),
-    color: C.mint,
-    marginBottom: 6,
-  },
-  menuRow: {
-    minHeight: 58,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-  },
-  menuHair: { borderBottomWidth: 1, borderBottomColor: C.hair },
-  menuTtl: { fontFamily: FONT.sans800, fontSize: 17, color: C.ink1 },
-  menuSub: { fontFamily: FONT.sans400, fontSize: 14, color: C.ink3 },
-  menuChev: { fontSize: 17, color: C.ink4 },
-  hr: {
-    height: 1,
-    backgroundColor: C.hair,
-    marginTop: 18,
-    marginHorizontal: -20,
-  },
-
-  heroRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    flexWrap: "wrap",
-    marginTop: 20,
-    gap: 12,
-  },
-  hero: {
-    fontFamily: FONT.sans800,
-    fontSize: 40,
-    letterSpacing: em(40, -0.045),
-    lineHeight: 42,
-    color: C.ink1,
-    fontVariant: ["tabular-nums"],
-  },
-  delta: { fontFamily: FONT.sans600, fontSize: 14.5 },
-  deltaLbl: { fontFamily: FONT.sans500, color: C.ink4 },
-  rg: { flexDirection: "row", gap: 2 },
-  rgBtn: {
-    height: 32,
-    paddingHorizontal: 8,
-    borderRadius: 9,
-    justifyContent: "center",
-  },
-  rgOn: { backgroundColor: C.raised },
-  rgText: { fontFamily: FONT.sans700, fontSize: 12.5, color: C.ink4 },
-  chartNote: {
-    marginTop: 6,
-    textAlign: "right",
-    fontFamily: FONT.mono400,
-    fontSize: 8.5,
-    letterSpacing: em(8.5, 0.16),
-    color: C.ink4,
-  },
-
-  cashRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginTop: 22,
-  },
-  cashIco: {
-    width: 52,
-    height: 52,
-    borderRadius: 999,
-    backgroundColor: C.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cashIcoText: { fontFamily: FONT.sans700, fontSize: 22, color: C.ink1 },
-  cashTop: { flexDirection: "row", alignItems: "center", gap: 8 },
-  cashBal: { flexDirection: "row", alignItems: "center", gap: 6 },
-  cashLbl: { flex: 1, fontFamily: FONT.sans400, fontSize: 14, color: C.ink3 },
-  dep: {
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: C.mint,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  depText: { fontFamily: FONT.sans700, fontSize: 15, color: C.onMint },
-  rf: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cash: {
-    flex: 1,
-    fontFamily: FONT.sans800,
-    fontSize: 26,
-    letterSpacing: em(22, -0.03),
-    color: C.ink1,
-    fontVariant: ["tabular-nums"],
-  },
-  perpLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    alignSelf: "flex-start",
-    minHeight: 30,
-  },
-  perpTxt: { fontFamily: FONT.mono400, fontSize: 11.5, color: C.ink3 },
-  perpGo: { fontFamily: FONT.sans700, fontSize: 12.5, color: C.mint },
-  sq: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: "#232933",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // wraps so the three-way switch drops under the title on narrow phones
-  posHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    marginTop: 30,
-    columnGap: 12,
-    rowGap: 12,
-  },
-  posHeadText: { flexGrow: 1, flexShrink: 1, minWidth: 130 },
-  posTitle: {
-    fontFamily: FONT.sans800,
-    fontSize: 20,
-    letterSpacing: em(20, -0.03),
-    color: C.ink1,
-  },
-  posSub: { fontFamily: FONT.mono400, fontSize: 11.5, color: C.ink4 },
-  oc: {
-    flexDirection: "row",
-    padding: 3,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.stroke,
-  },
-  ocBtn: {
-    height: 32,
-    paddingHorizontal: 12,
-    borderRadius: 9,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  ocOn: { backgroundColor: C.raised },
-  ocText: { fontFamily: FONT.sans700, fontSize: 13, color: C.ink4 },
-  ocDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.mint },
-
-  fchipsWrap: { marginTop: 14, marginHorizontal: -20 },
-  fchips: { gap: 8, paddingHorizontal: 20 },
-  fchip: {
-    height: 38,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.stroke,
-    justifyContent: "center",
-  },
-  fchipOn: { backgroundColor: C.raised, borderColor: "#313844" },
-  fchipText: { fontFamily: FONT.sans600, fontSize: 14, color: C.ink3 },
-
-  posRow: {
-    minHeight: 72,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  qty: { fontFamily: FONT.mono400, fontSize: 12, color: C.ink3 },
-  val: {
-    fontFamily: FONT.sans700,
-    fontSize: 16,
-    color: C.ink1,
-    fontVariant: ["tabular-nums"],
-  },
-  chg: {
-    fontFamily: FONT.mono400,
-    fontSize: 12.5,
-    fontVariant: ["tabular-nums"],
-  },
-  tri: { fontSize: 9 },
-  recStat: { flexDirection: "row", alignItems: "center", gap: 6 },
-  recDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.mint },
-  recStatText: {
-    fontFamily: FONT.mono400,
-    fontSize: 10,
-    letterSpacing: em(10, 0.14),
-    color: C.ink4,
-  },
-  manage: {
-    alignSelf: "flex-start",
-    minHeight: 40,
-    justifyContent: "center",
-    marginTop: 6,
-  },
-  manageText: { fontFamily: FONT.sans600, fontSize: 13, color: C.mint },
-
-  empty: {
-    fontFamily: FONT.sans400,
-    fontSize: 13.5,
-    lineHeight: 21,
-    color: C.ink3,
-    paddingVertical: 18,
-  },
-  foot: {
-    marginTop: 22,
-    textAlign: "center",
-    fontFamily: FONT.mono400,
-    fontSize: 9.5,
-    letterSpacing: em(9.5, 0.16),
-    color: C.ink4,
-  },
-});

@@ -15,7 +15,13 @@
 //   [ New recurring buy ]
 
 import { useMemo } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -44,20 +50,38 @@ export function RecurringBuysScreen() {
   const sheet = useSheet();
   const { recurringBuys, loading, error, reload } = useRecurringBuys();
 
-  const active = useMemo(() => recurringBuys.filter((r) => r.isActive), [recurringBuys]);
-  const ended = useMemo(() => recurringBuys.filter((r) => !r.isActive), [recurringBuys]);
+  const active = useMemo(
+    () => recurringBuys.filter((r) => r.isActive),
+    [recurringBuys],
+  );
+  const ended = useMemo(
+    () => recurringBuys.filter((r) => !r.isActive),
+    [recurringBuys],
+  );
 
   // monthly orders → each runs once in the next 30 days
-  const next30 = active.reduce((t, r) => t + (Number(r.usdcAmount) || Number(r.stockAmount) * Number(r.stock.price) || 0), 0);
+  const next30 = active.reduce(
+    (t, r) =>
+      t +
+      (Number(r.usdcAmount) ||
+        Number(r.stockAmount) * Number(r.stock.price) ||
+        0),
+    0,
+  );
   const shownTotal = useCountUp(next30);
 
   const amountOf = (r: (typeof recurringBuys)[number]) =>
-    r.usdcAmount ? money(Number(r.usdcAmount)) : `${r.stockAmount} ${r.stock.symbol}`;
+    r.usdcAmount
+      ? money(Number(r.usdcAmount))
+      : `${r.stockAmount} ${r.stock.symbol}`;
 
   const openStock = (symbol: string, stockType: string) =>
     (nav.getParent() as any)?.navigate("Home", {
       screen: "StockDetail",
-      params: { symbol, category: stockType === "PreIPO" ? "pre-ipo" : "us-stock" },
+      params: {
+        symbol,
+        category: stockType === "PreIPO" ? "pre-ipo" : "us-stock",
+      },
       initial: false,
     });
 
@@ -86,10 +110,19 @@ export function RecurringBuysScreen() {
   return (
     <View style={s.safe}>
       <ScrollView
-        contentContainerStyle={[s.page, { paddingTop: insets.top + 12, paddingBottom: bottom }]}
+        contentContainerStyle={[
+          s.page,
+          { paddingTop: insets.top + 12, paddingBottom: bottom },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={() => reload()} tintColor={C.mint} colors={[C.mint]} progressBackgroundColor={C.raised} />
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => reload()}
+            tintColor={C.mint}
+            colors={[C.mint]}
+            progressBackgroundColor={C.raised}
+          />
         }
       >
         <BackLink onPress={() => nav.goBack()} />
@@ -109,7 +142,9 @@ export function RecurringBuysScreen() {
           <View style={s.wash}>
             <Text style={TYPE.lbl}>NEXT 30 DAYS</Text>
             <Text style={s.total}>{loading ? "…" : money0(shownTotal)}</Text>
-            <Text style={s.washNote}>Pulled from your USDC balance. Cancel any time.</Text>
+            <Text style={s.washNote}>
+              Pulled from your USDC balance. Cancel any time.
+            </Text>
           </View>
         </Rise>
 
@@ -121,15 +156,24 @@ export function RecurringBuysScreen() {
           </View>
         ) : error ? (
           <View style={s.wash}>
-            <Text style={[TYPE.sub, { color: C.loss }]}>Couldn't load your standing orders.</Text>
-            <Button variant="quiet" size="sm" title="Try again" onPress={() => reload()} style={{ alignSelf: "flex-start", width: 140 }} />
+            <Text style={[TYPE.sub, { color: C.loss }]}>
+              Couldn't load your standing orders.
+            </Text>
+            <Button
+              variant="quiet"
+              size="sm"
+              title="Try again"
+              onPress={() => reload()}
+              style={{ alignSelf: "flex-start", width: 140 }}
+            />
           </View>
         ) : active.length === 0 && ended.length === 0 ? (
           <Rise delay={165}>
             <View style={[s.wash, { gap: 8 }]}>
               <Text style={TYPE.ttl}>No standing orders</Text>
               <Text style={[TYPE.sub, { fontSize: 13, lineHeight: 20 }]}>
-                Start one below, or open any stock or pre-IPO and choose Recurring to buy it on a schedule.
+                Start one below, or open any stock or pre-IPO and choose
+                Recurring to buy it on a schedule.
               </Text>
             </View>
           </Rise>
@@ -148,7 +192,12 @@ export function RecurringBuysScreen() {
                     style={s.cardTop}
                     accessibilityRole="button"
                   >
-                    <AssetAvatar symbol={r.stock.symbol} imageUrl={r.stock.imageUrl} size={40} radius={12} />
+                    <AssetAvatar
+                      symbol={r.stock.symbol}
+                      imageUrl={r.stock.imageUrl}
+                      size={40}
+                      radius={12}
+                    />
                     <View style={{ flex: 1, gap: 3 }}>
                       <Text style={s.sym}>{r.stock.symbol}</Text>
                       <Text style={TYPE.sub} numberOfLines={1}>
@@ -159,7 +208,10 @@ export function RecurringBuysScreen() {
                   </PressScale>
 
                   <View style={s.metaRow}>
-                    <Text style={s.meta}>MONTHLY · NEXT {dayDate(new Date(r.buyDate)).toUpperCase()}</Text>
+                    <Text style={s.meta}>
+                      MONTHLY · NEXT{" "}
+                      {dayDate(new Date(r.buyDate)).toUpperCase()}
+                    </Text>
                     <View style={s.status}>
                       <View style={s.dot} />
                       <Text style={[s.meta, { color: C.mint }]}>ACTIVE</Text>
@@ -190,13 +242,26 @@ export function RecurringBuysScreen() {
               </Rise>
             ))}
 
-            {ended.length ? <Text style={[TYPE.lbl, { color: C.ink4, marginTop: 14 }]}>ENDED</Text> : null}
+            {ended.length ? (
+              <Text style={[TYPE.lbl, { color: C.ink4, marginTop: 14 }]}>
+                ENDED
+              </Text>
+            ) : null}
             {ended.map((r) => (
               <View key={r.id} style={s.endedRow}>
-                <AssetAvatar symbol={r.stock.symbol} imageUrl={r.stock.imageUrl} size={34} radius={10} />
+                <AssetAvatar
+                  symbol={r.stock.symbol}
+                  imageUrl={r.stock.imageUrl}
+                  size={34}
+                  radius={10}
+                />
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[TYPE.ttl, { color: C.ink2 }]}>{r.stock.symbol}</Text>
-                  <Text style={TYPE.sub}>{amountOf(r)} every month · cancelled</Text>
+                  <Text style={[TYPE.ttl, { color: C.ink2 }]}>
+                    {r.stock.symbol}
+                  </Text>
+                  <Text style={TYPE.sub}>
+                    {amountOf(r)} every month · cancelled
+                  </Text>
                 </View>
               </View>
             ))}
@@ -216,20 +281,60 @@ const s = StyleSheet.create({
   page: { paddingHorizontal: 20, gap: 20 },
 
   wash: { backgroundColor: C.sunk, borderRadius: 18, padding: 16, gap: 10 },
-  total: { fontFamily: FONT.mono400, fontSize: 26, letterSpacing: em(26, -0.03), color: C.ink1, fontVariant: ["tabular-nums"] },
+  total: {
+    fontFamily: FONT.mono400,
+    fontSize: 26,
+    letterSpacing: em(26, -0.03),
+    color: C.ink1,
+    fontVariant: ["tabular-nums"],
+  },
   washNote: { fontFamily: FONT.sans400, fontSize: 12.5, color: C.ink2 },
 
   card: { backgroundColor: C.surface, borderRadius: 16, padding: 16, gap: 14 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 12 },
-  sym: { fontFamily: FONT.sans800, fontSize: 17, letterSpacing: em(17, -0.04), color: C.ink1 },
-  amt: { fontFamily: FONT.mono400, fontSize: 18, letterSpacing: em(18, -0.02), color: C.ink1, fontVariant: ["tabular-nums"] },
+  sym: {
+    fontFamily: FONT.sans800,
+    fontSize: 17,
+    letterSpacing: em(17, -0.04),
+    color: C.ink1,
+  },
+  amt: {
+    fontFamily: FONT.mono400,
+    fontSize: 18,
+    letterSpacing: em(18, -0.02),
+    color: C.ink1,
+    fontVariant: ["tabular-nums"],
+  },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  meta: { flex: 0, fontFamily: FONT.mono400, fontSize: 9.5, letterSpacing: em(9.5, 0.14), color: C.ink4 },
-  status: { marginLeft: "auto", flexDirection: "row", alignItems: "center", gap: 6 },
+  meta: {
+    flex: 0,
+    fontFamily: FONT.mono400,
+    fontSize: 9.5,
+    letterSpacing: em(9.5, 0.14),
+    color: C.ink4,
+  },
+  status: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   dot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.mint },
   cancelRow: { paddingTop: 4, borderTopWidth: 1, borderTopColor: C.hair },
-  linkDanger: { alignSelf: "flex-start", minHeight: 40, justifyContent: "center" },
+  linkDanger: {
+    alignSelf: "flex-start",
+    minHeight: 40,
+    justifyContent: "center",
+  },
   linkDangerText: { fontFamily: FONT.sans600, fontSize: 13.5, color: C.loss },
 
-  endedRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, opacity: 0.6, borderBottomWidth: 1, borderBottomColor: C.hair },
+  endedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 56,
+    opacity: 0.6,
+    borderBottomWidth: 1,
+    borderBottomColor: C.hair,
+  },
 });

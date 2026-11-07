@@ -52,6 +52,7 @@ import {
   Tag,
 } from "./PerpUi";
 import { useTradablePerps } from "../hooks/useTradablePerps";
+import { Image } from "expo-image";
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
 const clean = (t: string) => {
@@ -957,7 +958,13 @@ export function MarketPickerSheet({
                 },
               ]}
             >
-              <Logo sym={m.symbol} imageUrl={m.imageUrl} size={38} />
+              <Image
+                source={{ uri: m.imageUrl }}
+                style={{ width: 38, height: 38, borderRadius: 999 }}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                transition={150}
+              />
               <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
                 <View style={[s.rowC, { gap: 7 }]}>
                   <Text

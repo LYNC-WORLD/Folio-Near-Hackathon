@@ -29,26 +29,14 @@ import {
   QUIZ_SEEN_KEY,
 } from "@/components/perps/PerpSheets";
 import { AMBER, Btn, Kv, ON_MINT, ON_SHORT, Tag } from "@/components/perps/PerpUi";
-import { perpLabel } from "@/data/perps";
 import { OrderBook } from "@/components/perps/OrderBook";
-import { PerpToast } from "@/components/perps/PerpToast";
+import { PerpToast, toast } from "@/components/perps/PerpToast";
 import { LivePositionSheet } from "@/components/perps/LivePositionSheet";
 import { DockBalance } from "@/components/perps/DockBalance";
 import { TransferSheet } from "@/components/TransferSheet";
 import { ChartStage } from "@/components/perps/PerpChart";
 import { OrderTicketSheet } from "@/components/perps/OrderTicketSheet";
 import { C, FONT } from "@/theme";
-import {
-  TAKER,
-  fmtPx,
-  fundLeft,
-  marketOf,
-  mktOpen,
-  sMoney,
-  sPct,
-  sideTxt,
-  toast,
-} from "@/data/perpsStore";
 import {
   livePnl,
   liveRoe,
@@ -66,10 +54,12 @@ import {
 import { TpSlSheet } from "@/components/perps/TpSlSheet";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
-import { DEFAULT_PERP_MARKETS } from "@/data/perpMarketsDefault";
+import { useTradablePerps } from "@/hooks/useTradablePerps";
 import { useSpotToPerpDeposit } from "@/hooks/useSpotToPerpDeposit";
 import { LiveOrderSheet } from "@/components/perps/LiveOrderSheet";
 import { usePerpToSpotDeposit } from "@/hooks/perps/usePerpToSpotDeposit";
+import { TAKER, fundLeft, usMarketOpen } from "@/lib/perps";
+import { money, sMoney, sPct, sideTxt } from "@/lib/format";
 
 type PTab = "pos" | "ord" | "book" | "info";
 type TransferOpts = { dir?: "in" | "out"; amt?: number; then?: () => void };
@@ -104,21 +94,6 @@ const orderTone = (o: SymOrder): "long" | "short" =>
         ? "long"
         : "short";
 
-function metaOf(sym: string) {
-  try {
-    return marketOf(sym) ?? null;
-  } catch {
-    return null;
-  }
-}
-const labelOf = (sym: string) => {
-  const m = metaOf(sym);
-  try {
-    return m ? perpLabel(m) : sym;
-  } catch {
-    return sym;
-  }
-};
 const logoTxt = (sym: string) => sym.replace(/[^A-Z0-9]/g, "").slice(0, 3);
 
 export function TradeScreen() {
@@ -138,6 +113,7 @@ export function TradeScreen() {
   // ---- live data
   const session = usePerpsSession();
   const markets = useMarkets();
+  const tradable = useTradablePerps();
   const live = useLiveMarket(sym);
   const posQ = useAllPositions(session.idToken);
   const ordQ = useAllOrders(session.idToken);
@@ -170,7 +146,7 @@ export function TradeScreen() {
 
   useEffect(() => {
     if (withdrawPhase === "done") {
-      toast(`Moved ${fmtPx(withdrawAmount)} to spot`, "TRANSFER CONFIRMED");
+      toast(`Moved ${money(withdrawAmount)} to spot`, "TRANSFER CONFIRMED");
       resetWithdraw();
     } else if (withdrawPhase === "error" && withdrawError) {
       toast("Transfer issue", withdrawError.toUpperCase());
@@ -181,7 +157,7 @@ export function TradeScreen() {
 
   useEffect(() => {
     if (depositPhase === "done") {
-      toast(`Moved ${fmtPx(depositAmount)} to perp`, "TRANSFER CONFIRMED");
+      toast(`Moved ${money(depositAmount)} to perp`, "TRANSFER CONFIRMED");
       resetDeposit();
     } else if (depositPhase === "error" && depositError) {
       toast("Transfer issue", depositError.toUpperCase());
@@ -215,11 +191,10 @@ export function TradeScreen() {
       then: o?.then,
     });
 
-  const meta = metaOf(sym);
-  const label = labelOf(sym);
-  const category: string = "stocks";
-  const name: string = sym;
-  const open = meta ? mktOpen(meta) : true;
+  const listing = tradable.markets.find((m) => m.symbol === sym);
+  const label = sym;
+  const name: string = listing?.name ?? sym;
+  const open = usMarketOpen();
   const listed = !!live.market;
   const notListed = !markets.loading && !markets.error && !listed;
 
@@ -248,24 +223,17 @@ export function TradeScreen() {
       y: Math.max(0, chartY - 60),
       animated: true,
     });
-  const goSpot = () => {
-    if (category === "stocks")
-      (nav as any).navigate("Home", {
-        screen: "StockDetail",
-        params: { symbol: meta?.symbol ?? sym, category: "us-stock" },
-      });
-    else
-      toast(
-        "No spot page yet",
-        label.toUpperCase() + " IS PERP-ONLY IN THIS BUILD",
-      );
-  };
+  const goSpot = () =>
+    (nav as any).navigate("Home", {
+      screen: "StockDetail",
+      params: { symbol: sym, category: "us-stock" },
+    });
 
   const fr = live.fundingPct;
   const maxLev = listed ? Math.min(MAX_LEV, live.maxLeverage) : MAX_LEV;
   const stats: [string, string, "up" | "down" | null][] = [
-    ["MARK", fmtPx(live.mark), null],
-    ["ORACLE", fmtPx(live.oracle), null],
+    ["MARK", money(live.mark), null],
+    ["ORACLE", money(live.oracle), null],
     [
       "FUNDING / 1H",
       `${fr >= 0 ? "+" : "−"}${Math.abs(fr).toFixed(4)}%`,
@@ -306,9 +274,6 @@ export function TradeScreen() {
 
   const levLabel = Math.min(DEFAULT_LEV, maxLev);
 
-  const selectedMarket = DEFAULT_PERP_MARKETS.find(
-    (market) => market.marketSymbol === label,
-  );
 
   return (
     <SafeAreaView style={tradeStyles.safe} edges={["top"]}>
@@ -317,8 +282,8 @@ export function TradeScreen() {
           <ActivityIndicator size="small" color={C.mint} />
           <Text style={tradeStyles.depositBannerT}>
             {depositPhase === "depositing"
-              ? `Sending ${fmtPx(depositAmount)} to perp…`
-              : `Confirming transfer of ${fmtPx(depositAmount)}…`}
+              ? `Sending ${money(depositAmount)} to perp…`
+              : `Confirming transfer of ${money(depositAmount)}…`}
           </Text>
         </View>
       ) : withdrawPhase === "depositing" || withdrawPhase === "confirming" ? (
@@ -326,8 +291,8 @@ export function TradeScreen() {
           <ActivityIndicator size="small" color={C.mint} />
           <Text style={tradeStyles.depositBannerT}>
             {withdrawPhase === "depositing"
-              ? `Sending ${fmtPx(withdrawAmount)} to spot…`
-              : `Confirming transfer of ${fmtPx(withdrawAmount)}…`}
+              ? `Sending ${money(withdrawAmount)} to spot…`
+              : `Confirming transfer of ${money(withdrawAmount)}…`}
           </Text>
         </View>
       ) : null}
@@ -359,8 +324,8 @@ export function TradeScreen() {
                 overflow: "hidden",
               }}
             >
-              {selectedMarket?.imageUrl ? (
-                <SvgUri uri={selectedMarket.imageUrl} width={42} height={42} />
+              {listing?.imageUrl ? (
+                <SvgUri uri={listing.imageUrl} width={42} height={42} />
               ) : null}
             </View>
             <View style={{ gap: 3, flexShrink: 1 }}>
@@ -432,7 +397,7 @@ export function TradeScreen() {
                 socket !== "open" && { opacity: 0.5 },
               ]}
             >
-              {fmtPx(live.mark)}
+              {money(live.mark)}
             </Text>
             <Text style={[tradeStyles.chg, { color: tone(live.change24) }]}>
               {sPct(live.change24)}
@@ -469,7 +434,7 @@ export function TradeScreen() {
         ) : null}
 
         {/* market status */}
-        {meta ? (
+        {listing ? (
           <Pressable
             style={tradeStyles.status}
             hitSlop={{ top: 8, bottom: 8 }}
@@ -489,9 +454,7 @@ export function TradeScreen() {
               ]}
             />
             <Text style={tradeStyles.statusT}>
-              {category === "commodities"
-                ? String(meta.short ?? sym).toUpperCase() + " MARKET"
-                : "US MARKET"}{" "}
+              US MARKET{" "}
               {open
                 ? "OPEN · TRACKS THE LIVE PRICE"
                 : "CLOSED · PERP TRADES 24/7"}
@@ -580,14 +543,14 @@ export function TradeScreen() {
                     </View>
                     <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
                       <View style={[tradeStyles.rowC, { gap: 8 }]}>
-                        <Text style={tradeStyles.ttl}>{labelOf(p.sym)}</Text>
+                        <Text style={tradeStyles.ttl}>{p.sym}</Text>
                         <Tag
                           label={`${sideTxt(p.side)} ${p.lev}x`}
                           tone={p.side > 0 ? "long" : "short"}
                         />
                       </View>
                       <Text style={tradeStyles.entry} numberOfLines={1}>
-                        {fmtPx(p.entry)} → {fmtPx(mark)}
+                        {money(p.entry)} → {money(mark)}
                       </Text>
                     </View>
                     <View style={{ alignItems: "flex-end", gap: 4 }}>
@@ -607,7 +570,7 @@ export function TradeScreen() {
                       hitSlop={8}
                       style={tradeStyles.editBtn}
                       accessibilityRole="button"
-                      accessibilityLabel={`Edit take profit and stop loss for ${labelOf(p.sym)}`}
+                      accessibilityLabel={`Edit take profit and stop loss for ${p.sym}`}
                     >
                       <Svg
                         width={15}
@@ -666,14 +629,14 @@ export function TradeScreen() {
                       setSheet({ t: "order", id: o.id });
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`${ROLE_LABEL[o.role].toLowerCase()} order for ${labelOf(o.sym)}, tap for details`}
+                    accessibilityLabel={`${ROLE_LABEL[o.role].toLowerCase()} order for ${o.sym}, tap for details`}
                   >
                     <View style={tradeStyles.logo}>
                       <Text style={tradeStyles.logoT}>{logoTxt(o.sym)}</Text>
                     </View>
                     <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
                       <View style={[tradeStyles.rowC, { gap: 8 }]}>
-                        <Text style={tradeStyles.ttl}>{labelOf(o.sym)}</Text>
+                        <Text style={tradeStyles.ttl}>{o.sym}</Text>
                         <Tag label={ROLE_LABEL[o.role]} tone={t} />
                       </View>
                       <Text style={tradeStyles.entry} numberOfLines={1}>
@@ -689,7 +652,7 @@ export function TradeScreen() {
                           { color: t === "long" ? C.mint : C.loss },
                         ]}
                       >
-                        {fmtPx(o.px)}
+                        {money(o.px)}
                       </Text>
                       <Text style={[tradeStyles.roe, { color: C.ink3 }]}>
                         {sPct(dist)}
@@ -719,7 +682,7 @@ export function TradeScreen() {
             <View>
               {(
                 [
-                  ["UNDERLYING", category === "index" ? name + " index" : name],
+                  ["UNDERLYING", name],
                   ["VENUE", "Hyperliquid · " + live.coin],
                   ["MAX LEVERAGE", maxLev + "x"],
                   [
@@ -855,7 +818,7 @@ export function TradeScreen() {
         <TpSlSheet
           position={sheetTpSl}
           mark={markOf(sheetTpSl.coin, sheetTpSl.entry)}
-          label={labelOf(sheetTpSl.sym)}
+          label={sheetTpSl.sym}
           idToken={session.idToken}
           onClose={() => setSheet(null)}
           onSaved={refreshTrading}
@@ -866,7 +829,7 @@ export function TradeScreen() {
         <LivePositionSheet
           position={sheetPos}
           mark={markOf(sheetPos.coin, sheetPos.entry)}
-          label={labelOf(sheetPos.sym)}
+          label={sheetPos.sym}
           onClose={() => setSheet(null)}
           onEditTpSl={() => setSheet({ t: "tpsl", id: sheetPos.id })}
           onClosePosition={() =>
@@ -890,7 +853,7 @@ export function TradeScreen() {
         <LiveOrderSheet
           order={sheetOrd}
           mark={markOf(sheetOrd.coin, sheetOrd.px)}
-          label={labelOf(sheetOrd.sym)}
+          label={sheetOrd.sym}
           roleLabel={ROLE_LABEL[sheetOrd.role]}
           tone={orderTone(sheetOrd)}
           onClose={() => setSheet(null)}

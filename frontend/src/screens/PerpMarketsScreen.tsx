@@ -1,10 +1,16 @@
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -13,16 +19,10 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { HomeStackParamList } from "@/navigation/HomeStack";
 import type { TabParamList } from "@/navigation/types"; // ← fix path to where TabParamList lives
 import { C, FONT, TYPE } from "@/theme";
-import { Chip, PressScale, Rise } from "@/components/ui";
+import { PressScale, Rise } from "@/components/ui";
 import { money, pct } from "@/lib/format";
 import { hTap } from "@/lib/haptics";
-import {
-  PERP_CATEGORIES,
-  PERP_MARKETS,
-  perpLabel,
-  type PerpCategory,
-  type PerpMarket,
-} from "@/data/perps";
+import { useTradablePerps, type TradablePerp } from "@/hooks/useTradablePerps";
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<HomeStackParamList>,
@@ -32,18 +32,16 @@ type Nav = CompositeNavigationProp<
 export function PerpMarketsScreen() {
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const [cat, setCat] = useState<"all" | PerpCategory>("all");
+  const { markets, loading, error, refetch } = useTradablePerps();
 
   // most traded first
   const list = useMemo(
     () =>
-      PERP_MARKETS.filter((m) => cat === "all" || m.category === cat).sort(
-        (a, b) => b.vol24 - a.vol24,
-      ),
-    [cat],
+      [...markets].sort((a, b) => b.vol24Usd - a.vol24Usd),
+    [markets],
   );
 
-  const open = (m: PerpMarket) => {
+  const open = (m: TradablePerp) => {
     nav.navigate("Trade", { symbol: m.symbol });
     // clear this screen off the Home stack once the tab switch has covered it
     setTimeout(() => nav.popToTop(), 450);
@@ -52,7 +50,6 @@ export function PerpMarketsScreen() {
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
       <ScrollView
-        stickyHeaderIndices={[1]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: 8,
@@ -74,33 +71,21 @@ export function PerpMarketsScreen() {
           </Pressable>
           <Text style={TYPE.lbl}>PERP MARKETS</Text>
           <Text style={TYPE.h2}>
-            Long or short any of {PERP_MARKETS.length}
+            Long or short any of {markets.length}
           </Text>
         </View>
 
-        <View style={s.sticky}>
-          <View style={s.cats}>
-            {PERP_CATEGORIES.map((c) => (
-              <Chip
-                key={c.key}
-                label={c.label}
-                variant={c.key === cat ? "mint" : undefined}
-                onPress={() => setCat(c.key)}
-              />
-            ))}
-          </View>
-          <LinearGradient
-            pointerEvents="none"
-            colors={[C.ground, "rgba(10,11,14,0)"]}
-            style={s.fade}
-          />
-        </View>
-
         <View style={s.body}>
+          {loading ? (
+            <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+          ) : error ? (
+            <Pressable onPress={() => refetch()}>
+              <Text style={s.note}>Couldn't load markets. Tap to retry.</Text>
+            </Pressable>
+          ) : null}
           {list.map((m, i) => (
-            // keyed by category so rows re-cascade when you switch chips
             <Rise
-              key={`${cat}-${m.symbol}`}
+              key={m.symbol}
               delay={Math.min(i, 8) * 25}
               duration={300}
             >
@@ -122,7 +107,7 @@ function PerpRow({
   last,
   onPress,
 }: {
-  m: PerpMarket;
+  m: TradablePerp;
   last: boolean;
   onPress: () => void;
 }) {
@@ -145,10 +130,10 @@ function PerpRow({
       </View>
       <View style={s.mid}>
         <Text style={TYPE.ttl} numberOfLines={1}>
-          {perpLabel(m)}
+          {m.symbol}
         </Text>
         <Text style={TYPE.sub} numberOfLines={1}>
-          {m.name} · {m.kind}
+          {m.name} · up to {m.maxLev}x
         </Text>
       </View>
       <View style={s.right}>
@@ -167,9 +152,7 @@ const s = StyleSheet.create({
   back: { width: 44, height: 36, marginLeft: -8, justifyContent: "center" },
   backChev: { fontSize: 30, lineHeight: 32, color: C.ink1 },
 
-  sticky: { backgroundColor: C.ground, paddingHorizontal: 20, paddingTop: 4 },
-  cats: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  fade: { height: 18, marginHorizontal: -20, marginTop: 8 },
+  note: { ...TYPE.sub, paddingVertical: 14 },
 
   body: { paddingHorizontal: 20 },
   row: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12 },

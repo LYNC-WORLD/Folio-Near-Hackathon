@@ -4,7 +4,8 @@ import { PressScale } from "@/components/ui";
 import { C, FONT, em } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import { pct } from "@/lib/format";
-import { PerpMarket } from "@/data/perps";
+import { useRecentBars } from "@/hooks/perps";
+import type { TradablePerp } from "@/hooks/useTradablePerps";
 const GRID_GAP = 10;
 const GRID_PADDING = 20; // matches HomeScreen s.body paddingHorizontal
 
@@ -40,41 +41,57 @@ export function PerpStrip({
   markets,
   onPress,
 }: {
-  markets: PerpMarket[];
-  onPress: (m: PerpMarket) => void;
+  markets: TradablePerp[];
+  onPress: (m: TradablePerp) => void;
 }) {
   const { width } = useWindowDimensions();
   const cardWidth = (width - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
   return (
     <View style={s.row}>
-      {markets.map((m) => {
-        const up = m.change >= 0;
-        return (
-          <PressScale
-            key={m.symbol}
-            scaleTo={0.96}
-            onPress={() => {
-              hTap();
-              onPress(m);
-            }}
-            style={[s.card, { width: cardWidth }]}
-            accessibilityRole="button"
-            accessibilityLabel={`Trade ${m.short} perp, ${pct(m.change)} today`}
-          >
-            <Text style={s.label} numberOfLines={1}>
-              {m.short.toUpperCase()}
-            </Text>
-            <Sparkline data={m.series} up={up} />
-            <View style={s.foot}>
-              <Text style={[s.fig, { color: up ? C.mint : C.loss }]}>
-                {pct(m.change)}
-              </Text>
-              <Text style={s.lev}>{m.maxLev}X</Text>
-            </View>
-          </PressScale>
-        );
-      })}
+      {markets.map((m) => (
+        <PerpCard key={m.symbol} m={m} width={cardWidth} onPress={onPress} />
+      ))}
     </View>
+  );
+}
+
+function PerpCard({
+  m,
+  width,
+  onPress,
+}: {
+  m: TradablePerp;
+  width: number;
+  onPress: (m: TradablePerp) => void;
+}) {
+  const up = m.change >= 0;
+  const bars = useRecentBars(m.symbol, "1h", 24); // last 24h, hourly
+  return (
+    <PressScale
+      scaleTo={0.96}
+      onPress={() => {
+        hTap();
+        onPress(m);
+      }}
+      style={[s.card, { width }]}
+      accessibilityRole="button"
+      accessibilityLabel={`Trade ${m.name} perp, ${pct(m.change)} today`}
+    >
+      <Text style={s.label} numberOfLines={1}>
+        {m.name.toUpperCase()}
+      </Text>
+      {bars.length > 1 ? (
+        <Sparkline data={bars.map((b) => b.c)} up={up} />
+      ) : (
+        <View style={{ height: 26 }} />
+      )}
+      <View style={s.foot}>
+        <Text style={[s.fig, { color: up ? C.mint : C.loss }]}>
+          {pct(m.change)}
+        </Text>
+        <Text style={s.lev}>{m.maxLev}X</Text>
+      </View>
+    </PressScale>
   );
 }
 

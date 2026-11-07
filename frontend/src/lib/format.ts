@@ -21,3 +21,19 @@ export function dayChange(price: string | number, open?: string | null): number 
 /** "SpaceX" → "SPA", "T-BILL 3M" → "TBI" */
 export const assetCode = (sym: string) =>
   sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase();
+
+/** 1,234.56 (no currency sign) */
+export const fmtNum = (n: number) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** +$12.30 / −$4.00 */
+export const sMoney = (n: number) => (n >= 0 ? "+" : "−") + money(Math.abs(n));
+
+/** +2.15% / −1.40% */
+export const sPct = (n: number) => pct(n, 2);
+
+/** position size: fewer decimals for bigger sizes */
+export const qtyFmt = (q: number) =>
+  q >= 100 ? q.toFixed(1) : q >= 1 ? q.toFixed(3) : q.toFixed(4);
+
+export const sideTxt = (s: number) => (s > 0 ? "LONG" : "SHORT");

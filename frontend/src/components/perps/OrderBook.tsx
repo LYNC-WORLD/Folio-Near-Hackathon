@@ -1,10 +1,10 @@
 // Live order book for the Trade screen's "Order book" tab (l2Book WebSocket).
 import { ActivityIndicator, Text, View } from "react-native";
 import { C } from "@/theme";
-import { fmtNum, fmtPx, qtyFmt } from "@/data/perpsStore";
 import { useOrderBook } from "@/hooks/perps";
 import type { BookRow } from "@/services/hyperliquid/format";
 import { tradeStyles } from "@/screens/TradeScreen";
+import { fmtNum, money, qtyFmt } from "@/lib/format";
 
 export function OrderBook({ sym, label, depth = 10 }: { sym: string; label: string; depth?: number }) {
   const { bids, asks, spread, mid, ready } = useOrderBook(sym, depth);
@@ -51,7 +51,7 @@ export function OrderBook({ sym, label, depth = 10 }: { sym: string; label: stri
         </View>
       </View>
       <Text style={tradeStyles.foot}>
-        SPREAD {fmtPx(spread)} · {mid ? ((spread / mid) * 100).toFixed(3) : "0.000"}% · LIVE
+        SPREAD {money(spread)} · {mid ? ((spread / mid) * 100).toFixed(3) : "0.000"}% · LIVE
       </Text>
     </View>
   );

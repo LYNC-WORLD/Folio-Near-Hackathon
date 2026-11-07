@@ -2,10 +2,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { PressScale } from "@/components/ui";
 import { C, FONT, TYPE, em } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import type { PerpCategory } from "@/hooks/usePerpPositions";
 import { UiPosition } from "@/hooks/perps";
 
-export type PerpRow = UiPosition & { category?: PerpCategory };
+export type PerpRow = UiPosition;
 
 const usd = (n: number) =>
   "$" +
@@ -127,30 +126,24 @@ export function PerpPositionRow({
   );
 }
 
-// The list under the chips. `category` is your current chip value ("all" | "stocks" | "index" | "commodities").
+// The perps tab list on Portfolio.
 export function PerpPositionList({
   positions,
-  category,
   onOpen,
   onOpenTrade,
 }: {
   positions: PerpRow[];
-  category: "all" | PerpCategory;
   onOpen?: (p: PerpRow) => void;
   onOpenTrade: () => void;
 }) {
-  const rows = positions.filter(
-    (p) => category === "all" || (p.category ?? "stocks") === category,
-  );
+  const rows = positions;
   if (!rows.length) {
     return (
       <View style={s.empty}>
         <Text style={TYPE.sub}>
-          {positions.length
-            ? "No perps in this category."
-            : "No perp positions. Go long or short on stocks, index funds and commodities."}
+          No perp positions. Go long or short on US stocks.
         </Text>
-        {!positions.length && (
+        {!rows.length && (
           <PressScale
             onPress={onOpenTrade}
             style={s.cta}

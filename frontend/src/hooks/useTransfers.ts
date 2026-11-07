@@ -4,10 +4,10 @@
 //   <TransferSheet {...transfers} onClose={...} />
 // The host screen must mount <PerpToast /> for the toasts to show.
 import { useEffect } from "react";
-import { toast } from "@/data/perpsStore";
 import { money } from "@/lib/format";
 import { useSpotToPerpDeposit } from "./useSpotToPerpDeposit";
 import { usePerpToSpotDeposit } from "./perps/usePerpToSpotDeposit";
+import { toast } from "@/components/perps/PerpToast";
 
 export function useTransfers(onSettled?: () => void) {
   const dep = useSpotToPerpDeposit();

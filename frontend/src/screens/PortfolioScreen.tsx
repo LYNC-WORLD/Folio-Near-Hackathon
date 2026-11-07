@@ -56,7 +56,6 @@ import { dayDate } from "@/lib/trade";
 import { hSelect, hTap } from "@/lib/haptics";
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { ChartPeriod } from "@/hooks";
-import { usePerpPositions, type PerpCategory } from "@/hooks/usePerpPositions";
 import { useAllPositions } from "@/hooks/perps";
 
 type Nav = BottomTabNavigationProp<TabParamList, "Portfolio">;
@@ -84,14 +83,6 @@ const CATS: [Cat, string][] = [
   ["index", "Index funds"],
 ];
 
-// Perps have no Pre-IPO market; commodities (gold, oil…) are perp-only.
-type PerpCat = "all" | PerpCategory;
-const PERP_CATS: [PerpCat, string][] = [
-  ["all", "All"],
-  ["stocks", "Stocks"],
-  ["index", "Index funds"],
-  ["commodities", "Commodities"],
-];
 
 export function PortfolioScreen() {
   const nav = useNavigation<Nav>();
@@ -101,7 +92,6 @@ export function PortfolioScreen() {
   const sheet = useSheet();
   const toast = useToast();
   const following = useFollowing();
-  const perp = usePerpPositions();
   const walletBal = useWalletBalance();
   const bal = {
     perp: walletBal.perpAvailable,
@@ -220,7 +210,6 @@ export function PortfolioScreen() {
   // ---------- positions ----------
   const [tab, setTab] = useState<Tab>("open");
   const [cat, setCat] = useState<Cat>("all");
-  const [perpCat, setPerpCat] = useState<PerpCat>("all");
 
   const moves = useMemo(() => {
     const m = new Map<string, number | null>();
@@ -272,14 +261,13 @@ export function PortfolioScreen() {
     .sort((a, b) => Number(b.isActive) - Number(a.isActive))
     .filter((r) => cat === "all" || r.stock.stockType === cat);
 
-  // chips + active value depend on the tab (Perps has its own set)
-  const chipList: [string, string][] = tab === "perp" ? PERP_CATS : CATS;
-  const activeChip = tab === "perp" ? perpCat : cat;
+  // filter chips (the Perps tab has none: every perp is a US stock)
+  const chipList: [string, string][] = tab === "perp" ? [] : CATS;
+  const activeChip = cat;
   const pickChip = (k: string) => {
     if (k === activeChip) return;
     hSelect();
-    if (tab === "perp") setPerpCat(k as PerpCat);
-    else setCat(k as Cat);
+    setCat(k as Cat);
   };
 
   // ---------- identity ----------
@@ -376,7 +364,7 @@ export function PortfolioScreen() {
           value: p.value,
           change: p.change,
         }))}
-        perp={{ positions: perp.positions, pnl: perp.pnl }}
+        perp={{ positions: allPos.data, pnl: perpPnl }}
       />,
       { label: "Share" },
     );
@@ -620,8 +608,8 @@ export function PortfolioScreen() {
 
               <PerpSummaryLine
                 equity={walletBal.perpAvailable}
-                pnl={perp.pnl}
-                count={perp.positions.length}
+                pnl={perpPnl}
+                count={allPos.data.length}
               />
               <PressScale
                 scaleTo={0.97}
@@ -641,7 +629,7 @@ export function PortfolioScreen() {
             <View style={s.posHeadText}>
               {tab === "perp" ? (
                 <PerpsHeader
-                  count={perp.positions.length}
+                  count={allPos.data.length}
                   margin={perpMargin}
                   pnl={perpPnl}
                 />
@@ -684,28 +672,30 @@ export function PortfolioScreen() {
             </View>
           </Rise>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.fchipsWrap}
-            contentContainerStyle={s.fchips}
-          >
-            {chipList.map(([k, t]) => (
-              <Pressable
-                key={k}
-                onPress={() => pickChip(k)}
-                style={[s.fchip, activeChip === k && s.fchipOn]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: activeChip === k }}
-              >
-                <Text
-                  style={[s.fchipText, activeChip === k && { color: C.ink1 }]}
+          {chipList.length ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={s.fchipsWrap}
+              contentContainerStyle={s.fchips}
+            >
+              {chipList.map(([k, t]) => (
+                <Pressable
+                  key={k}
+                  onPress={() => pickChip(k)}
+                  style={[s.fchip, activeChip === k && s.fchipOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: activeChip === k }}
                 >
-                  {t}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                  <Text
+                    style={[s.fchipText, activeChip === k && { color: C.ink1 }]}
+                  >
+                    {t}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
 
           {/* rows — keyed by tab + filter so they cascade in on every switch */}
           <Animated.View
@@ -728,7 +718,6 @@ export function PortfolioScreen() {
               ) : (
                 <PerpPositionList
                   positions={allPos.data}
-                  category={perpCat}
                   onOpen={openPerp}
                   onOpenTrade={openPerp}
                 />
@@ -942,7 +931,7 @@ export function PortfolioScreen() {
         </View>
       </ScrollView>
 
-      {/* TransferSheet fires its success toast through perpsStore, so PerpToast must be mounted here */}
+      {/* useTransfers fires its toasts through PerpToast, so it must be mounted here */}
       <PerpToast />
 
       {xfer ? (

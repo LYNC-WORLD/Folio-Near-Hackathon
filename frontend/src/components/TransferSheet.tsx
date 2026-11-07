@@ -24,10 +24,10 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path, Rect } from "react-native-svg";
 import { C, FONT } from "@/theme";
-import { fmtPx } from "@/data/perpsStore";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { hTap } from "@/lib/haptics";
 import { Btn, CARD, Check, H2, Body, Lbl, Sheet } from "./perps/PerpUi";
+import { money } from "@/lib/format";
 
 export type TransferStatus = {
   phase: "idle" | "depositing" | "confirming" | "done" | "error";
@@ -102,12 +102,12 @@ const Card = memo(function Card({
         <Text style={s.k}>
           {role} · {which === "spot" ? "SPOT WALLET" : "PERP ACCOUNT"}
         </Text>
-        <Text style={s.bal}>{fmtPx(bal)}</Text>
+        <Text style={s.bal}>{money(bal)}</Text>
       </View>
       <View style={{ alignItems: "flex-end", gap: 4 }}>
         <Text style={s.k}>AFTER</Text>
         <Text style={[s.after, { color: col }]}>
-          {fmtPx(Math.max(0, after))}
+          {money(Math.max(0, after))}
         </Text>
       </View>
     </View>
@@ -250,7 +250,7 @@ export function TransferSheet({
           <H2 style={{ fontSize: 19 }}>Moving money</H2>
           <ActivityIndicator color={C.mint} size="large" />
           <Text style={s.mono}>
-            {fmtPx(amt)} · {inb ? "SPOT → PERP" : "PERP → SPOT"}
+            {money(amt)} · {inb ? "SPOT → PERP" : "PERP → SPOT"}
           </Text>
         </View>
       ) : phase === "submitted" ? (
@@ -259,7 +259,7 @@ export function TransferSheet({
           <View style={[s.center, { gap: 14, paddingTop: 6 }]}>
             <Check />
             <H2 style={{ textAlign: "center" }}>
-              Moved {fmtPx(result.amount)} {inb ? "to perp" : "to spot"}
+              Moved {money(result.amount)} {inb ? "to perp" : "to spot"}
             </H2>
             <Body style={{ textAlign: "center", fontSize: 13 }}>
               {inb
@@ -283,7 +283,7 @@ export function TransferSheet({
             <ActivityIndicator color={C.mint} size="large" />
             <H2 style={{ textAlign: "center" }}>Transfer submitted</H2>
             <Body style={{ textAlign: "center", fontSize: 13 }}>
-              Moving {fmtPx(amt)} to your {inb ? "perp account" : "spot wallet"}
+              Moving {money(amt)} to your {inb ? "perp account" : "spot wallet"}
               . This can take up to 5 minutes — you can close this now and we'll
               let you know once it's done.
             </Body>
@@ -364,7 +364,7 @@ export function TransferSheet({
                 </View>
               </View>
               <View style={{ alignItems: "flex-end", gap: 3 }}>
-                <Text style={s.avail}>{fmtPx(src)}</Text>
+                <Text style={s.avail}>{money(src)}</Text>
                 <Text style={s.availK}>
                   {inb ? "IN SPOT WALLET" : "FREE IN PERP ACCOUNT"}
                 </Text>
@@ -408,8 +408,8 @@ export function TransferSheet({
               over
                 ? `More than you have in your ${inb ? "spot wallet" : "perp account"}`
                 : under
-                  ? `Minimum transfer is ${fmtPx(MIN_AMOUNT)}`
-                  : `Move ${fmtPx(amt)} ${inb ? "to perp" : "to spot"}`
+                  ? `Minimum transfer is ${money(MIN_AMOUNT)}`
+                  : `Move ${money(amt)} ${inb ? "to perp" : "to spot"}`
             }
             onPress={submit}
           />

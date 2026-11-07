@@ -1,12 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { usePerps } from "@/data/perpsStore";
 import { tradeStyles } from "@/screens/TradeScreen";
 
+// Tiny toast bus: call toast() from anywhere; every mounted <PerpToast /> shows it.
+type Toast = { id: number; title: string; sub?: string } | null;
+let current: Toast = null;
+const listeners = new Set<() => void>();
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+const snapshot = () => current;
+
+export function toast(title: string, sub?: string) {
+  current = { id: Date.now(), title, sub };
+  listeners.forEach((l) => l());
+}
+
 export function PerpToast() {
-  const { toast: t } = usePerps();
+  const t = useSyncExternalStore(subscribe, snapshot, snapshot);
   const insets = useSafeAreaInsets();
   const [shown, setShown] = useState<typeof t>(null);
   useEffect(() => {

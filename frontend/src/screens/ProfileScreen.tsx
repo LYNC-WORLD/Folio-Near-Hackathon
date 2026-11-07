@@ -52,7 +52,7 @@ import { useFollowing } from "@/lib/follows";
 import { NOTIFY_OPTIONS, setNotify, useNotifyPrefs } from "@/lib/notifyPrefs";
 import { money, money0 } from "@/lib/format";
 import { hTap } from "@/lib/haptics";
-import { usePerpPositions } from "@/hooks/usePerpPositions";
+import { useAllPositions } from "@/hooks/perps/useSymbolTrading";
 import { useBalances } from "@/hooks/useBalances";
 import { useTransfers } from "@/hooks/useTransfers";
 
@@ -78,7 +78,7 @@ export function ProfileScreen() {
     refresh,
   } = useWallet();
   const txs = useUserTransactions(idToken ?? undefined);
-  const perp = usePerpPositions();
+  const perpPositions = useAllPositions(idToken).data;
   const bal = useBalances(); // { spot, perp }
 
   const { recurringBuys, reload: reloadRecurring } = useRecurringBuys();
@@ -313,7 +313,7 @@ export function ProfileScreen() {
             <LinkRow
               title="Perp positions"
               value={
-                perp.positions.length ? `${perp.positions.length} open` : "None"
+                perpPositions.length ? `${perpPositions.length} open` : "None"
               }
               onPress={() => nav.getParent()?.navigate("Portfolio" as never)}
             />
@@ -380,7 +380,7 @@ export function ProfileScreen() {
         </Rise>
       </ScrollView>
 
-      {/* TransferSheet fires its success toast through perpsStore, so PerpToast must be mounted here */}
+      {/* useTransfers fires its toasts through PerpToast, so it must be mounted here */}
       <PerpToast />
 
       {xfer ? (

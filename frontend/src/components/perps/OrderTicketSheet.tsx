@@ -13,18 +13,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import {
-  MIN_MARGIN,
-  TAKER,
-  fmtPx,
-  fundLeft,
-  marketOf,
-  preCheck,
-  qtyFmt,
-  sMoney,
-  sideTxt,
-  toast,
-} from "@/data/perpsStore";
+import { useTradablePerps } from "@/hooks/useTradablePerps";
 import {
   AMBER,
   Body,
@@ -44,9 +33,12 @@ import {
 } from "./PerpUi";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import { useAccount, useLiveMarket, usePerpsSession } from "@/hooks/perps";
+import { useAccount, useLiveMarket, usePerpsSession, useRecentBars } from "@/hooks/perps";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { errMsg, toSym } from "@/services/hyperliquid/format";
+import { MIN_MARGIN, TAKER, fundLeft, preCheck } from "@/lib/perps";
+import { money, qtyFmt, sMoney, sideTxt } from "@/lib/format";
+import { toast } from "@/components/perps/PerpToast";
 
 type OrderType = "Market" | "Limit";
 type MarginMode = "ISOLATED" | "CROSS";
@@ -124,25 +116,6 @@ const clean = (t: string) => {
 const num = (t: string) => parseFloat(t) || 0;
 const ceil2 = (n: number) => Math.ceil(n * 100) / 100;
 
-function metaOf(sym: string) {
-  try {
-    return marketOf(sym) ?? null;
-  } catch {
-    return null;
-  }
-}
-function safeCheck(sym: string, dist: number): [string, string] {
-  try {
-    return preCheck(sym, dist) as [string, string];
-  } catch {
-    return dist < 5
-      ? ["bad", "Liquidation is very close. A small move closes this trade."]
-      : dist < 12
-        ? ["warn", "A normal day's move could reach your liquidation price."]
-        : ["ok", "Liquidation is a fair distance away."];
-  }
-}
-
 export function OrderTicketSheet({
   sym,
   initialSide,
@@ -167,9 +140,10 @@ export function OrderTicketSheet({
   const live = useLiveMarket(sym);
   const acct = useAccount(session.address);
 
-  const meta = metaOf(sym);
-  const nm: string = meta?.short ?? toSym(sym);
-  const unit: string = meta?.category === "stocks" ? (meta?.symbol ?? nm) : nm;
+  const listing = useTradablePerps().markets.find((m) => m.symbol === toSym(sym));
+  const nm: string = listing?.name ?? toSym(sym);
+  const unit: string = toSym(sym);
+  const days = useRecentBars(sym, "1d", 90);
   const mk = live.mark;
   const exchangeMaxLev = Math.max(1, live.maxLeverage);
   const maxLev = Math.min(MAX_LEV, exchangeMaxLev); // what the user can pick
@@ -220,8 +194,8 @@ export function OrderTicketSheet({
     : en;
   const dist = en ? (Math.abs(liq - en) / en) * 100 : 0;
   const [tone, toneTxt] = useMemo(
-    () => safeCheck(sym, dist || 0.01),
-    [sym, dist],
+    () => preCheck(nm, side, dist || 0.01, days),
+    [nm, side, dist, days],
   );
   const toneCol = tone === "ok" ? C.mint : tone === "warn" ? AMBER : C.loss;
   const fpay = notional * (live.fundingPct / 100) * side;
@@ -254,7 +228,7 @@ export function OrderTicketSheet({
   if (tpOn && tp && (side > 0 ? tp <= en : tp >= en))
     bad = `Take profit has to be ${side > 0 ? "above" : "below"} your entry.`;
   if (tpOn && sl && (side > 0 ? sl >= en || sl <= liq : sl <= en || sl >= liq))
-    bad = `Stop loss has to sit between your entry and ${fmtPx(liq)}.`;
+    bad = `Stop loss has to sit between your entry and ${money(liq)}.`;
 
   const setType = (t: OrderType) => {
     setOtype(t);
@@ -313,7 +287,7 @@ export function OrderTicketSheet({
   const holdNeeded = lev >= 25 && !short;
   const btnLabel = short
     ? canMove
-      ? `Move ${fmtPx(needUp)} from spot`
+      ? `Move ${money(needUp)} from spot`
       : "Add funds to trade"
     : lev >= 25
       ? `Hold to ${otype === "Market" ? "open" : "place"} ${lev}x ${side > 0 ? "long" : "short"}`
@@ -345,19 +319,19 @@ export function OrderTicketSheet({
     const col = side > 0 ? C.mint : C.loss;
     const rows: [string, string][] = isPos
       ? [
-          ["ENTRY", fmtPx(entry)],
-          ["SIZE", fmtPx(result.size * entry) + " · " + lev + "x"],
-          ["MARGIN", fmtPx(mg)],
-          ["LIQUIDATION (EST.)", fmtPx(liq)],
-          ["FEE (EST.)", fmtPx(fee)],
+          ["ENTRY", money(entry)],
+          ["SIZE", money(result.size * entry) + " · " + lev + "x"],
+          ["MARGIN", money(mg)],
+          ["LIQUIDATION (EST.)", money(liq)],
+          ["FEE (EST.)", money(fee)],
         ]
       : [
-          ["PRICE", fmtPx(num(opx))],
+          ["PRICE", money(num(opx))],
           ["SIDE", sideTxt(side) + " · " + lev + "x"],
-          ["MARGIN HELD", fmtPx(mg)],
+          ["MARGIN HELD", money(mg)],
         ];
-    if (tpOn && tp) rows.push(["TAKE PROFIT", fmtPx(tp)]);
-    if (tpOn && sl) rows.push(["STOP LOSS", fmtPx(sl)]);
+    if (tpOn && tp) rows.push(["TAKE PROFIT", money(tp)]);
+    if (tpOn && sl) rows.push(["STOP LOSS", money(sl)]);
     return (
       <Sheet onClose={onClose}>
         <View style={{ alignItems: "center", gap: 14, paddingTop: 6 }}>
@@ -370,7 +344,7 @@ export function OrderTicketSheet({
           <Body style={{ textAlign: "center", fontSize: 13 }}>
             {isPos
               ? "It is on your chart with its liquidation line."
-              : `It fills when ${nm} reaches ${fmtPx(num(opx))}. Your ${fmtPx(mg)} is set aside until then.`}
+              : `It fills when ${nm} reaches ${money(num(opx))}. Your ${money(mg)} is set aside until then.`}
           </Body>
         </View>
         <KvCard>
@@ -402,7 +376,7 @@ export function OrderTicketSheet({
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={s.ttl}>{nm} perp</Text>
           <Text style={[s.mono, { color: C.ink3, letterSpacing: 0 }]}>
-            {mk ? fmtPx(mk) + " mark" : "Loading price…"}
+            {mk ? money(mk) + " mark" : "Loading price…"}
           </Text>
         </View>
         <Tag label={`UP TO ${maxLev}X`} />
@@ -506,7 +480,7 @@ export function OrderTicketSheet({
                 { fontSize: 13.5, color: "#E4E8EE", letterSpacing: 0 },
               ]}
             >
-              {acct.loading ? "…" : fmtPx(usdc)}
+              {acct.loading ? "…" : money(usdc)}
             </Text>
             <Text style={[s.mono, { fontSize: 8.5, color: C.ink4 }]}>
               IN PERP ACCOUNT
@@ -535,7 +509,7 @@ export function OrderTicketSheet({
           accessibilityRole="button"
         >
           <Text style={s.xferT}>
-            Move money from spot · {fmtPx(spotBal)} there ›
+            Move money from spot · {money(spotBal)} there ›
           </Text>
         </Pressable>
       </View>
@@ -562,20 +536,20 @@ export function OrderTicketSheet({
               { fontSize: 12.5, color: C.ink1, letterSpacing: 0 },
             ]}
           >
-            {mg > 0 ? `${fmtPx(notional)} · ${qtyFmt(qty)} ${unit}` : "—"}
+            {mg > 0 ? `${money(notional)} · ${qtyFmt(qty)} ${unit}` : "—"}
           </Text>
         </View>
         <Text style={s.say}>
           {mg > 0 ? (
             <>
               If {nm} {side > 0 ? "falls" : "rises"} to{" "}
-              <Text style={[s.b, { color: C.loss }]}>{fmtPx(liq)}</Text> (
+              <Text style={[s.b, { color: C.loss }]}>{money(liq)}</Text> (
               {side > 0 ? "−" : "+"}
               {dist.toFixed(1)}%), this closes and you lose your{" "}
-              <Text style={s.b}>{fmtPx(mg)}</Text>. A{" "}
+              <Text style={s.b}>{money(mg)}</Text>. A{" "}
               {side > 0 ? "rise" : "fall"} of 5% makes{" "}
               <Text style={[s.b, { color: C.mint }]}>
-                {fmtPx(notional * 0.05)}
+                {money(notional * 0.05)}
               </Text>
               .
             </>
@@ -638,7 +612,7 @@ export function OrderTicketSheet({
             </View>
             {tp ? (
               <Text style={[s.mono, { color: C.mint, fontSize: 12 }]}>
-                {tpMode === "pct" ? `${fmtPx(tp)} · ` : ""}
+                {tpMode === "pct" ? `${money(tp)} · ` : ""}
                 {sMoney(side * (tp - en) * qty)}
               </Text>
             ) : null}
@@ -682,7 +656,7 @@ export function OrderTicketSheet({
             </View>
             {sl ? (
               <Text style={[s.mono, { color: C.loss, fontSize: 12 }]}>
-                {slMode === "pct" ? `${fmtPx(sl)} · ` : ""}
+                {slMode === "pct" ? `${money(sl)} · ` : ""}
                 {sMoney(side * (sl - en) * qty)}
               </Text>
             ) : null}
@@ -710,13 +684,13 @@ export function OrderTicketSheet({
       </View>
 
       <View>
-        <Kv k="FEE (EST.)" v={`${fmtPx(fee)} · ${(TAKER * 100).toFixed(3)}%`} />
+        <Kv k="FEE (EST.)" v={`${money(fee)} · ${(TAKER * 100).toFixed(3)}%`} />
         <Kv
           k={`FUNDING · NEXT IN ${fundLeft()}`}
           v={
             <Text style={[s.kvV, { color: fpay > 0 ? C.loss : C.mint }]}>
               {fpay > 0 ? "you pay " : "you get "}
-              {fmtPx(Math.abs(fpay))}
+              {money(Math.abs(fpay))}
             </Text>
           }
           last
@@ -748,8 +722,8 @@ export function OrderTicketSheet({
           </Text>
           <Text style={s.coachT}>
             {canMove
-              ? `Your perp account has ${fmtPx(usdc)}. Move ${fmtPx(needUp)} from your spot wallet to open this trade.`
-              : `Your perp account has ${fmtPx(usdc)} and your spot wallet ${fmtPx(spotBal)}. Add ${fmtPx(needUp)} straight to your perp account to open this trade.`}
+              ? `Your perp account has ${money(usdc)}. Move ${money(needUp)} from your spot wallet to open this trade.`
+              : `Your perp account has ${money(usdc)} and your spot wallet ${money(spotBal)}. Add ${money(needUp)} straight to your perp account to open this trade.`}
           </Text>
         </View>
       ) : bad ? (

@@ -2,12 +2,13 @@ import { memo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Body, Btn, CARD, H2, Lbl, Sheet, Tag } from "./PerpUi";
-import { fmtPx, sMoney, sideTxt, toast } from "@/data/perpsStore";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { errMsg } from "@/services/hyperliquid/format";
 import type { UiPosition } from "@/hooks/perps";
+import { money, sMoney, sideTxt } from "@/lib/format";
+import { toast } from "@/components/perps/PerpToast";
 
 const clean = (t: string) => {
   const x = t.replace(/[^0-9.]/g, "");
@@ -243,11 +244,11 @@ export function TpSlSheet({
               tone={long ? "long" : "short"}
             />
           </View>
-          <Text style={s.bal}>{fmtPx(p.entry)}</Text>
+          <Text style={s.bal}>{money(p.entry)}</Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 4 }}>
           <Text style={s.k}>MARK</Text>
-          <Text style={s.after}>{fmtPx(mark)}</Text>
+          <Text style={s.after}>{money(mark)}</Text>
         </View>
       </View>
 

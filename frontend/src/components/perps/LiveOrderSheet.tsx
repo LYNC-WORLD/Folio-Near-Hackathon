@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "./PerpUi";
-import { fmtPx, sPct, toast } from "@/data/perpsStore";
 import { C } from "@/theme";
 import { errMsg } from "@/services/hyperliquid/format";
 import type { SymOrder } from "@/hooks/perps/useSymbolTrading";
+import { money, sPct } from "@/lib/format";
+import { toast } from "@/components/perps/PerpToast";
 
 const NOTE: Record<SymOrder["role"], string> = {
   tp: "When the price reaches this level, your position closes at market to lock in profit.",
@@ -39,7 +40,7 @@ export function LiveOrderSheet({
     setBusy(true);
     try {
       await onCancelOrder();
-      toast("Order cancelled", `${label.toUpperCase()} · ${fmtPx(o.px)}`);
+      toast("Order cancelled", `${label.toUpperCase()} · ${money(o.px)}`);
       onClose();
     } catch (e) {
       toast("Couldn't cancel", errMsg(e).toUpperCase());
@@ -54,10 +55,10 @@ export function LiveOrderSheet({
     ...(o.isTrigger
       ? ([["TRIGGER", o.triggerText]] as [string, string][])
       : []),
-    [o.isTrigger ? "TRIGGER PRICE" : "LIMIT PRICE", fmtPx(o.px)],
-    ["MARK", fmtPx(mark)],
+    [o.isTrigger ? "TRIGGER PRICE" : "LIMIT PRICE", money(o.px)],
+    ["MARK", money(mark)],
     ["DISTANCE FROM MARK", sPct(dist)],
-    ["SIZE", fullPos ? "Full position" : `${o.size} · ${fmtPx(o.size * o.px)}`],
+    ["SIZE", fullPos ? "Full position" : `${o.size} · ${money(o.size * o.px)}`],
     ["REDUCE ONLY", o.reduceOnly ? "Yes" : "No"],
     ["PLACED", new Date(o.placedAt).toLocaleString()],
     ["ORDER ID", String(o.oid)],
@@ -71,7 +72,7 @@ export function LiveOrderSheet({
       </View>
       <View style={{ flexDirection: "row", alignItems: "baseline", gap: 10 }}>
         <Text style={{ fontSize: 28, fontWeight: "800", color: col }}>
-          {fmtPx(o.px)}
+          {money(o.px)}
         </Text>
         <Text style={{ fontSize: 13, color: C.ink3 }}>
           {sPct(dist)} from mark

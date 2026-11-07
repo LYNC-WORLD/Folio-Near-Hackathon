@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "./PerpUi";
-import { fmtPx, sMoney, sPct, sideTxt, toast } from "@/data/perpsStore";
 import { C } from "@/theme";
 import { livePnl, liveRoe, type UiPosition } from "@/hooks/perps";
 import { errMsg } from "@/services/hyperliquid/format";
 import { hTap } from "@/lib/haptics";
 import Svg, { Path } from "react-native-svg";
+import { money, sMoney, sPct, sideTxt } from "@/lib/format";
+import { toast } from "@/components/perps/PerpToast";
 
 export function LivePositionSheet({
   position: p,
@@ -43,13 +44,13 @@ export function LivePositionSheet({
   };
 
   const rows: [string, string][] = [
-    ["SIZE", `${p.size} · ${fmtPx(p.size * mark)}`],
-    ["ENTRY", fmtPx(p.entry)],
-    ["MARK", fmtPx(mark)],
-    ["LIQUIDATION", p.liq != null ? fmtPx(p.liq) : "—"],
-    ["MARGIN", `${fmtPx(p.margin)} · ${p.isCross ? "cross" : "isolated"}`],
-    ["TAKE PROFIT", p.tp != null ? fmtPx(p.tp) : "Not set"],
-    ["STOP LOSS", p.sl != null ? fmtPx(p.sl) : "Not set"],
+    ["SIZE", `${p.size} · ${money(p.size * mark)}`],
+    ["ENTRY", money(p.entry)],
+    ["MARK", money(mark)],
+    ["LIQUIDATION", p.liq != null ? money(p.liq) : "—"],
+    ["MARGIN", `${money(p.margin)} · ${p.isCross ? "cross" : "isolated"}`],
+    ["TAKE PROFIT", p.tp != null ? money(p.tp) : "Not set"],
+    ["STOP LOSS", p.sl != null ? money(p.sl) : "Not set"],
     ["FUNDING SINCE OPEN", sMoney(p.fundingSinceOpen)],
   ];
 

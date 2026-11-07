@@ -26,7 +26,7 @@ import Animated, {
 import Svg, { Circle, Path } from "react-native-svg";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import { MAXLEV } from "@/data/perpsStore";
+import { MAXLEV } from "@/lib/perps";
 
 export const AMBER = "#E8A33D";
 export const ON_MINT = "#06120D";

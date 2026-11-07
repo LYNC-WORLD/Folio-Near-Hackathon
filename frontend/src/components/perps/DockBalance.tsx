@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import { fmtPx } from "@/data/perpsStore";
+import { money } from "@/lib/format";
 
 export function DockBalance({
   perp,
@@ -15,7 +15,7 @@ export function DockBalance({
   return (
     <View style={s.row}>
       <Text style={s.k}>PERP ACCOUNT</Text>
-      <Text style={s.v}>{fmtPx(perp)}</Text>
+      <Text style={s.v}>{money(perp)}</Text>
       <View style={{ flex: 1 }} />
       <Pressable
         onPress={() => {

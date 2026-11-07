@@ -36,7 +36,8 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { ChartPeriod } from "@/hooks";
-import { money, money0 } from "@/lib/format";
+import { money, money0, sideTxt } from "@/lib/format";
+import type { UiPosition } from "@/hooks/perps";
 import { usePortfolioSeries } from "@/hooks/usePortfolioSeries";
 import { C, em, FONT } from "@/theme";
 import { hSelect, hTap } from "@/lib/haptics";
@@ -71,7 +72,7 @@ type Props = {
   holdings: { mint: string; balance: number; price: number }[]; // for the chart
   usdcValue: number;
   positions: ShareHolding[]; // for Top holdings
-  perp: { positions: any[]; pnl: number };
+  perp: { positions: UiPosition[]; pnl: number };
 };
 
 const H = 130; // chart height
@@ -187,10 +188,8 @@ export function ShareSheet({
   const invested = positions.reduce((s, p) => s + p.value, 0);
 
   // ---- perps tab ----
-  const roeOf = (p: any): number =>
-    Number(p.roe ?? p.pnlPct ?? p.returnPct ?? 0) || 0;
   const bestRoe = perp.positions.length
-    ? Math.max(...perp.positions.map(roeOf))
+    ? Math.max(...perp.positions.map((p) => p.roe))
     : 0;
 
   // ---- actions ----
@@ -418,19 +417,18 @@ export function ShareSheet({
                   </Text>
                 </View>
                 {perp.positions.slice(0, 3).map((p, i) => {
-                  const r = roeOf(p);
+                  const r = p.roe;
                   return (
-                    <View key={p.symbol ?? i} style={s.row}>
+                    <View key={p.id} style={s.row}>
                       <AssetAvatar
-                        symbol={String(p.symbol ?? "?")}
+                        symbol={p.sym}
                         size={34}
                         radius={999}
                       />
                       <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={s.rowTtl}>{p.symbol}</Text>
+                        <Text style={s.rowTtl}>{p.sym}</Text>
                         <Text style={s.side}>
-                          {String(p.side ?? "").toUpperCase()}
-                          {p.leverage ? ` ${p.leverage}x` : ""}
+                          {sideTxt(p.side)} {p.lev}x
                         </Text>
                       </View>
                       <Text

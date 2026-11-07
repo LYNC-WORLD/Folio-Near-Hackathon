@@ -26,7 +26,6 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
-import { sideTxt, sMoney, fmtNum } from "@/data/perpsStore";
 import {
   CIND,
   CTYPES,
@@ -41,7 +40,7 @@ import {
   type Bar,
   type ChartType,
   type IndKey,
-} from "@/data/perpsChart";
+} from "@/lib/perpsChart";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import {
@@ -51,6 +50,7 @@ import {
   type UiOrder,
   type UiPosition,
 } from "@/hooks/perps";
+import { sideTxt, sMoney, fmtNum } from "@/lib/format";
 
 const UP = "#37E099",
   DN = "#F0604D",

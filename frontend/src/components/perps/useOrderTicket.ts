@@ -1,18 +1,19 @@
 // Order ticket state: side, type, margin, leverage, TP/SL, the live quote (orderQuote),
 // the analyst check, and placing the order through the backend.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { C } from "@/theme";
 import { AMBER } from "./PerpUi";
 import { toast } from "./PerpToast";
 import { useTradablePerps } from "@/hooks/useTradablePerps";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useWallet } from "@/context/WalletContext";
 import {
   useLiveMarket,
   usePerpsSession,
   useRecentBars,
 } from "@/hooks/perps";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
-import { errMsg, toSym } from "@/services/hyperliquid/format";
+import { errMsg, newCloid, toSym } from "@/services/hyperliquid/format";
+import { ApiError } from "@/services/api/client";
 import { TAKER, orderQuote, preCheck, type TpSlMode } from "@/lib/perps";
 import { money } from "@/lib/format";
 
@@ -39,7 +40,7 @@ export function useOrderTicket({
   const session = usePerpsSession();
   const live = useLiveMarket(sym);
   // perpBal comes from the wallet balance query; show "…" until it has loaded
-  const balLoading = useWalletBalance().loading;
+  const balLoading = useWallet().loading;
 
   const listing = useTradablePerps().markets.find((m) => m.symbol === toSym(sym));
   const nm: string = listing?.name ?? toSym(sym);
@@ -124,12 +125,21 @@ export function useOrderTicket({
     setMarginT(String(Math.floor(max * p) / 100));
   };
 
+  // One id per order. Kept when we can't tell whether the order went through
+  // (timeout / network), so trying again can't open a second position.
+  const cloid = useRef<`0x${string}` | null>(null);
+  const submitting = useRef(false);
+
   const go = async () => {
+    if (submitting.current) return; // double tap
+    submitting.current = true;
     setErr("");
     setPhase("busy");
+    cloid.current ??= newCloid();
     try {
       const token = session.idToken ?? "";
       const common = {
+        cloid: cloid.current,
         stockSymbol: sym,
         dollarSize: mg,
         leverage: lev,
@@ -149,6 +159,7 @@ export function useOrderTicket({
                 token,
               ),
             );
+      cloid.current = null;
       if (r.status === "error") throw new Error(r.error ?? "Order rejected");
       setResult({
         filled: r.status === "filled",
@@ -157,10 +168,21 @@ export function useOrderTicket({
       });
       setPhase("done");
     } catch (e) {
-      const m = errMsg(e);
-      setErr(m);
-      toast("Order not placed", m.toUpperCase());
+      const unknown =
+        e instanceof ApiError && (e.code === "TIMEOUT" || e.code === "NETWORK");
+      if (unknown) {
+        const m = "We couldn't confirm this order. Check your positions before trying again.";
+        setErr(m);
+        toast("Order status unknown", "CHECK YOUR POSITIONS");
+      } else {
+        cloid.current = null; // the backend answered: this order is settled
+        const m = errMsg(e);
+        setErr(m);
+        toast("Order not placed", m.toUpperCase());
+      }
       setPhase("form");
+    } finally {
+      submitting.current = false;
     }
   };
 

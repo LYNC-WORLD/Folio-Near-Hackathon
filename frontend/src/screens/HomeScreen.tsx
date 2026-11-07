@@ -31,7 +31,8 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useIndexFunds, useStocks, useWalletBalance } from "@/hooks";
+import { useIndexFunds, useStocks } from "@/hooks";
+import { useWallet } from "@/context/WalletContext";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useAuth } from "@/context";
 import type { HomeStackParamList } from "@/navigation/HomeStack"; // use the file where TabParamList actually lives
@@ -101,7 +102,7 @@ export function HomeScreen() {
     wallet,
     loading: walletLoading,
     error: walletError,
-  } = useWalletBalance();
+  } = useWallet();
   const usdc = wallet ? wallet.usdc.balance * Number(wallet.usdc.price) : 0;
   const shownUsdc = useCountUp(usdc);
 

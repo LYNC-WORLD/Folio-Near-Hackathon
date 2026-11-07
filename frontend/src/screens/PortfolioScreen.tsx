@@ -10,7 +10,6 @@ import { useIndexFunds, useStocks } from "@/hooks";
 import { useRecurringBuys } from "@/hooks/useTrade";
 import { useUserTransactions } from "@/hooks/useUserRecords";
 import { useCountUp } from "@/hooks/useCountUp";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useAllPositions } from "@/hooks/perps";
 import { getOnboardingProfile } from "@/lib";
@@ -53,10 +52,10 @@ export function PortfolioScreen() {
   const sheet = useSheet();
   const toast = useToast();
   const following = useFollowing();
-  const walletBal = useWalletBalance();
+  const walletBal = useWallet();
   const bal = {
     perp: walletBal.perpAvailable,
-    spot: walletBal.wallet?.usdc.balance ?? 0,
+    spot: walletBal.usdc?.balance ?? 0,
   };
   const [xfer, setXfer] = useState(false);
   const [xferDir, setXferDir] = useState<"in" | "out">("in");
@@ -88,15 +87,15 @@ export function PortfolioScreen() {
 
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   useEffect(() => {
-    getOnboardingProfile().then(setProfile);
-  }, []);
+    if (user) getOnboardingProfile(user.id).then(setProfile);
+  }, [user]);
 
   // ---------- value + chart ----------
   const value = usePortfolioValue({
     tokens,
     usdcValue,
     usdValue,
-    perpTotal: walletBal.perpTotal,
+    perpTotal: walletBal.perpValue,
   });
   const cash = useCountUp(usdcValue);
 

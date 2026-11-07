@@ -87,8 +87,8 @@ export function ProfileScreen() {
 
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   useEffect(() => {
-    getOnboardingProfile().then(setProfile);
-  }, []);
+    if (user) getOnboardingProfile(user.id).then(setProfile);
+  }, [user]);
 
   const total = useCountUp(bal.perp + usdValue);
   const [signingOut, setSigningOut] = useState(false);

@@ -136,8 +136,8 @@ export function SignalsScreen() {
   const { recurringBuys } = useRecurringBuys();
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   useEffect(() => {
-    getOnboardingProfile().then(setProfile);
-  }, []);
+    if (user) getOnboardingProfile(user.id).then(setProfile);
+  }, [user]);
 
   // ---------- context from real data ----------
   const ctx = useMemo<AnalystContext>(() => {

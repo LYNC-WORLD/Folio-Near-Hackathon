@@ -24,7 +24,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path, Rect } from "react-native-svg";
 import { C, FONT } from "@/theme";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useWallet } from "@/context/WalletContext";
 import { hTap } from "@/lib/haptics";
 import { Btn, CARD, Check, H2, Body, Lbl, Sheet } from "./perps/PerpUi";
 import { money } from "@/lib/format";
@@ -135,8 +135,8 @@ export function TransferSheet({
   depositStatus?: TransferStatus;
   withdrawStatus?: TransferStatus;
 }) {
-  const wallet = useWalletBalance();
-  const spot = wallet.wallet?.usdc.balance ?? 0;
+  const wallet = useWallet();
+  const spot = wallet.usdc?.balance ?? 0;
   const perp = wallet.perpAvailable;
   const [dir, setDir] = useState<"in" | "out">(dir0);
   const src0 = dir0 === "in" ? spot : perp;

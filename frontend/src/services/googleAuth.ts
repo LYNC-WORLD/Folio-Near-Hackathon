@@ -41,4 +41,14 @@ export async function restoreGoogleSession(): Promise<GoogleSession | null> {
   return res.type === "success" ? toSession(res.data) : null;
 }
 
+// Fresh idToken for the signed-in user without any UI (Google idTokens last ~1h).
+// Returns null if there is no saved sign-in to refresh.
+export async function refreshGoogleSession(): Promise<GoogleSession | null> {
+  const res = await GoogleSignin.signInSilently();
+  if (res.type !== "success") return null;
+  // getTokens refreshes the idToken if it has expired
+  const { idToken } = await GoogleSignin.getTokens();
+  return toSession({ user: res.data.user, idToken });
+}
+
 export const signOutGoogle = () => GoogleSignin.signOut();

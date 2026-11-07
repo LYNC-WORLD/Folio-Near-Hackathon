@@ -1,5 +1,4 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "./index";
@@ -9,8 +8,11 @@ import {
   MyPerpLeaderboard,
   PerpLeaderboardEntry,
 } from "@/services/leaderboard";
+import { getUserItem, setUserItem } from "@/lib/userStorage";
 
-const CACHE_KEY = "folio.perpLeaderboard.v1";
+// v2: stored per user. The old shared v1 cache is left behind on purpose, it may hold
+// another account's rank.
+const CACHE_KEY = "folio.perpLeaderboard.v2";
 
 type Board = {
   entries: PerpLeaderboardEntry[];
@@ -28,21 +30,28 @@ type Value = Board & {
 const Ctx = createContext<Value | null>(null);
 
 export function LeaderboardProvider({ children }: { children: ReactNode }) {
-  const { idToken } = useAuth();
+  const { idToken, user } = useAuth();
+  const userId = user?.id;
 
-  // paint the last board from disk while the network request runs
+  // paint this user's last board from disk while the network request runs
   const [cached, setCached] = useState<Board | null>(null);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    AsyncStorage.getItem(CACHE_KEY)
-      .then((raw) => raw && setCached(JSON.parse(raw)))
+    setCached(null);
+    if (!userId) return;
+    let live = true;
+    getUserItem(CACHE_KEY, userId)
+      .then((raw) => live && raw && setCached(JSON.parse(raw)))
       .catch(() => {})
-      .finally(() => setHydrated(true));
-  }, []);
+      .finally(() => live && setHydrated(true));
+    return () => {
+      live = false;
+    };
+  }, [userId]);
 
   // refetches on app foreground via focusManager (App.tsx), at most once a minute
   const query = useQuery({
-    queryKey: ["perpLeaderboard", idToken],
+    queryKey: ["perpLeaderboard", userId],
     queryFn: async (): Promise<Board> => {
       const [board, mine] = await Promise.all([
         getPerpLeaderboard(idToken!, { limit: 50, offset: 0 }),
@@ -53,10 +62,10 @@ export function LeaderboardProvider({ children }: { children: ReactNode }) {
         totalRanked: board.data.totalRanked,
         me: mine.data,
       };
-      AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fresh)).catch(() => {});
+      setUserItem(CACHE_KEY, userId!, JSON.stringify(fresh)).catch(() => {});
       return fresh;
     },
-    enabled: !!idToken,
+    enabled: !!idToken && !!userId,
     staleTime: 60_000,
   });
 

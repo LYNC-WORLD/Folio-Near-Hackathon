@@ -24,9 +24,43 @@ type RequestOptions = {
 // Strip trailing slashes so `${BASE_URL}${path}` never becomes "//api/..."
 const BASE_URL = ENV.API_URL.replace(/\/+$/, "");
 
+/** Given the token the server just rejected, returns a fresh one (or null if signed out). */
+type TokenRefresher = (staleToken: string) => Promise<string | null>;
+let refreshToken: TokenRefresher | null = null;
+
+/** AuthProvider registers how to get a fresh token; returns an unregister function. */
+export function setTokenRefresher(fn: TokenRefresher) {
+  refreshToken = fn;
+  return () => {
+    if (refreshToken === fn) refreshToken = null;
+  };
+}
+
 export async function request<T>(
   path: string,
-  { method = "GET", body, token, timeoutMs = 15000 }: RequestOptions = {},
+  opts: RequestOptions = {},
+): Promise<T> {
+  try {
+    return await send<T>(path, opts);
+  } catch (e) {
+    // Expired token: refresh once and retry. A 401 means the server did nothing,
+    // so retrying is safe even for orders.
+    if (
+      !(e instanceof ApiError && e.status === 401) ||
+      !opts.token ||
+      !refreshToken
+    ) {
+      throw e;
+    }
+    const fresh = await refreshToken(opts.token).catch(() => null);
+    if (!fresh || fresh === opts.token) throw e;
+    return send<T>(path, { ...opts, token: fresh });
+  }
+}
+
+async function send<T>(
+  path: string,
+  { method = "GET", body, token, timeoutMs = 15000 }: RequestOptions,
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

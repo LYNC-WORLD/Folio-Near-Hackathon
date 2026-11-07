@@ -11,9 +11,13 @@ import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Animated, { Easing, FadeIn } from "react-native-reanimated";
 import { queryClient } from "./src/lib/queryClient";
+import {
+  getUserItem,
+  removeUserItem,
+  setUserItem,
+} from "./src/lib/userStorage";
 import { AuthProvider, useAuth } from "./src/context";
 import { C } from "./src/theme/colors";
 import { fontsToLoad } from "./src/theme/fonts";
@@ -65,25 +69,28 @@ function Root() {
     return () => sub.remove();
   }, []);
 
-  // Check onboarding status once we know a user is signed in.
+  // Check onboarding status once we know a user is signed in (saved per user).
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) {
-      setHasOnboarded(null);
-      return;
-    }
-    AsyncStorage.getItem(ONBOARDED_KEY)
-      .then((v) => setHasOnboarded(v === "true"))
-      .catch(() => setHasOnboarded(false));
-  }, [user]);
+    setHasOnboarded(null);
+    if (!userId) return;
+    let live = true;
+    getUserItem(ONBOARDED_KEY, userId)
+      .then((v) => live && setHasOnboarded(v === "true"))
+      .catch(() => live && setHasOnboarded(false));
+    return () => {
+      live = false;
+    };
+  }, [userId]);
 
   const completeOnboarding = () => {
-    AsyncStorage.setItem(ONBOARDED_KEY, "true").catch(() => {});
+    if (userId) setUserItem(ONBOARDED_KEY, userId, "true").catch(() => {});
     setHasOnboarded(true);
   };
 
   // Account → "Retake the questions": back to onboarding (fades in like any phase change)
   const retakeOnboarding = () => {
-    AsyncStorage.removeItem(ONBOARDED_KEY).catch(() => {});
+    if (userId) removeUserItem(ONBOARDED_KEY, userId).catch(() => {});
     setHasOnboarded(false);
   };
 

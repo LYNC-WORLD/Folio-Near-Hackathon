@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  OrderApi,
+  OpenOrderApi,
   PositionApi,
   tradeService,
   unwrap,
 } from "@/services/perps/tradeService";
+import { useAuth } from "@/context/AuthContext";
 import { UiOrder, UiPosition } from "./account";
 
 const POLL_MS = 5000;
@@ -45,7 +46,7 @@ export type SymOrder = UiOrder & {
   isPositionTpsl: boolean;
 };
 
-const toOrder = (r: OrderApi): SymOrder => {
+const toOrder = (r: OpenOrderApi): SymOrder => {
   const o = r.order.order;
   const ot = o.orderType.toLowerCase();
   const role: OrderRole = ot.includes("take profit")
@@ -82,8 +83,10 @@ function usePolled<A, T>(
   fetcher: (token: string) => Promise<A[]>,
   map: (a: A) => T,
 ) {
+  // keyed by user, not token: a refreshed token shouldn't throw away the data
+  const userId = useAuth().user?.id;
   const query = useQuery({
-    queryKey: [key, idToken],
+    queryKey: [key, userId],
     queryFn: async () => ((await fetcher(idToken!)) ?? []).map(map),
     enabled: !!idToken,
     refetchInterval: POLL_MS,

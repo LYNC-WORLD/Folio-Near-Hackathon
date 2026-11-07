@@ -28,7 +28,7 @@ export function ProfileSummaryScreen({ navigation, route }: Props) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { idToken } = useAuth();
+  const { idToken, user } = useAuth();
 
   const handleEnter = async () => {
     if (isSubmitting) return;
@@ -49,7 +49,7 @@ export function ProfileSummaryScreen({ navigation, route }: Props) {
       };
 
       await submitLoginForm(payload, idToken!);
-      saveOnboardingProfile(profile);
+      if (user) saveOnboardingProfile(user.id, profile);
       hSuccess();
       onComplete?.();
     } catch (err) {

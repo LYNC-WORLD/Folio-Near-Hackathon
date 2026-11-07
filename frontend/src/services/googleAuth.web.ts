@@ -3,21 +3,11 @@ import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
 import type { GoogleSession } from "@/types";
 import { ENV } from "@/config";
+import { decodeJwt, jwtExpiresAt } from "@/lib/jwt";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const STORAGE_KEY = "google_session";
-
-function decodeJwt(token: string): Record<string, any> {
-  const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-  const json = decodeURIComponent(
-    atob(payload)
-      .split("")
-      .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
-      .join("")
-  );
-  return JSON.parse(json);
-}
 
 function toSession(idToken: string): GoogleSession {
   const c = decodeJwt(idToken);
@@ -74,8 +64,8 @@ export async function restoreGoogleSession(): Promise<GoogleSession | null> {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw) as GoogleSession;
-    const { exp } = decodeJwt(session.idToken);
-    if (exp * 1000 < Date.now()) {
+    const exp = jwtExpiresAt(session.idToken);
+    if (!exp || exp < Date.now()) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
@@ -84,6 +74,10 @@ export async function restoreGoogleSession(): Promise<GoogleSession | null> {
     return null;
   }
 }
+
+// The implicit web flow has no refresh token, so the stored idToken is all there is:
+// still valid -> keep it, expired -> null (the user signs in again).
+export const refreshGoogleSession = restoreGoogleSession;
 
 export async function signOutGoogle(): Promise<void> {
   try {

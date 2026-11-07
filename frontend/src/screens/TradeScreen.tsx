@@ -37,7 +37,7 @@ import {
   type SymOrder,
 } from "@/hooks/perps/useSymbolTrading";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useWallet } from "@/context/WalletContext";
 import { useTradablePerps } from "@/hooks/useTradablePerps";
 import { useTransfers } from "@/hooks/useTransfers";
 import { TransferBanner } from "./trade/TransferBanner";
@@ -87,10 +87,10 @@ export function TradeScreen() {
     ordQ.refetch();
   };
   const socket = useSocketStatus();
-  const walletBal = useWalletBalance();
+  const walletBal = useWallet();
   const bal = {
     perp: walletBal.perpAvailable,
-    spot: walletBal.wallet?.usdc.balance ?? 0,
+    spot: walletBal.usdc?.balance ?? 0,
   };
 
   // transfer requests + their toasts; the phases also drive the top banner

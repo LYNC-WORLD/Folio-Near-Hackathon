@@ -4,6 +4,10 @@
 
 import { request } from "@/services/api/client";
 
+// Orders go through our backend and on to Hyperliquid: give them longer than plain reads,
+// since a timeout leaves the user not knowing whether the order went through.
+const ORDER_TIMEOUT_MS = 30_000;
+
 export interface PlaceOrderBase {
   stockSymbol: string;
   dollarSize: number;
@@ -14,6 +18,8 @@ export interface PlaceOrderBase {
   slPrice: number | undefined;
   tpPercent: number | undefined;
   slPercent: number | undefined;
+  /** client order id: the same id on a retry lets the backend refuse a duplicate */
+  cloid: `0x${string}`;
 }
 export type PlaceMarketOrder = PlaceOrderBase;
 export interface PlaceLimitOrder extends PlaceOrderBase {
@@ -37,18 +43,6 @@ export interface PositionApi {
 export interface PositionResponse {
   type: "oneWay" | string;
   position: PositionApi | null;
-}
-
-export interface OrderApi {
-  oid: number;
-  coin: string;
-  stockSymbol: string;
-  isBuy: boolean;
-  orderType: "market" | "limit" | "stop";
-  price: string;
-  size: string;
-  reduceOnly?: boolean;
-  timestamp?: number; // ms
 }
 
 export interface ApiResponse<T> {
@@ -128,7 +122,8 @@ export interface OpenOrderInner {
   cloid: string | null;
 }
 
-export interface OrderApi {
+/** One row of /api/perp-trade/open-orders and orders-by-symbol. */
+export interface OpenOrderApi {
   status: string; // "order"
   order: {
     order: OpenOrderInner;
@@ -229,6 +224,7 @@ export const tradeService = {
       method: "POST",
       token: idToken,
       body: payload,
+      timeoutMs: ORDER_TIMEOUT_MS,
     }),
 
   placeLimitOrder: (payload: PlaceLimitOrder, idToken: string) =>
@@ -236,6 +232,7 @@ export const tradeService = {
       method: "POST",
       token: idToken,
       body: payload,
+      timeoutMs: ORDER_TIMEOUT_MS,
     }),
 
   /** Called after the user signed approveAgent, so the backend can verify via extraAgents. */
@@ -258,7 +255,7 @@ export const tradeService = {
     }),
 
   getOrdersBySymbol: (stock: string, idToken: string) =>
-    request<ApiResponse<OrderApi[]>>(
+    request<ApiResponse<OpenOrderApi[]>>(
       `/api/perp-trade/orders-by-symbol/${encodeURIComponent(stock)}`,
       { method: "GET", token: idToken },
     ),
@@ -269,7 +266,7 @@ export const tradeService = {
       { method: "POST", token: idToken, body: payload },
     ),
   getAllOrders: (idToken: string) =>
-    request<ApiResponse<OrderApi[]>>("/api/perp-trade/open-orders", {
+    request<ApiResponse<OpenOrderApi[]>>("/api/perp-trade/open-orders", {
       method: "GET",
       token: idToken,
     }),

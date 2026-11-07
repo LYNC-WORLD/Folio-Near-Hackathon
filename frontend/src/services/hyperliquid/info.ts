@@ -72,10 +72,4 @@ export const hlInfo = {
       aggregateByTime: true,
       ...(endTime ? { endTime } : {}),
     }),
-
-  /** Approved builder fee in tenths of a basis point (0.05% -> 50). 0 = not approved. */
-  maxBuilderFee: (user: Address, builder: Address) => info<number>({ type: "maxBuilderFee", user, builder }),
-
-  extraAgents: (user: Address) =>
-    info<{ address: Address; name: string; validUntil: number }[]>({ type: "extraAgents", user }),
 };

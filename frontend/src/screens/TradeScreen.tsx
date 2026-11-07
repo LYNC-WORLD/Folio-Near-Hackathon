@@ -29,7 +29,6 @@ import {
   refreshMarkets,
   useMarkOf,
   useMarketsSelect,
-  usePerpsSession,
 } from "@/hooks/perps";
 import { toCoin } from "@/services/hyperliquid/format";
 import {
@@ -39,6 +38,8 @@ import {
 } from "@/hooks/perps/useSymbolTrading";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { useWallet } from "@/context/WalletContext";
+import { useAuth } from "@/context/AuthContext";
+import { DEFAULT_LEV, MAX_LEV } from "@/lib/perps";
 import { usePerpListing } from "@/hooks/useTradablePerps";
 import { useTransfers } from "@/hooks/useTransfers";
 import { TransferBanner } from "./trade/TransferBanner";
@@ -60,8 +61,6 @@ type SheetState =
   | { t: "tpsl"; id: string }
   | { t: "transfer"; dir: "in" | "out"; amt?: number; then?: () => void };
 
-const MAX_LEV = 10;
-const DEFAULT_LEV = 10;
 
 export function TradeScreen() {
   const nav = useNavigation<BottomTabNavigationProp<TabParamList, "Trade">>();
@@ -78,15 +77,15 @@ export function TradeScreen() {
 
   // ---- data. Live prices are read by the parts that show them (MarketSummary,
   // TradePanel, the sheets), so price ticks don't re-render this whole screen.
-  const session = usePerpsSession();
+  const { idToken } = useAuth();
   const coin = toCoin(sym);
   const listed = useMarketsSelect((s) => !!s.byCoin[coin]);
   const exchangeMaxLev = useMarketsSelect((s) => s.byCoin[coin]?.maxLeverage ?? 1);
   const marketsLoading = useMarketsSelect((s) => s.loading);
   const marketsError = useMarketsSelect((s) => s.error);
   const listing = usePerpListing(sym);
-  const posQ = useAllPositions(session.idToken);
-  const ordQ = useAllOrders(session.idToken);
+  const posQ = useAllPositions(idToken);
+  const ordQ = useAllOrders(idToken);
   const refreshTrading = () => {
     posQ.refetch();
     ordQ.refetch();
@@ -155,11 +154,11 @@ export function TradeScreen() {
     sheet?.t === "tpsl" ? positions.find((p) => p.id === sheet.id) : undefined;
 
   const cancelOrder = async (o: SymOrder) => {
-    if (!session.idToken) throw new Error("Sign in first");
+    if (!idToken) throw new Error("Sign in first");
     await unwrap(
       tradeService.cancelPerpOrder(
         { assetSymbol: o.coin, orderId: String(o.oid) },
-        session.idToken,
+        idToken,
       ),
     );
     refreshTrading();
@@ -304,7 +303,7 @@ export function TradeScreen() {
               position={sheetTpSl}
               mark={mark}
               label={sheetTpSl.sym}
-              idToken={session.idToken}
+              idToken={idToken}
               onClose={() => setSheet(null)}
               onSaved={refreshTrading}
             />
@@ -325,7 +324,7 @@ export function TradeScreen() {
                 unwrap(
                   tradeService.closePosition(
                     { stockSymbol: sheetPos.sym },
-                    session.idToken ?? "",
+                    idToken ?? "",
                   ),
                 ).then(() => refreshTrading())
               }

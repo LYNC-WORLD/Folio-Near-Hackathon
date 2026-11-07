@@ -3,7 +3,13 @@
 import type { Bar } from "./perpsChart";
 import { money } from "./format";
 
-export const MAXLEV = 50;
+/** Most leverage Folio lets anyone pick (a market may allow less). */
+export const MAX_LEV = 10;
+/** Leverage the ticket starts on (capped to the market's max). */
+export const DEFAULT_LEV = 10;
+/** From here up the order button must be held to confirm. Above MAX_LEV today, so it
+ *  only kicks in if the cap is ever raised — kept so that can't drop the safety check. */
+export const HOLD_FROM_LEV = 25;
 export const MIN_MARGIN = 3;
 export const TAKER = 0.0006; // 0.06 %
 
@@ -94,6 +100,8 @@ export function orderQuote(o: {
   perp: number;
   /** money in the spot wallet that could be moved in */
   spot: number;
+  /** cross margin: the whole free perp balance backs the trade, not just `margin` */
+  cross?: boolean;
 }) {
   const { side, mark, margin: mg, lev } = o;
   const en = o.market ? mark * (1 + side * 0.0003) : o.limitPx || mark;
@@ -101,10 +109,16 @@ export function orderQuote(o: {
     qty = en ? notional / en : 0,
     fee = notional * TAKER;
   const MMR = 1 / (2 * o.maxLev); // Hyperliquid: half the initial margin at max leverage
+  // What a liquidation would take. Isolated: this trade's margin. Cross: the whole free
+  // perp balance, estimated as if this were the only cross position (others share it).
+  const atRisk = o.cross ? Math.max(mg, o.perp - fee) : mg;
   const liq = qty
-    ? side > 0
-      ? en - (mg - MMR * qty * en) / qty
-      : en + (mg - MMR * qty * en) / qty
+    ? Math.max(
+        0, // a long with enough backing can't be liquidated above $0
+        side > 0
+          ? en - (atRisk - MMR * qty * en) / qty
+          : en + (atRisk - MMR * qty * en) / qty,
+      )
     : en;
   const dist = en ? (Math.abs(liq - en) / en) * 100 : 0;
   const tp = o.tpIn
@@ -137,5 +151,5 @@ export function orderQuote(o: {
   if (o.tpOn && sl && (side > 0 ? sl >= en || sl <= liq : sl <= en || sl >= liq))
     bad = `Stop loss has to sit between your entry and ${money(liq)}.`;
 
-  return { en, notional, qty, fee, liq, dist, tp, sl, need, canMove, needUp, bad };
+  return { en, notional, qty, fee, liq, dist, atRisk, tp, sl, need, canMove, needUp, bad };
 }

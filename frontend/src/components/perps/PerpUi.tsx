@@ -27,7 +27,7 @@ import Animated, {
 import Svg, { Circle, Path } from "react-native-svg";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import { MAXLEV, fundLeft } from "@/lib/perps";
+import { MAX_LEV, fundLeft } from "@/lib/perps";
 
 export const AMBER = C.amber;
 export const ON_MINT = C.onMint;
@@ -396,7 +396,7 @@ export const levTone = (l: number) =>
 export function LeverageSlider({
   value,
   onChange,
-  max = MAXLEV,
+  max = MAX_LEV,
 }: {
   value: number;
   onChange: (v: number) => void;

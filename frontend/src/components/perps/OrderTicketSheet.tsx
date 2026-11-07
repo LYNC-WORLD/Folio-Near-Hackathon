@@ -1,6 +1,6 @@
 // src/components/perps/OrderTicketSheet.tsx — Long / Short ticket: side, order type, margin,
-// leverage, liquidation preview, analyst check, TP/SL, fees, hold-to-confirm (25x+), success card.
-// Sends real orders through useTradeActions -> backend -> Hyperliquid.
+// leverage, liquidation preview, analyst check, TP/SL, fees, hold-to-confirm (high leverage), success card.
+// Sends real orders through useOrderTicket -> backend (/api/perp-trade/*) -> Hyperliquid.
 // Margin comes from the PERP account (perpBal); spot money is moved in with onTransfer.
 import {
   ActivityIndicator,
@@ -139,6 +139,7 @@ export function OrderTicketSheet({
     otype,
     marginMode,
     setMarginMode,
+    onlyIsolated,
     tpMode,
     setTpMode,
     slMode,
@@ -165,6 +166,7 @@ export function OrderTicketSheet({
     fee,
     liq,
     dist,
+    atRisk,
     toneTxt,
     toneCol,
     fpay,
@@ -267,19 +269,24 @@ export function OrderTicketSheet({
               onPress={() => setMarginMode("ISOLATED")}
             />
           </View>
-          <View style={{ flex: 1 }}>
-            <Radio
-              label="Cross"
-              sub="Uses your whole account"
-              on={marginMode === "CROSS"}
-              onPress={() => setMarginMode("CROSS")}
-            />
-          </View>
+          {onlyIsolated ? null : (
+            <View style={{ flex: 1 }}>
+              <Radio
+                label="Cross"
+                sub="Uses your whole account"
+                on={marginMode === "CROSS"}
+                onPress={() => setMarginMode("CROSS")}
+              />
+            </View>
+          )}
         </View>
-        {marginMode === "CROSS" ? (
+        {onlyIsolated ? (
+          <Text style={s.sub}>This market trades with isolated margin only.</Text>
+        ) : marginMode === "CROSS" ? (
           <Text style={s.sub}>
-            The liquidation price below is an isolated estimate. In cross it
-            will be further away.
+            Your whole perp balance backs this trade, so liquidation is further
+            away, but it can take up to all of it. Estimated as if this is your
+            only cross position.
           </Text>
         ) : null}
       </View>
@@ -376,8 +383,9 @@ export function OrderTicketSheet({
               If {nm} {side > 0 ? "falls" : "rises"} to{" "}
               <Text style={[s.b, { color: C.loss }]}>{money(liq)}</Text> (
               {side > 0 ? "−" : "+"}
-              {dist.toFixed(1)}%), this closes and you lose your{" "}
-              <Text style={s.b}>{money(mg)}</Text>. A{" "}
+              {dist.toFixed(1)}%), this closes and you lose{" "}
+              {marginMode === "CROSS" ? "up to " : "your "}
+              <Text style={s.b}>{money(atRisk)}</Text>. A{" "}
               {side > 0 ? "rise" : "fall"} of 5% makes{" "}
               <Text style={[s.b, { color: C.mint }]}>
                 {money(notional * 0.05)}

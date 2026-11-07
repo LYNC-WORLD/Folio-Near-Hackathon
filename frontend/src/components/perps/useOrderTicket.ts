@@ -6,22 +6,26 @@ import { AMBER } from "./PerpUi";
 import { toast } from "./PerpToast";
 import { usePerpListing } from "@/hooks/useTradablePerps";
 import { useWallet } from "@/context/WalletContext";
-import {
-  useLiveMarket,
-  usePerpsSession,
-  useRecentBars,
-} from "@/hooks/perps";
+import { useAuth } from "@/context/AuthContext";
+import { useLiveMarket, useRecentBars } from "@/hooks/perps";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { errMsg, newCloid, toSym } from "@/services/hyperliquid/format";
 import { ApiError } from "@/services/api/client";
-import { TAKER, orderQuote, preCheck, type TpSlMode } from "@/lib/perps";
+import {
+  DEFAULT_LEV,
+  HOLD_FROM_LEV,
+  MAX_LEV,
+  TAKER,
+  orderQuote,
+  preCheck,
+  type TpSlMode,
+} from "@/lib/perps";
 import { money } from "@/lib/format";
 
 export type OrderType = "Market" | "Limit";
 export type MarginMode = "ISOLATED" | "CROSS";
 type Result = { filled: boolean; entry: number | null; size: number };
 
-const MAX_LEV = 10;
 const num = (t: string) => parseFloat(t) || 0;
 
 export function useOrderTicket({
@@ -37,7 +41,7 @@ export function useOrderTicket({
   /** money in the spot wallet: can be moved into the perp account */
   spotBal: number;
 }) {
-  const session = usePerpsSession();
+  const { idToken } = useAuth();
   const live = useLiveMarket(sym);
   // perpBal comes from the wallet balance query; show "…" until it has loaded
   const balLoading = useWallet().loading;
@@ -60,7 +64,7 @@ export function useOrderTicket({
 
   const [opx, setOpx] = useState("");
   const [marginT, setMarginT] = useState("");
-  const [lev, setLevRaw] = useState(Math.min(10, maxLev));
+  const [lev, setLevRaw] = useState(Math.min(DEFAULT_LEV, maxLev));
   const setLev = (v: number) =>
     setLevRaw(Math.max(1, Math.min(maxLev, Math.round(v))));
   const [tpOn, setTpOn] = useState(false);
@@ -73,6 +77,11 @@ export function useOrderTicket({
     if (!marginT && usdc > 0)
       setMarginT(String(Math.min(50, Math.floor(usdc))));
   }, [usdc]); // eslint-disable-line
+  // some markets are isolated only
+  const onlyIsolated = !!live.market?.onlyIsolated;
+  useEffect(() => {
+    if (onlyIsolated) setMarginMode("ISOLATED");
+  }, [onlyIsolated]);
   // this market may allow less leverage than the default
   useEffect(() => {
     if (lev > maxLev) setLevRaw(maxLev);
@@ -96,6 +105,7 @@ export function useOrderTicket({
     slMode,
     perp: usdc,
     spot: spotBal,
+    cross: marginMode === "CROSS",
   });
   const { qty, need, dist, tp, sl } = q;
 
@@ -132,7 +142,7 @@ export function useOrderTicket({
     setPhase("busy");
     cloid.current ??= newCloid();
     try {
-      const token = session.idToken ?? "";
+      const token = idToken ?? "";
       const common = {
         cloid: cloid.current,
         stockSymbol: sym,
@@ -182,12 +192,12 @@ export function useOrderTicket({
   };
 
   const short = mg > 0 && need > 0; // not enough in the perp account
-  const holdNeeded = lev >= 25 && !short;
+  const holdNeeded = lev >= HOLD_FROM_LEV && !short;
   const btnLabel = short
     ? q.canMove
       ? `Move ${money(q.needUp)} from spot`
       : "Add funds to trade"
-    : lev >= 25
+    : lev >= HOLD_FROM_LEV
       ? `Hold to ${otype === "Market" ? "open" : "place"} ${lev}x ${side > 0 ? "long" : "short"}`
       : `${otype === "Market" ? "" : otype + " "}${side > 0 ? "Long " : "Short "}${nm} · ${lev}x`;
   const disabled = mg <= 0 || (!!q.bad && !(need > 0));
@@ -204,6 +214,7 @@ export function useOrderTicket({
     otype,
     marginMode,
     setMarginMode,
+    onlyIsolated,
     tpMode,
     setTpMode,
     slMode,

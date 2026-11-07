@@ -24,35 +24,6 @@ export const INTERVAL_MS: Record<string, number> = {
   "1d": 1440 * MIN, "3d": 3 * 1440 * MIN, "1w": 7 * 1440 * MIN, "1M": 30 * 1440 * MIN,
 };
 
-const stripZeros = (x: string) => (x.includes(".") ? x.replace(/\.?0+$/, "") : x);
-
-/**
- * Price rounded down to Hyperliquid tick rules: max 5 significant figures and
- * max (6 - szDecimals) decimals. Integers are always valid. "0" if invalid.
- * (No SDK import here on purpose: keeps the market-data path free of Node/web-only code.)
- */
-export function roundPx(px: number, szDecimals: number): string {
-  if (!Number.isFinite(px) || px <= 0) return "0";
-  if (Number.isInteger(px)) return String(px);
-  const intDigits = Math.floor(Math.log10(px)) + 1;
-  if (intDigits > 5) {
-    const k = 10 ** (intDigits - 5);
-    return String(Math.floor(px / k) * k);
-  }
-  const dec = Math.max(0, Math.min(6 - szDecimals, 5 - intDigits));
-  const f = 10 ** dec;
-  const v = Math.floor(px * f + 1e-9) / f;
-  return v > 0 ? stripZeros(v.toFixed(dec)) : "0";
-}
-
-/** Size rounded down to the market's lot size. "0" if it rounds to nothing. */
-export function roundSz(sz: number, szDecimals: number): string {
-  if (!Number.isFinite(sz) || sz <= 0) return "0";
-  const f = 10 ** szDecimals;
-  const v = Math.floor(sz * f + 1e-9) / f;
-  return v > 0 ? stripZeros(v.toFixed(szDecimals)) : "0";
-}
-
 /** Same shape the chart already uses: t in seconds. */
 export interface HlBar {
   t: number;
@@ -100,8 +71,5 @@ export function newCloid(): `0x${string}` {
   else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
   return `0x${Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("")}`;
 }
-
-/** "0.05%" -> 50 (tenths of a basis point, the unit maxBuilderFee returns). */
-export const feePctToTenthBps = (pct: string) => Math.round(parseFloat(pct) * 1000);
 
 export const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));

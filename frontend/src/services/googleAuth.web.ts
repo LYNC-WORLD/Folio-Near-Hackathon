@@ -3,10 +3,12 @@ import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
 import type { GoogleSession } from "@/types";
 import { ENV } from "@/config";
-import { decodeJwt, jwtExpiresAt } from "@/lib/jwt";
+import { decodeJwt, googleIdTokenProblem } from "@/lib/jwt";
 
 WebBrowser.maybeCompleteAuthSession();
 
+// The idToken lives in localStorage so the session survives a reload. Anything on this
+// origin can read it, so the backend must verify the token's signature on every request.
 const STORAGE_KEY = "google_session";
 
 function toSession(idToken: string): GoogleSession {
@@ -27,20 +29,23 @@ function toSession(idToken: string): GoogleSession {
 // Returns null if the user cancelled
 export async function signInWithGoogle(): Promise<GoogleSession | null> {
   const discovery = await AuthSession.fetchDiscoveryAsync(
-    "https://accounts.google.com"
+    "https://accounts.google.com",
   );
 
- const request = new AuthSession.AuthRequest({
-  clientId: ENV.GOOGLE_WEB_CLIENT_ID,
-  redirectUri: AuthSession.makeRedirectUri(),
-  responseType: AuthSession.ResponseType.IdToken,
-  scopes: ["openid", "profile", "email"],
-  usePKCE: false, 
-  extraParams: {
-    nonce: Crypto.randomUUID(),
-    prompt: "select_account",
-  },
-});
+  // Google echoes the nonce inside the token: checking it proves the token answers
+  // this request and wasn't replayed or injected into the redirect.
+  const nonce = Crypto.randomUUID();
+  const request = new AuthSession.AuthRequest({
+    clientId: ENV.GOOGLE_WEB_CLIENT_ID,
+    redirectUri: AuthSession.makeRedirectUri(),
+    responseType: AuthSession.ResponseType.IdToken,
+    scopes: ["openid", "profile", "email"],
+    usePKCE: false,
+    extraParams: {
+      nonce,
+      prompt: "select_account",
+    },
+  });
 
   const result = await request.promptAsync(discovery);
 
@@ -50,6 +55,11 @@ export async function signInWithGoogle(): Promise<GoogleSession | null> {
   if (!idToken) {
     throw new Error("Google did not return an idToken. Check webClientId.");
   }
+  const problem = googleIdTokenProblem(idToken, {
+    clientId: ENV.GOOGLE_WEB_CLIENT_ID,
+    nonce,
+  });
+  if (problem) throw new Error(`Google sign-in failed: ${problem}.`);
 
   const session = toSession(idToken);
   try {
@@ -58,14 +68,17 @@ export async function signInWithGoogle(): Promise<GoogleSession | null> {
   return session;
 }
 
-// Returns null if there is no previous (or an expired) session
+// Returns null if there is no previous (or an expired / not-for-this-app) session
 export async function restoreGoogleSession(): Promise<GoogleSession | null> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw) as GoogleSession;
-    const exp = jwtExpiresAt(session.idToken);
-    if (!exp || exp < Date.now()) {
+    if (
+      googleIdTokenProblem(session.idToken, {
+        clientId: ENV.GOOGLE_WEB_CLIENT_ID,
+      })
+    ) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }

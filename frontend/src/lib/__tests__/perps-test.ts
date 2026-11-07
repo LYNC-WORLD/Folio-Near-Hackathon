@@ -82,6 +82,35 @@ describe("orderQuote", () => {
     expect(q.canMove).toBe(true);
     expect(orderQuote({ ...base, perp: 5, spot: 1 }).canMove).toBe(false);
   });
+
+  it("isolated: only this trade's margin is at risk", () => {
+    expect(orderQuote(base).atRisk).toBe(10);
+  });
+
+  it("cross: the free perp balance backs the trade, so liquidation is further away", () => {
+    // $50 free - $0.06 fee backs it: 100 - (49.94 - 5) = 55.06
+    const q = orderQuote({ ...base, cross: true });
+    expect(q.atRisk).toBeCloseTo(49.94);
+    expect(q.liq).toBeCloseTo(55.06);
+    expect(orderQuote({ ...base, side: -1, cross: true }).liq).toBeCloseTo(144.94);
+  });
+
+  it("cross: never backs a trade with less than its own margin", () => {
+    const q = orderQuote({ ...base, perp: 5, cross: true });
+    expect(q.atRisk).toBe(10);
+    expect(q.liq).toBeCloseTo(95);
+  });
+
+  it("a long's liquidation never goes below $0", () => {
+    const q = orderQuote({ ...base, perp: 500, cross: true });
+    expect(q.liq).toBe(0);
+    expect(q.dist).toBeCloseTo(100);
+  });
+
+  it("a stop loss in cross is checked against the cross liquidation", () => {
+    // 94 would be past an isolated liquidation (95) but is fine in cross (55.06)
+    expect(orderQuote({ ...base, cross: true, tpOn: true, slIn: 94 }).bad).toBe("");
+  });
 });
 
 const day = (o: number, h: number, l: number): Bar => ({

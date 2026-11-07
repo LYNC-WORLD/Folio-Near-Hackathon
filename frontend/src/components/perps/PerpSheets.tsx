@@ -26,7 +26,7 @@ import {
   Tag,
 } from "./PerpUi";
 import { searchPerps, useTradablePerps } from "@/hooks/useTradablePerps";
-import { MAXLEV, usMarketOpen } from "@/lib/perps";
+import { HOLD_FROM_LEV, MAX_LEV, usMarketOpen } from "@/lib/perps";
 import { money, sPct } from "@/lib/format";
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
@@ -300,8 +300,10 @@ export function UnlockSheet({
         <Check />
         <H2 style={{ textAlign: "center" }}>Perps are unlocked</H2>
         <Body style={{ textAlign: "center", fontSize: 13 }}>
-          You can trade up to {MAXLEV}x. From 25x up you hold the button to
-          confirm, so a big bet never happens by accident.
+          You can trade up to {MAX_LEV}x.
+          {MAX_LEV >= HOLD_FROM_LEV
+            ? ` From ${HOLD_FROM_LEV}x up you hold the button to confirm, so a big bet never happens by accident.`
+            : ""}
         </Body>
       </View>
       <Btn label="Continue to your trade" onPress={onDone} />

@@ -60,7 +60,7 @@ function Blank() {
 }
 
 function Root() {
-  const { user, initializing } = useAuth();
+  const { user, session, initializing } = useAuth();
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
   const [splashDone, setSplashDone] = useState(false);
 
@@ -71,9 +71,15 @@ function Root() {
 
   // Check onboarding status once we know a user is signed in (saved per user).
   const userId = user?.id;
+  const formFilled = session?.data?.formFilled === true;
   useEffect(() => {
     setHasOnboarded(null);
     if (!userId) return;
+    if (formFilled) {
+      setUserItem(ONBOARDED_KEY, userId, "true").catch(() => {});
+      setHasOnboarded(true);
+      return;
+    }
     let live = true;
     getUserItem(ONBOARDED_KEY, userId)
       .then((v) => live && setHasOnboarded(v === "true"))
@@ -81,7 +87,7 @@ function Root() {
     return () => {
       live = false;
     };
-  }, [userId]);
+  }, [userId, formFilled]);
 
   const completeOnboarding = () => {
     if (userId) setUserItem(ONBOARDED_KEY, userId, "true").catch(() => {});

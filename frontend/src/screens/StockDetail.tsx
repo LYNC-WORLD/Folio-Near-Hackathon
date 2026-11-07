@@ -283,7 +283,9 @@ export function StockDetail() {
   };
 
   // switch tab, then quietly reset this stack behind it
-  const leaveTo = (go: (tabs: BottomTabNavigationProp<TabParamList>) => void) => {
+  const leaveTo = (
+    go: (tabs: BottomTabNavigationProp<TabParamList>) => void,
+  ) => {
     const tabs = nav.getParent<BottomTabNavigationProp<TabParamList>>();
     if (tabs) go(tabs);
     setTimeout(() => nav.popToTop(), 350);
@@ -299,7 +301,8 @@ export function StockDetail() {
       );
     if (o === "folio") leaveTo((t) => t.navigate("Portfolio"));
     // Standing orders live in the Profile stack (opened from Folio's gear)
-    if (o === "orders") leaveTo((t) => t.navigate("Profile", { screen: "RecurringBuys" }));
+    if (o === "orders")
+      leaveTo((t) => t.navigate("Profile", { screen: "RecurringBuys" }));
     if (o === "makeRecurring") {
       setMode("recurring");
       setTimeout(
@@ -354,7 +357,6 @@ export function StockDetail() {
     );
   };
 
-  // ---------- render ----------
   return (
     <View style={s.safe}>
       <ScrollView
@@ -376,7 +378,6 @@ export function StockDetail() {
           <Ionicons name="chevron-back" size={16} color={C.mint} />
           <Text style={s.backText}>Back</Text>
         </Pressable>
-
         {/* header */}
         <Rise duration={420}>
           <View style={s.head}>
@@ -399,7 +400,6 @@ export function StockDetail() {
             </View>
           </View>
         </Rise>
-
         <Rise duration={420} delay={60}>
           <PriceChart
             mint={stock.tokenAddress}
@@ -407,7 +407,6 @@ export function StockDetail() {
             onScrub={setScrub}
           />
         </Rise>
-
         {held > 0 ? (
           <Rise duration={420} delay={120}>
             <View style={s.card}>
@@ -438,7 +437,6 @@ export function StockDetail() {
             </View>
           </Rise>
         ) : null}
-
         {activeRec ? (
           <Rise duration={420} delay={150}>
             <View style={s.card}>
@@ -463,7 +461,6 @@ export function StockDetail() {
             </View>
           </Rise>
         ) : null}
-
         <View onLayout={(e) => (segY.current = e.nativeEvent.layout.y)}>
           <Segmented
             options={[
@@ -474,7 +471,6 @@ export function StockDetail() {
             onChange={setMode}
           />
         </View>
-
         <View onLayout={(e) => (amountY.current = e.nativeEvent.layout.y)}>
           <AmountField
             ref={amountRef}
@@ -505,7 +501,6 @@ export function StockDetail() {
             }
           />
         </View>
-
         {rep ? (
           <Animated.View
             entering={FadeIn.duration(260)}
@@ -533,12 +528,10 @@ export function StockDetail() {
             )}
           </Animated.View>
         ) : null}
-
         <Animated.View layout={SLIDE}>
           <WashRow k="PAY WITH" v="USDC" hairOnly />
           <WashRow k="SETTLES TO" v="Your wallet" hairOnly />
         </Animated.View>
-
         <Animated.View layout={SLIDE} style={{ gap: 4 }}>
           <Text style={[TYPE.lbl, { marginTop: 8, marginBottom: 4 }]}>
             RECENT ACTIVITY
@@ -575,7 +568,6 @@ export function StockDetail() {
             ))
           )}
         </Animated.View>
-
         <Animated.View style={kbSpace} />
       </ScrollView>
 

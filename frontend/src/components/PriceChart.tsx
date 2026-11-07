@@ -8,7 +8,13 @@
 // • period switch: 1D 1W 1M 1Y All (prototype range group)
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -24,7 +30,12 @@ import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { C, FONT, TYPE } from "@/theme";
 import { timing } from "@/theme/motion";
 import { hSelect } from "@/lib/haptics";
-import { CHART_PERIODS, useStockChart, type Candle, type ChartPeriod } from "@/hooks";
+import {
+  CHART_PERIODS,
+  useStockChart,
+  type Candle,
+  type ChartPeriod,
+} from "@/hooks";
 import { Skeleton } from "./ui/Skeleton";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -33,7 +44,11 @@ const H = 160;
 const PAD_TOP = 14;
 const PAD_BOTTOM = 10;
 
-export type ChartChange = { period: ChartPeriod; changeAbs: number; changePct: number };
+export type ChartChange = {
+  period: ChartPeriod;
+  changeAbs: number;
+  changePct: number;
+};
 
 type Props = {
   mint: string;
@@ -44,7 +59,13 @@ type Props = {
   onPeriod?: (p: ChartPeriod) => void;
 };
 
-export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPeriod }: Props) {
+export function PriceChart({
+  mint,
+  initialPeriod = "1D",
+  onChange,
+  onScrub,
+  onPeriod,
+}: Props) {
   const [period, setPeriod] = useState<ChartPeriod>(initialPeriod);
   const { candles, loading, error, reload } = useStockChart(mint, period);
   const [width, setWidth] = useState(0);
@@ -56,13 +77,19 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
     const lo = Math.min(...closes);
     const hi = Math.max(...closes);
     const pad = (hi - lo) * 0.12 || 1;
-    const y = (v: number) => PAD_TOP + (1 - (v - (lo - pad)) / (hi + pad - (lo - pad))) * (H - PAD_TOP - PAD_BOTTOM);
+    const y = (v: number) =>
+      PAD_TOP +
+      (1 - (v - (lo - pad)) / (hi + pad - (lo - pad))) *
+        (H - PAD_TOP - PAD_BOTTOM);
     const W = width - 8; // leave room for the end dot
     const step = W / (closes.length - 1);
     const pts = closes.map((v, i) => [i * step, y(v)] as const);
     let len = 0;
-    for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-    const line = pts.map(([x, yy], i) => `${i ? "L" : "M"}${x.toFixed(1)},${yy.toFixed(1)}`).join(" ");
+    for (let i = 1; i < pts.length; i++)
+      len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    const line = pts
+      .map(([x, yy], i) => `${i ? "L" : "M"}${x.toFixed(1)},${yy.toFixed(1)}`)
+      .join(" ");
     const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${H} L0,${H} Z`;
     return { pts, line, area, len, step };
   }, [candles, width]);
@@ -72,7 +99,11 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
     const first = candles[0].open || candles[0].close;
     const last = candles[candles.length - 1].close;
     const changeAbs = last - first;
-    return { period, changeAbs, changePct: first ? (changeAbs / first) * 100 : 0 };
+    return {
+      period,
+      changeAbs,
+      changePct: first ? (changeAbs / first) * 100 : 0,
+    };
   }, [candles, period]);
 
   useEffect(() => {
@@ -97,7 +128,9 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
   }, [geo?.line]);
 
   const len = geo?.len ?? 1;
-  const lineProps = useAnimatedProps(() => ({ strokeDashoffset: (1 - draw.value) * len }));
+  const lineProps = useAnimatedProps(() => ({
+    strokeDashoffset: (1 - draw.value) * len,
+  }));
   const areaProps = useAnimatedProps(() => ({ opacity: fill.value }));
 
   // ---- ping ring on the end dot ----
@@ -105,10 +138,19 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
   const ping = useSharedValue(reduced ? 1 : 0); // 1 = ring fully faded out
   useEffect(() => {
     if (reduced) return; // Reduce Motion: keep the dot, drop the pulsing ring
-    ping.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.bezier(0.22, 0.61, 0.36, 1) }), -1, false);
+    ping.value = withRepeat(
+      withTiming(1, {
+        duration: 1800,
+        easing: Easing.bezier(0.22, 0.61, 0.36, 1),
+      }),
+      -1,
+      false,
+    );
   }, [reduced]);
   const scrubbing = active != null;
-  const dotStyle = useAnimatedStyle(() => ({ opacity: scrubbing ? 0 : dot.value }));
+  const dotStyle = useAnimatedStyle(() => ({
+    opacity: scrubbing ? 0 : dot.value,
+  }));
   const pingStyle = useAnimatedStyle(() => ({
     opacity: 1 - ping.value,
     transform: [{ scale: 0.6 + 1.6 * ping.value }],
@@ -161,12 +203,21 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
 
   return (
     <View style={s.card}>
-      <View style={s.chart} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <View
+        style={s.chart}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      >
         {!candles && loading ? (
           <Skeleton height={H - 20} radius={12} />
         ) : error && !candles ? (
-          <Pressable onPress={reload} style={s.center} accessibilityRole="button">
-            <Text style={[TYPE.sub, { color: C.loss }]}>Couldn't load the chart</Text>
+          <Pressable
+            onPress={reload}
+            style={s.center}
+            accessibilityRole="button"
+          >
+            <Text style={[TYPE.sub, { color: C.loss }]}>
+              Couldn't load the chart
+            </Text>
             <Text style={s.retry}>Tap to retry</Text>
           </Pressable>
         ) : !geo ? (
@@ -175,7 +226,10 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
           </View>
         ) : (
           <GestureDetector gesture={pan}>
-            <View style={StyleSheet.absoluteFill} accessibilityLabel={`Price chart, ${period}`}>
+            <View
+              style={StyleSheet.absoluteFill}
+              accessibilityLabel={`Price chart, ${period}`}
+            >
               <Svg width={width} height={H}>
                 <Defs>
                   <LinearGradient id="pcFill" x1="0" y1="0" x2="0" y2="1">
@@ -183,7 +237,11 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
                     <Stop offset="1" stopColor={stroke} stopOpacity={0} />
                   </LinearGradient>
                 </Defs>
-                <AnimatedPath d={geo.area} fill="url(#pcFill)" animatedProps={areaProps} />
+                <AnimatedPath
+                  d={geo.area}
+                  fill="url(#pcFill)"
+                  animatedProps={areaProps}
+                />
                 <AnimatedPath
                   d={geo.line}
                   stroke={stroke}
@@ -197,24 +255,61 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
               </Svg>
 
               {endPt ? (
-                <Animated.View pointerEvents="none" style={[s.endWrap, { left: endPt[0] - 7, top: endPt[1] - 7 }, dotStyle]}>
-                  <Animated.View style={[s.ping, { borderColor: up ? "rgba(55,224,153,0.45)" : "rgba(240,96,77,0.45)" }, pingStyle]} />
-                  <View style={[s.glow, { backgroundColor: up ? "rgba(55,224,153,0.18)" : "rgba(240,96,77,0.18)" }]} />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    s.endWrap,
+                    { left: endPt[0] - 7, top: endPt[1] - 7 },
+                    dotStyle,
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      s.ping,
+                      {
+                        borderColor: up
+                          ? "rgba(55,224,153,0.45)"
+                          : "rgba(240,96,77,0.45)",
+                      },
+                      pingStyle,
+                    ]}
+                  />
+                  <View
+                    style={[
+                      s.glow,
+                      {
+                        backgroundColor: up
+                          ? "rgba(55,224,153,0.18)"
+                          : "rgba(240,96,77,0.18)",
+                      },
+                    ]}
+                  />
                   <View style={[s.endDot, { backgroundColor: stroke }]} />
                 </Animated.View>
               ) : null}
 
               {activePt ? (
                 <>
-                  <View pointerEvents="none" style={[s.scrubLine, { left: activePt[0] }]} />
-                  <View pointerEvents="none" style={[s.scrubDot, { left: activePt[0] - 6, top: activePt[1] - 6 }]} />
+                  <View
+                    pointerEvents="none"
+                    style={[s.scrubLine, { left: activePt[0] }]}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      s.scrubDot,
+                      { left: activePt[0] - 6, top: activePt[1] - 6 },
+                    ]}
+                  />
                 </>
               ) : null}
             </View>
           </GestureDetector>
         )}
 
-        {loading && candles ? <ActivityIndicator size="small" color={C.ink4} style={s.spinner} /> : null}
+        {loading && candles ? (
+          <ActivityIndicator size="small" color={C.ink4} style={s.spinner} />
+        ) : null}
       </View>
 
       <View style={s.periods} accessibilityRole="tablist">
@@ -236,7 +331,15 @@ export function PriceChart({ mint, initialPeriod = "1Y", onChange, onScrub, onPe
   );
 }
 
-function PeriodButton({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+function PeriodButton({
+  label,
+  on,
+  onPress,
+}: {
+  label: string;
+  on: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -251,18 +354,53 @@ function PeriodButton({ label, on, onPress }: { label: string; on: boolean; onPr
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: C.surface, borderRadius: 16, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 10, gap: 8 },
+  card: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    paddingTop: 14,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    gap: 8,
+  },
   chart: { height: H, justifyContent: "center" },
   center: { alignItems: "center", gap: 6 },
   retry: { fontFamily: FONT.sans600, fontSize: 13, color: C.mint },
   spinner: { position: "absolute", top: 0, right: 0 },
 
   endWrap: { position: "absolute", width: 14, height: 14 },
-  endDot: { position: "absolute", left: 0, top: 0, width: 14, height: 14, borderRadius: 999 },
-  glow: { position: "absolute", left: -4, top: -4, width: 22, height: 22, borderRadius: 999 },
-  ping: { position: "absolute", left: -4, top: -4, width: 22, height: 22, borderRadius: 999, borderWidth: 2 },
+  endDot: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 999,
+  },
+  glow: {
+    position: "absolute",
+    left: -4,
+    top: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+  },
+  ping: {
+    position: "absolute",
+    left: -4,
+    top: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    borderWidth: 2,
+  },
 
-  scrubLine: { position: "absolute", top: 0, bottom: 0, width: 1, backgroundColor: "rgba(255,255,255,0.22)" },
+  scrubLine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
   scrubDot: {
     position: "absolute",
     width: 12,
@@ -274,7 +412,13 @@ const s = StyleSheet.create({
   },
 
   periods: { flexDirection: "row", gap: 2 },
-  period: { flex: 1, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  period: {
+    flex: 1,
+    height: 32,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   periodOn: { backgroundColor: C.raised },
   periodText: { fontFamily: FONT.sans700, fontSize: 12.5, color: C.ink4 },
 });

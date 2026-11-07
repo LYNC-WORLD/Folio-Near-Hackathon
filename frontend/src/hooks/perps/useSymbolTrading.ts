@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   OrderApi,
   PositionApi,
@@ -75,58 +75,33 @@ const toOrder = (r: OrderApi): SymOrder => {
   };
 };
 
-/** Shared fetch + poll logic. `loading` is true only until the first response. */
-function useBySymbol<A, T>(
-  stock: string,
+/** Shared, polled query: every screen using the same key shares one request. */
+function usePolled<A, T>(
+  key: string,
   idToken: string | null | undefined,
-  fetcher: (stock: string, token: string) => Promise<A[]>,
+  fetcher: (token: string) => Promise<A[]>,
   map: (a: A) => T,
 ) {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const req = useRef(0);
-
-  const load = useCallback(async () => {
-    if (!idToken || !stock) {
-      setData([]);
-      setLoading(false);
-      return;
-    }
-    const id = ++req.current;
-    try {
-      const rows = await fetcher(stock, idToken);
-      if (id !== req.current) return; // stale: symbol changed meanwhile
-      setData((rows ?? []).map(map));
-      setError(null);
-    } catch (e) {
-      if (id !== req.current) return;
-      setError(e instanceof Error ? e.message : "Request failed");
-    } finally {
-      if (id === req.current) setLoading(false);
-    }
-  }, [stock, idToken]); // eslint-disable-line
-
-  useEffect(() => {
-    setData([]);
-    setLoading(true);
-    setError(null);
-    load();
-    const i = setInterval(load, POLL_MS);
-    return () => {
-      req.current++; // invalidate in-flight request
-      clearInterval(i);
-    };
-  }, [load]);
-
-  return { data, loading, error, refetch: load };
+  const query = useQuery({
+    queryKey: [key, idToken],
+    queryFn: async () => ((await fetcher(idToken!)) ?? []).map(map),
+    enabled: !!idToken,
+    refetchInterval: POLL_MS,
+    staleTime: POLL_MS,
+  });
+  return {
+    data: query.data ?? [],
+    loading: query.isLoading, // only until the first response
+    error: query.error instanceof Error ? query.error.message : null,
+    refetch: () => query.refetch().then(() => {}),
+  };
 }
 
 export const useAllPositions = (idToken?: string | null) =>
-  useBySymbol(
-    "all", // dummy key, the endpoint takes no symbol
+  usePolled(
+    "perpPositions",
     idToken,
-    async (_s, t) => {
+    async (t) => {
       const rows = await unwrap(tradeService.getAllPositions(t));
       return (rows ?? [])
         .map((r) => r.position)
@@ -135,36 +110,11 @@ export const useAllPositions = (idToken?: string | null) =>
     toPosition,
   );
 
-export const usePositionsBySymbol = (stock: string, idToken?: string | null) =>
-  useBySymbol(
-    stock,
-    idToken,
-    async (s, t) => {
-      const d = await unwrap(tradeService.getPositionsBySymbol(s, t));
-      const p = d?.position;
-      return p && parseFloat(p.szi) !== 0 ? [p] : [];
-    },
-    toPosition,
-  );
-
-export const useOrdersBySymbol = (stock: string, idToken?: string | null) =>
-  useBySymbol(
-    stock,
-    idToken,
-    async (s, t) => {
-      const rows = await unwrap(tradeService.getOrdersBySymbol(s, t));
-      return (rows ?? []).filter(
-        (r) => r.status === "order" && r.order?.status === "open",
-      );
-    },
-    toOrder,
-  );
-
 export const useAllOrders = (idToken?: string | null) =>
-  useBySymbol(
-    "all",
+  usePolled(
+    "perpOrders",
     idToken,
-    async (_s, t) => {
+    async (t) => {
       const rows = await unwrap(tradeService.getAllOrders(t));
       return (rows ?? []).filter(
         (r) => r.status === "order" && r.order?.status === "open",

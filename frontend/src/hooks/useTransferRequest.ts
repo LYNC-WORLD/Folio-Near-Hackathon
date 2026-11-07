@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { checkDepositStatus, depositPerpToSpot } from "@/services/wallet";
+import {
+  checkDepositStatus,
+  depositPerpToSpot,
+  depositSpotToPerp,
+} from "@/services/wallet";
 
 export type DepositPhase =
   | "idle"
@@ -13,7 +17,13 @@ export type DepositPhase =
 const POLL_INTERVAL_MS = 30_000;
 const MAX_POLLS = 10;
 
-export function usePerpToSpotDeposit() {
+/**
+ * One spot <-> perp transfer: send the request, then poll the backend every 30s
+ * (up to 10 times) until it reports completed or failed.
+ */
+function useTransferRequest(
+  send: (amount: string, token: string) => Promise<unknown>,
+) {
   const { idToken } = useAuth();
   const queryClient = useQueryClient();
 
@@ -84,14 +94,14 @@ export function usePerpToSpotDeposit() {
     pollTimer.current = setInterval(pollOnce, POLL_INTERVAL_MS);
   }, [pollOnce, stopPolling]);
 
-  const withdraw = useCallback(
+  const start = useCallback(
     async (amt: number) => {
       if (!idToken) throw new Error("Sign in first");
       setError(null);
       setAmount(amt);
       setPhase("depositing");
       try {
-        await depositPerpToSpot(String(amt), idToken);
+        await send(String(amt), idToken);
         if (!alive.current) return;
         setPhase("confirming");
         startPolling();
@@ -104,7 +114,7 @@ export function usePerpToSpotDeposit() {
         throw e;
       }
     },
-    [idToken, startPolling],
+    [idToken, send, startPolling],
   );
 
   const reset = useCallback(() => {
@@ -115,5 +125,17 @@ export function usePerpToSpotDeposit() {
     setError(null);
   }, [stopPolling]);
 
-  return { phase, amount, error, withdraw, reset };
+  return { phase, amount, error, start, reset };
+}
+
+/** spot wallet -> perp account */
+export function useSpotToPerpDeposit() {
+  const { start, ...rest } = useTransferRequest(depositSpotToPerp);
+  return { ...rest, deposit: start };
+}
+
+/** perp account -> spot wallet */
+export function usePerpToSpotDeposit() {
+  const { start, ...rest } = useTransferRequest(depositPerpToSpot);
+  return { ...rest, withdraw: start };
 }

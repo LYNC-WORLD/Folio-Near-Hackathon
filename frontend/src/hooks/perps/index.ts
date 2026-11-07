@@ -5,7 +5,6 @@ export * from "./useOrderBook";
 export * from "./useCandles";
 export * from "./useAccount";
 export * from "./useTradeActions";
-export * from "./usePerpsOnboarding";
 export * from "./usePerpsSession";
 export * from "./useSymbolTrading";
 export * from "./useRecentBars";

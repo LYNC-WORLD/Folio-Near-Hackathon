@@ -55,9 +55,8 @@ import { TpSlSheet } from "@/components/perps/TpSlSheet";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { useTradablePerps } from "@/hooks/useTradablePerps";
-import { useSpotToPerpDeposit } from "@/hooks/useSpotToPerpDeposit";
+import { useTransfers } from "@/hooks/useTransfers";
 import { LiveOrderSheet } from "@/components/perps/LiveOrderSheet";
-import { usePerpToSpotDeposit } from "@/hooks/perps/usePerpToSpotDeposit";
 import { TAKER, fundLeft, usMarketOpen } from "@/lib/perps";
 import { money, sMoney, sPct, sideTxt } from "@/lib/format";
 
@@ -128,43 +127,10 @@ export function TradeScreen() {
     spot: walletBal.wallet?.usdc.balance ?? 0,
   };
 
-  const {
-    deposit,
-    phase: depositPhase,
-    amount: depositAmount,
-    error: depositError,
-    reset: resetDeposit,
-  } = useSpotToPerpDeposit();
-
-  const {
-    withdraw,
-    phase: withdrawPhase,
-    amount: withdrawAmount,
-    error: withdrawError,
-    reset: resetWithdraw,
-  } = usePerpToSpotDeposit();
-
-  useEffect(() => {
-    if (withdrawPhase === "done") {
-      toast(`Moved ${money(withdrawAmount)} to spot`, "TRANSFER CONFIRMED");
-      resetWithdraw();
-    } else if (withdrawPhase === "error" && withdrawError) {
-      toast("Transfer issue", withdrawError.toUpperCase());
-      resetWithdraw();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withdrawPhase]);
-
-  useEffect(() => {
-    if (depositPhase === "done") {
-      toast(`Moved ${money(depositAmount)} to perp`, "TRANSFER CONFIRMED");
-      resetDeposit();
-    } else if (depositPhase === "error" && depositError) {
-      toast("Transfer issue", depositError.toUpperCase());
-      resetDeposit();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depositPhase]);
+  // transfer requests + their toasts; the phases also drive the top banner
+  const transfers = useTransfers();
+  const { phase: depositPhase, amount: depositAmount } = transfers.depositStatus;
+  const { phase: withdrawPhase, amount: withdrawAmount } = transfers.withdrawStatus;
 
   const [quizSeen, setQuizSeen] = useState(false);
   useEffect(() => {
@@ -792,19 +758,8 @@ export function TradeScreen() {
       {sheet?.t === "transfer" ? (
         <TransferSheet
           dir={sheet.dir}
-          onDeposit={deposit}
-          onWithdraw={withdraw}
+          {...transfers}
           amt={sheet.amt}
-          depositStatus={{
-            phase: depositPhase,
-            amount: depositAmount,
-            error: depositError,
-          }}
-          withdrawStatus={{
-            phase: withdrawPhase,
-            amount: withdrawAmount,
-            error: withdrawError,
-          }}
           onClose={() => setSheet(null)}
           onMoved={() => {
             const then = sheet.then;

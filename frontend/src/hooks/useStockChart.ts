@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { InteractionManager } from "react-native";
 import { fetchCandles } from "@/services";
 
@@ -27,60 +28,29 @@ const PERIOD_CONFIG: Record<
 };
 
 export function useStockChart(mint: string | undefined, period: ChartPeriod) {
-  const [candles, setCandles] = useState<Candle[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [nonce, setNonce] = useState(0);
-
-  // Per-period cache so flipping back to a tab is instant
-  const cache = useRef(new Map<ChartPeriod, Candle[]>());
-
+  // wait for the screen transition to finish before fetching
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => setReady(true));
     return () => task.cancel();
   }, []);
 
-  useEffect(() => {
-    cache.current.clear();
-    setCandles(null);
-  }, [mint]);
+  const query = useQuery({
+    queryKey: ["stockChart", mint, period],
+    queryFn: ({ signal }) => fetchCandles(mint!, period, signal),
+    enabled: ready && !!mint,
+    staleTime: 5 * 60_000, // flipping back to a period is instant
+    // keep the previous period on screen while the next loads, but never another stock's
+    placeholderData: (prev, prevQuery) =>
+      prevQuery?.queryKey[1] === mint ? prev : undefined,
+  });
 
-  useEffect(() => {
-    if (!ready || !mint) return;
-
-    const cached = cache.current.get(period);
-    if (cached) {
-      setCandles(cached);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    const ctrl = new AbortController();
-    setLoading(true);
-    setError(null);
-
-    fetchCandles(mint, period, ctrl.signal)
-      .then((data) => {
-        cache.current.set(period, data);
-        setCandles(data);
-      })
-      .catch((e) => {
-        if (ctrl.signal.aborted) return;
-        setError(e instanceof Error ? e.message : "Couldn't load chart");
-      })
-      .finally(() => {
-        if (!ctrl.signal.aborted) setLoading(false);
-      });
-
-    return () => ctrl.abort();
-  }, [ready, mint, period, nonce]);
-
-  const reload = useCallback(() => {
-    cache.current.delete(period);
-    setNonce((n) => n + 1);
-  }, [period]);
-
-  return { candles, loading: loading || !ready, error, reload };
+  return {
+    candles: query.data ?? null,
+    loading: !ready || query.isPending || query.isPlaceholderData,
+    error: query.error instanceof Error ? query.error.message : null,
+    reload: () => {
+      query.refetch();
+    },
+  };
 }

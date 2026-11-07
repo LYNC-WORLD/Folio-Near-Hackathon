@@ -1,17 +1,8 @@
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { AppState } from "react-native";
+import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 
-import { useAuth } from "./index"; // adjust to wherever useAuth lives
+import { useAuth } from "./index";
 import {
   getMyPerpLeaderboard,
   getPerpLeaderboard,
@@ -20,12 +11,14 @@ import {
 } from "@/services/leaderboard";
 
 const CACHE_KEY = "folio.perpLeaderboard.v1";
-const STALE_MS = 60_000; // don't refetch on foreground more than once a minute
 
-type Value = {
+type Board = {
   entries: PerpLeaderboardEntry[];
   me: MyPerpLeaderboard | null;
   totalRanked: number;
+};
+
+type Value = Board & {
   loading: boolean; // true only when there is nothing to show yet
   refreshing: boolean; // background refetch in progress
   error: string | null;
@@ -36,85 +29,51 @@ const Ctx = createContext<Value | null>(null);
 
 export function LeaderboardProvider({ children }: { children: ReactNode }) {
   const { idToken } = useAuth();
-  const [entries, setEntries] = useState<PerpLeaderboardEntry[]>([]);
-  const [me, setMe] = useState<MyPerpLeaderboard | null>(null);
-  const [totalRanked, setTotalRanked] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const lastFetch = useRef(0);
-  const inFlight = useRef(false);
 
-  // 1. paint from cache immediately
+  // paint the last board from disk while the network request runs
+  const [cached, setCached] = useState<Board | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     AsyncStorage.getItem(CACHE_KEY)
-      .then((raw) => {
-        if (!raw) return;
-        const c = JSON.parse(raw);
-        setEntries(c.entries ?? []);
-        setMe(c.me ?? null);
-        setTotalRanked(c.totalRanked ?? 0);
-      })
+      .then((raw) => raw && setCached(JSON.parse(raw)))
       .catch(() => {})
       .finally(() => setHydrated(true));
   }, []);
 
-  // 2. fetch fresh data
-  const refresh = useCallback(async () => {
-    if (!idToken || inFlight.current) return;
-    inFlight.current = true;
-    setRefreshing(true);
-    setError(null);
-    try {
+  // refetches on app foreground via focusManager (App.tsx), at most once a minute
+  const query = useQuery({
+    queryKey: ["perpLeaderboard", idToken],
+    queryFn: async (): Promise<Board> => {
       const [board, mine] = await Promise.all([
-        getPerpLeaderboard(idToken, { limit: 50, offset: 0 }),
-        getMyPerpLeaderboard(idToken),
+        getPerpLeaderboard(idToken!, { limit: 50, offset: 0 }),
+        getMyPerpLeaderboard(idToken!),
       ]);
-      setEntries(board.data.entries);
-      setTotalRanked(board.data.totalRanked);
-      setMe(mine.data);
-      lastFetch.current = Date.now();
-      AsyncStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({
-          entries: board.data.entries,
-          totalRanked: board.data.totalRanked,
-          me: mine.data,
-        }),
-      ).catch(() => {});
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load leaderboard");
-    } finally {
-      inFlight.current = false;
-      setRefreshing(false);
-    }
-  }, [idToken]);
+      const fresh = {
+        entries: board.data.entries,
+        totalRanked: board.data.totalRanked,
+        me: mine.data,
+      };
+      AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fresh)).catch(() => {});
+      return fresh;
+    },
+    enabled: !!idToken,
+    staleTime: 60_000,
+  });
 
-  // 3. fetch as soon as we have a token (i.e. app open / login)
-  useEffect(() => {
-    if (idToken) refresh();
-  }, [idToken, refresh]);
-
-  // 4. refetch when app returns to foreground (throttled)
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (st) => {
-      if (st === "active" && Date.now() - lastFetch.current > STALE_MS)
-        refresh();
-    });
-    return () => sub.remove();
-  }, [refresh]);
+  const board = query.data ?? cached;
+  const error = query.error instanceof Error ? query.error.message : null;
 
   const value = useMemo<Value>(
     () => ({
-      entries,
-      me,
-      totalRanked,
-      loading: entries.length === 0 && (!hydrated || (refreshing && !error)),
-      refreshing,
+      entries: board?.entries ?? [],
+      me: board?.me ?? null,
+      totalRanked: board?.totalRanked ?? 0,
+      loading: !board?.entries.length && (!hydrated || (query.isFetching && !error)),
+      refreshing: query.isFetching,
       error,
-      refresh,
+      refresh: () => query.refetch().then(() => {}),
     }),
-    [entries, me, totalRanked, hydrated, refreshing, error, refresh],
+    [board, hydrated, query.isFetching, error, query.refetch],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

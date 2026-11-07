@@ -2,13 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path, SvgUri } from "react-native-svg";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";

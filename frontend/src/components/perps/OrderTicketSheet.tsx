@@ -18,6 +18,7 @@ import {
   Btn,
   CARD,
   Check,
+  FundingCountdown,
   H2,
   HoldButton,
   Kv,
@@ -31,7 +32,7 @@ import {
 } from "./PerpUi";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import { TAKER, fundLeft, type TpSlMode } from "@/lib/perps";
+import { TAKER, type TpSlMode } from "@/lib/perps";
 import { money, qtyFmt, sMoney, sideTxt } from "@/lib/format";
 import { toast } from "./PerpToast";
 import { useOrderTicket, type OrderType } from "./useOrderTicket";
@@ -516,7 +517,11 @@ export function OrderTicketSheet({
       <View>
         <Kv k="FEE (EST.)" v={`${money(fee)} · ${(TAKER * 100).toFixed(3)}%`} />
         <Kv
-          k={`FUNDING · NEXT IN ${fundLeft()}`}
+          k={
+            <>
+              FUNDING · NEXT IN <FundingCountdown />
+            </>
+          }
           v={
             <Text style={[s.kvV, { color: fpay > 0 ? C.loss : C.mint }]}>
               {fpay > 0 ? "you pay " : "you get "}

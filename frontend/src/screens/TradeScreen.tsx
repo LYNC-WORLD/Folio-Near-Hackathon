@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -26,11 +26,12 @@ import { ChartStage } from "@/components/perps/PerpChart";
 import { OrderTicketSheet } from "@/components/perps/OrderTicketSheet";
 import { tradeStyles } from "@/components/perps/tradeStyles";
 import {
-  useLiveMarket,
-  useMarkets,
+  refreshMarkets,
+  useMarkOf,
+  useMarketsSelect,
   usePerpsSession,
-  useSocketStatus,
 } from "@/hooks/perps";
+import { toCoin } from "@/services/hyperliquid/format";
 import {
   useAllPositions,
   useAllOrders,
@@ -38,7 +39,7 @@ import {
 } from "@/hooks/perps/useSymbolTrading";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { useWallet } from "@/context/WalletContext";
-import { useTradablePerps } from "@/hooks/useTradablePerps";
+import { usePerpListing } from "@/hooks/useTradablePerps";
 import { useTransfers } from "@/hooks/useTransfers";
 import { TransferBanner } from "./trade/TransferBanner";
 import { TradeHeader } from "./trade/TradeHeader";
@@ -75,18 +76,21 @@ export function TradeScreen() {
     if (paramSym) setSym(paramSym);
   }, [paramSym]);
 
-  // ---- live data
+  // ---- data. Live prices are read by the parts that show them (MarketSummary,
+  // TradePanel, the sheets), so price ticks don't re-render this whole screen.
   const session = usePerpsSession();
-  const markets = useMarkets();
-  const tradable = useTradablePerps();
-  const live = useLiveMarket(sym);
+  const coin = toCoin(sym);
+  const listed = useMarketsSelect((s) => !!s.byCoin[coin]);
+  const exchangeMaxLev = useMarketsSelect((s) => s.byCoin[coin]?.maxLeverage ?? 1);
+  const marketsLoading = useMarketsSelect((s) => s.loading);
+  const marketsError = useMarketsSelect((s) => s.error);
+  const listing = usePerpListing(sym);
   const posQ = useAllPositions(session.idToken);
   const ordQ = useAllOrders(session.idToken);
   const refreshTrading = () => {
     posQ.refetch();
     ordQ.refetch();
   };
-  const socket = useSocketStatus();
   const walletBal = useWallet();
   const bal = {
     perp: walletBal.perpAvailable,
@@ -115,14 +119,9 @@ export function TradeScreen() {
       then: o?.then,
     });
 
-  const listing = tradable.markets.find((m) => m.symbol === sym);
   const name: string = listing?.name ?? sym;
-  const listed = !!live.market;
-  const notListed = !markets.loading && !markets.error && !listed;
-  const maxLev = listed ? Math.min(MAX_LEV, live.maxLeverage) : MAX_LEV;
-
-  const markOf = (coin: string, fallback: number) =>
-    coin === live.coin ? live.mark : (markets.byCoin[coin]?.mid ?? fallback);
+  const notListed = !marketsLoading && !marketsError && !listed;
+  const maxLev = listed ? Math.min(MAX_LEV, exchangeMaxLev) : MAX_LEV;
 
   const openTicket = (side: 1 | -1) => {
     if (!listed)
@@ -191,12 +190,10 @@ export function TradeScreen() {
 
         <MarketSummary
           sym={sym}
-          live={live}
-          socket={socket}
           listed={listed}
           notListed={notListed}
-          marketsError={markets.error}
-          onRetry={() => markets.refresh()}
+          marketsError={marketsError}
+          onRetry={() => refreshMarkets()}
           showStatus={!!listing}
           onStatus={() => setSheet({ t: "status" })}
         />
@@ -220,11 +217,9 @@ export function TradeScreen() {
           sym={sym}
           name={name}
           listed={listed}
-          live={live}
           maxLev={maxLev}
           positions={{ ...posQ, data: positions }}
           orders={ordQ}
-          markOf={markOf}
           onOpenPosition={(id) => setSheet({ t: "position", id })}
           onEditTpSl={(id) => setSheet({ t: "tpsl", id })}
           onOpenOrder={(id) => setSheet({ t: "order", id })}
@@ -303,51 +298,79 @@ export function TradeScreen() {
       ) : null}
 
       {sheetTpSl ? (
-        <TpSlSheet
-          position={sheetTpSl}
-          mark={markOf(sheetTpSl.coin, sheetTpSl.entry)}
-          label={sheetTpSl.sym}
-          idToken={session.idToken}
-          onClose={() => setSheet(null)}
-          onSaved={refreshTrading}
-        />
+        <WithMark sym={sym} coin={sheetTpSl.coin} fallback={sheetTpSl.entry}>
+          {(mark) => (
+            <TpSlSheet
+              position={sheetTpSl}
+              mark={mark}
+              label={sheetTpSl.sym}
+              idToken={session.idToken}
+              onClose={() => setSheet(null)}
+              onSaved={refreshTrading}
+            />
+          )}
+        </WithMark>
       ) : null}
 
       {sheetPos ? (
-        <LivePositionSheet
-          position={sheetPos}
-          mark={markOf(sheetPos.coin, sheetPos.entry)}
-          label={sheetPos.sym}
-          onClose={() => setSheet(null)}
-          onEditTpSl={() => setSheet({ t: "tpsl", id: sheetPos.id })}
-          onClosePosition={() =>
-            unwrap(
-              tradeService.closePosition(
-                { stockSymbol: sheetPos.sym },
-                session.idToken ?? "",
-              ),
-            ).then(() => refreshTrading())
-          }
-          onMoveToSpot={() =>
-            openTransfer({
-              dir: "out",
-              amt: Math.floor(bal.perp * 100) / 100,
-            })
-          }
-        />
+        <WithMark sym={sym} coin={sheetPos.coin} fallback={sheetPos.entry}>
+          {(mark) => (
+            <LivePositionSheet
+              position={sheetPos}
+              mark={mark}
+              label={sheetPos.sym}
+              onClose={() => setSheet(null)}
+              onEditTpSl={() => setSheet({ t: "tpsl", id: sheetPos.id })}
+              onClosePosition={() =>
+                unwrap(
+                  tradeService.closePosition(
+                    { stockSymbol: sheetPos.sym },
+                    session.idToken ?? "",
+                  ),
+                ).then(() => refreshTrading())
+              }
+              onMoveToSpot={() =>
+                openTransfer({
+                  dir: "out",
+                  amt: Math.floor(bal.perp * 100) / 100,
+                })
+              }
+            />
+          )}
+        </WithMark>
       ) : null}
 
       {sheetOrd ? (
-        <LiveOrderSheet
-          order={sheetOrd}
-          mark={markOf(sheetOrd.coin, sheetOrd.px)}
-          label={sheetOrd.sym}
-          roleLabel={ROLE_LABEL[sheetOrd.role]}
-          tone={orderTone(sheetOrd)}
-          onClose={() => setSheet(null)}
-          onCancelOrder={() => cancelOrder(sheetOrd)}
-        />
+        <WithMark sym={sym} coin={sheetOrd.coin} fallback={sheetOrd.px}>
+          {(mark) => (
+            <LiveOrderSheet
+              order={sheetOrd}
+              mark={mark}
+              label={sheetOrd.sym}
+              roleLabel={ROLE_LABEL[sheetOrd.role]}
+              tone={orderTone(sheetOrd)}
+              onClose={() => setSheet(null)}
+              onCancelOrder={() => cancelOrder(sheetOrd)}
+            />
+          )}
+        </WithMark>
       ) : null}
     </SafeAreaView>
   );
+}
+
+/** Hands `children` the live mark for `coin`, so price ticks re-render only the sheet. */
+function WithMark({
+  sym,
+  coin,
+  fallback,
+  children,
+}: {
+  sym: string;
+  coin: string;
+  fallback: number;
+  children: (mark: number) => ReactNode;
+}) {
+  const markOf = useMarkOf(sym);
+  return <>{children(markOf(coin, fallback))}</>;
 }

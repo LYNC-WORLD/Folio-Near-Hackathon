@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -41,75 +41,88 @@ export function PerpMarketsScreen() {
     [markets],
   );
 
-  const open = (m: TradablePerp) => {
-    nav.navigate("Trade", { symbol: m.symbol });
-    // clear this screen off the Home stack once the tab switch has covered it
-    setTimeout(() => nav.popToTop(), 450);
-  };
+  // stable so memoized rows don't re-render on every price tick
+  const open = useCallback(
+    (m: TradablePerp) => {
+      nav.navigate("Trade", { symbol: m.symbol });
+      // clear this screen off the Home stack once the tab switch has covered it
+      setTimeout(() => nav.popToTop(), 450);
+    },
+    [nav],
+  );
+
+  const header = (
+    <>
+      <View style={s.head}>
+        <Pressable
+          onPress={() => {
+            hTap();
+            nav.goBack();
+          }}
+          hitSlop={12}
+          style={s.back}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Text style={s.backChev}>‹</Text>
+        </Pressable>
+        <Text style={TYPE.lbl}>PERP MARKETS</Text>
+        <Text style={TYPE.h2}>
+          Long or short any of {markets.length}
+        </Text>
+      </View>
+      {loading ? (
+        <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+      ) : error ? (
+        <Pressable onPress={() => refetch()}>
+          <Text style={s.note}>Couldn't load markets. Tap to retry.</Text>
+        </Pressable>
+      ) : null}
+    </>
+  );
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
-      <ScrollView
+      <FlatList
+        data={list}
+        keyExtractor={(m) => m.symbol}
+        ListHeaderComponent={header}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: 8,
+          paddingHorizontal: 20,
           paddingBottom: insets.bottom + 24,
         }}
-      >
-        <View style={s.head}>
-          <Pressable
-            onPress={() => {
-              hTap();
-              nav.goBack();
-            }}
-            hitSlop={12}
-            style={s.back}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={s.backChev}>‹</Text>
-          </Pressable>
-          <Text style={TYPE.lbl}>PERP MARKETS</Text>
-          <Text style={TYPE.h2}>
-            Long or short any of {markets.length}
-          </Text>
-        </View>
-
-        <View style={s.body}>
-          {loading ? (
-            <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
-          ) : error ? (
-            <Pressable onPress={() => refetch()}>
-              <Text style={s.note}>Couldn't load markets. Tap to retry.</Text>
-            </Pressable>
-          ) : null}
-          {list.map((m, i) => (
-            <Rise
-              key={m.symbol}
-              delay={Math.min(i, 8) * 25}
-              duration={300}
-            >
-              <PerpRow
-                m={m}
-                last={i === list.length - 1}
-                onPress={() => open(m)}
-              />
+        renderItem={({ item, index }) => {
+          const row = (
+            <PerpRow
+              m={item}
+              last={index === list.length - 1}
+              onPress={open}
+            />
+          );
+          // only the first screenful cascades in; rows scrolled to later just appear
+          return index < 14 ? (
+            <Rise delay={Math.min(index, 8) * 25} duration={300}>
+              {row}
             </Rise>
-          ))}
-        </View>
-      </ScrollView>
+          ) : (
+            row
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-function PerpRow({
+const PerpRow = memo(function PerpRow({
   m,
   last,
   onPress,
 }: {
   m: TradablePerp;
   last: boolean;
-  onPress: () => void;
+  onPress: (m: TradablePerp) => void;
 }) {
   const up = m.change >= 0;
   return (
@@ -117,7 +130,7 @@ function PerpRow({
       scaleTo={0.985}
       onPress={() => {
         hTap();
-        onPress();
+        onPress(m);
       }}
       style={[s.row, !last && s.hair]}
       accessibilityRole="button"
@@ -144,17 +157,16 @@ function PerpRow({
       </View>
     </PressScale>
   );
-}
+});
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.ground },
-  head: { paddingHorizontal: 20, gap: 6, marginBottom: 12 },
+  head: { gap: 6, marginBottom: 12 },
   back: { width: 44, height: 36, marginLeft: -8, justifyContent: "center" },
   backChev: { fontSize: 30, lineHeight: 32, color: C.ink1 },
 
   note: { ...TYPE.sub, paddingVertical: 14 },
 
-  body: { paddingHorizontal: 20 },
   row: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12 },
   hair: { borderBottomWidth: 1, borderBottomColor: C.hair },
   logo: {

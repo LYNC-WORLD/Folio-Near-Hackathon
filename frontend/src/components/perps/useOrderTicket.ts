@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { C } from "@/theme";
 import { AMBER } from "./PerpUi";
 import { toast } from "./PerpToast";
-import { useTradablePerps } from "@/hooks/useTradablePerps";
+import { usePerpListing } from "@/hooks/useTradablePerps";
 import { useWallet } from "@/context/WalletContext";
 import {
   useLiveMarket,
@@ -42,7 +42,7 @@ export function useOrderTicket({
   // perpBal comes from the wallet balance query; show "…" until it has loaded
   const balLoading = useWallet().loading;
 
-  const listing = useTradablePerps().markets.find((m) => m.symbol === toSym(sym));
+  const listing = usePerpListing(toSym(sym));
   const nm: string = listing?.name ?? toSym(sym);
   const unit: string = toSym(sym);
   const days = useRecentBars(sym, "1d", 90);
@@ -68,11 +68,6 @@ export function useOrderTicket({
   const [slT, setSlT] = useState("");
   const [phase, setPhase] = useState<"form" | "busy" | "done">("form");
   const [result, setResult] = useState<Result | null>(null);
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const i = setInterval(() => tick((n) => n + 1), 1000); // funding countdown
-    return () => clearInterval(i);
-  }, []);
   // default margin once the perp balance arrives
   useEffect(() => {
     if (!marginT && usdc > 0)

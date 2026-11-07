@@ -2,6 +2,7 @@
 // One REST fetch (metaAndAssetCtxs) every 30s + live mids from the allMids WebSocket.
 
 import { useEffect, useSyncExternalStore } from "react";
+import { AppState } from "react-native";
 import { STOCK_DEX } from "@/services/hyperliquid/config";
 import { errMsg, toCoin, toSym } from "@/services/hyperliquid/format";
 import { hlInfo } from "@/services/hyperliquid/info";
@@ -26,7 +27,7 @@ export interface PerpMarket {
   vol24Usd: number;
 }
 
-interface MarketsState {
+export interface MarketsState {
   byCoin: Record<string, PerpMarket>;
   list: PerpMarket[]; // sorted by 24h volume
   loading: boolean;
@@ -111,19 +112,35 @@ function applyMids(mids: Record<string, string>) {
   if (byCoin) emit({ byCoin, list: state.list.map((m) => byCoin![m.coin]) });
 }
 
-// ---- lifecycle: poll + live mids only while some component uses markets
+// ---- lifecycle: poll + live mids only while some component uses markets,
+// and no polling while the app is in the background (the socket pauses itself)
 let users = 0;
+let pollEvery = 30_000;
 let timer: ReturnType<typeof setInterval> | null = null;
 let unsubMids: (() => void) | null = null;
 
-function start(pollMs: number) {
+function startPolling() {
+  if (timer || AppState.currentState === "background") return;
   refreshMarkets();
-  timer = setInterval(refreshMarkets, pollMs);
+  timer = setInterval(refreshMarkets, pollEvery);
+}
+function stopPolling() {
+  if (timer) clearInterval(timer);
+  timer = null;
+}
+
+AppState.addEventListener("change", (s) => {
+  if (s === "active" && users > 0) startPolling();
+  else if (s === "background") stopPolling();
+});
+
+function start(pollMs: number) {
+  pollEvery = pollMs;
+  startPolling();
   unsubMids = hlSocket.subscribe({ type: "allMids", dex: STOCK_DEX }, (d: WsAllMids) => applyMids(d.mids));
 }
 function stop() {
-  if (timer) clearInterval(timer);
-  timer = null;
+  stopPolling();
   unsubMids?.();
   unsubMids = null;
 }
@@ -136,21 +153,41 @@ const subscribe = (f: () => void) => {
 };
 const snapshot = () => state;
 
-/** Whole stock universe. Use in Home, collections, market picker. */
-export function useMarkets(pollMs = 30_000) {
-  const s = useSyncExternalStore(subscribe, snapshot, snapshot);
+/** Keeps the poll + live mids running while the calling component is mounted. */
+function useMarketsFeed(pollMs: number) {
   useEffect(() => {
     if (users++ === 0) start(pollMs);
     return () => {
       if (--users === 0) stop();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/**
+ * Whole stock universe. Re-renders on every live price tick (several a second),
+ * so prefer useMarketsSelect / useMarket when you only need part of it.
+ */
+export function useMarkets(pollMs = 30_000) {
+  useMarketsFeed(pollMs);
+  const s = useSyncExternalStore(subscribe, snapshot, snapshot);
   return { ...s, refresh: refreshMarkets };
 }
 
-/** One market by app symbol ("NVDA") or coin ("xyz:NVDA"). */
+/**
+ * Re-renders only when what `select` returns changes. Return a primitive or an object
+ * straight from the store (never build a new one here, or it re-renders every tick).
+ *   const listed = useMarketsSelect((s) => !!s.byCoin["xyz:NVDA"]);
+ */
+export function useMarketsSelect<T>(select: (s: MarketsState) => T, pollMs = 30_000): T {
+  useMarketsFeed(pollMs);
+  const get = () => select(state);
+  return useSyncExternalStore(subscribe, get, get);
+}
+
+/** One market by app symbol ("NVDA") or coin ("xyz:NVDA"). Re-renders only when it changes. */
 export function useMarket(sym: string): PerpMarket | undefined {
-  return useMarkets().byCoin[toCoin(sym)];
+  const coin = toCoin(sym);
+  return useMarketsSelect((s) => s.byCoin[coin]);
 }
 
 /** Non-hook read for services / callbacks. */

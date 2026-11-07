@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Svg, { Polyline } from "react-native-svg";
 import { PressScale } from "@/components/ui";
@@ -5,7 +6,7 @@ import { C, FONT, em } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import { pct } from "@/lib/format";
 import { useRecentBars } from "@/hooks/perps";
-import type { TradablePerp } from "@/hooks/useTradablePerps";
+import { useTradablePerps, type TradablePerp } from "@/hooks/useTradablePerps";
 const GRID_GAP = 10;
 const GRID_PADDING = 20; // matches HomeScreen s.body paddingHorizontal
 
@@ -37,13 +38,16 @@ function Sparkline({ data, up }: { data: number[]; up: boolean }) {
   );
 }
 
+/** The first `count` perp markets as cards. Reads live prices itself, so price ticks
+ *  re-render this strip (and only the cards that moved), not the screen around it. */
 export function PerpStrip({
-  markets,
+  count = 3,
   onPress,
 }: {
-  markets: TradablePerp[];
+  count?: number;
   onPress: (m: TradablePerp) => void;
 }) {
+  const markets = useTradablePerps().markets.slice(0, count);
   const { width } = useWindowDimensions();
   const cardWidth = (width - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
   return (
@@ -55,7 +59,7 @@ export function PerpStrip({
   );
 }
 
-function PerpCard({
+const PerpCard = memo(function PerpCard({
   m,
   width,
   onPress,
@@ -93,7 +97,7 @@ function PerpCard({
       </View>
     </PressScale>
   );
-}
+});
 
 const s = StyleSheet.create({
   row: { flexDirection: "row", gap: GRID_GAP },

@@ -27,7 +27,7 @@ import Animated, {
 import Svg, { Circle, Path } from "react-native-svg";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
-import { MAXLEV } from "@/lib/perps";
+import { MAXLEV, fundLeft } from "@/lib/perps";
 
 export const AMBER = C.amber;
 export const ON_MINT = C.onMint;
@@ -137,13 +137,26 @@ export function Tag({
   );
 }
 
+/**
+ * "mm:ss" to the next hourly funding, for use inside a <Text>. Ticks on its own
+ * so the screen around it doesn't re-render every second.
+ */
+export function FundingCountdown() {
+  const [left, setLeft] = useState(fundLeft);
+  useEffect(() => {
+    const i = setInterval(() => setLeft(fundLeft()), 1000);
+    return () => clearInterval(i);
+  }, []);
+  return <>{left}</>;
+}
+
 export function Kv({
   k,
   v,
   tone,
   last,
 }: {
-  k: string;
+  k: ReactNode;
   v: ReactNode;
   tone?: "up" | "down";
   last?: boolean;

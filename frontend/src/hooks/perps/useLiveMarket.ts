@@ -1,11 +1,11 @@
 // Live header data for one market (Trade screen): mark, oracle, funding, OI, volume.
 // activeAssetCtx WebSocket updates every block; falls back to the polled market store.
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toCoin } from "@/services/hyperliquid/format";
 import type { PerpAssetCtx, WsActiveAssetCtx } from "@/services/hyperliquid/types";
 import { useHlSubscription } from "./useHlSubscription";
-import { useMarket } from "./useMarkets";
+import { useMarket, useMarketsSelect } from "./useMarkets";
 
 export function useLiveMarket(sym: string) {
   const coin = toCoin(sym);
@@ -38,4 +38,18 @@ export function useLiveMarket(sym: string) {
       szDecimals: market?.szDecimals ?? 0,
     };
   }, [coin, live, market]);
+}
+
+/**
+ * Live mark for any coin: the current market's live mark (`sym`), else the allMids mid,
+ * else `fallback`. Re-renders on price ticks, so call it where the prices are shown.
+ */
+export function useMarkOf(sym: string) {
+  const live = useLiveMarket(sym);
+  const byCoin = useMarketsSelect((s) => s.byCoin);
+  return useCallback(
+    (coin: string, fallback: number) =>
+      coin === live.coin ? live.mark : (byCoin[coin]?.mid ?? fallback),
+    [live.coin, live.mark, byCoin],
+  );
 }

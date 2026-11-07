@@ -9,7 +9,13 @@ import { TAKER } from "@/lib/perps";
 import { Btn, Kv, Tag } from "@/components/perps/PerpUi";
 import { OrderBook } from "@/components/perps/OrderBook";
 import { tradeStyles } from "@/components/perps/tradeStyles";
-import { livePnl, liveRoe, type UiPosition, type useLiveMarket } from "@/hooks/perps";
+import {
+  livePnl,
+  liveRoe,
+  useLiveMarket,
+  useMarkOf,
+  type UiPosition,
+} from "@/hooks/perps";
 import type { SymOrder } from "@/hooks/perps/useSymbolTrading";
 import { ROLE_LABEL, orderTone } from "./orderLabels";
 
@@ -28,11 +34,9 @@ export function TradePanel({
   sym,
   name,
   listed,
-  live,
   maxLev,
   positions,
   orders,
-  markOf,
   onOpenPosition,
   onEditTpSl,
   onOpenOrder,
@@ -40,18 +44,18 @@ export function TradePanel({
   sym: string;
   name: string;
   listed: boolean;
-  live: ReturnType<typeof useLiveMarket>;
   maxLev: number;
   /** positions with tp/sl filled in from their orders */
   positions: Query<UiPosition>;
   orders: Query<SymOrder>;
-  /** live mark for any coin, falling back to `fallback` */
-  markOf: (coin: string, fallback: number) => number;
   onOpenPosition: (id: string) => void;
   onEditTpSl: (id: string) => void;
   onOpenOrder: (id: number) => void;
 }) {
   const [tab, setTab] = useState<PTab>("pos");
+  // live prices are read here, not in TradeScreen, so ticks re-render only this panel
+  const live = useLiveMarket(sym);
+  const markOf = useMarkOf(sym);
   return (
     <>
       <View style={tradeStyles.tabs}>

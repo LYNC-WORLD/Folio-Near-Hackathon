@@ -13,6 +13,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  FlatList,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -79,9 +80,95 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
     });
   }, [assets, tag, sort]);
 
+  const header = (
+    <View style={s.head}>
+      <Pressable
+        onPress={() => nav.goBack()}
+        style={({ pressed }) => [s.back, pressed && { opacity: 0.6 }]}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Back to Home"
+      >
+        <Ionicons name="chevron-back" size={16} color={C.mint} />
+        <Text style={s.backText}>Home</Text>
+      </Pressable>
+
+      <View style={s.header}>
+        <Rise duration={460}>
+          <Text style={TYPE.lbl}>COLLECTION</Text>
+        </Rise>
+        <Rise duration={460} delay={55}>
+          <Text style={[TYPE.h1, h1Size(38)]} accessibilityRole="header">
+            {coll.title}
+          </Text>
+        </Rise>
+        <Rise duration={460} delay={110}>
+          <Text style={TYPE.body}>{coll.blurb}</Text>
+        </Rise>
+      </View>
+
+      <Rise duration={460} delay={165} style={s.filterRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.chips}
+          style={{ flex: 1 }}
+        >
+          <Chip
+            label={`All ${loading ? "…" : assets.length}`}
+            on={tag === "all"}
+            onPress={() => setTag("all")}
+          />
+          {tags.map((t) => (
+            <Chip
+              key={t}
+              label={t}
+              on={tag === t}
+              onPress={() => setTag(t)}
+            />
+          ))}
+        </ScrollView>
+        <Pressable
+          onPress={() => {
+            hSelect();
+            setSort((m) => NEXT_SORT[m]);
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort by ${SORT_LABEL[sort]}. Tap to change.`}
+        >
+          <Text style={s.sort}>{SORT_LABEL[sort]} ↕</Text>
+        </Pressable>
+      </Rise>
+
+      {error ? (
+        <View style={s.errorRow}>
+          <Text style={[TYPE.sub, { color: C.loss, flex: 1 }]}>{error}</Text>
+          <Chip label="Retry" onPress={() => reload()} />
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
-      <ScrollView
+      <FlatList
+        data={loading ? [] : list}
+        // keyed with the filter + sort so the list re-cascades when they change
+        keyExtractor={(a) => `${tag}-${sort}-${a.symbol}`}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          <View style={s.list}>
+            {loading ? (
+              [0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} height={122} radius={16} />
+              ))
+            ) : (
+              <Text style={[TYPE.sub, s.none]}>Nothing in this filter yet.</Text>
+            )}
+          </View>
+        }
+        ItemSeparatorComponent={Gap}
         contentContainerStyle={s.page}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -93,105 +180,34 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
             progressBackgroundColor={C.raised}
           />
         }
-      >
-        <Pressable
-          onPress={() => nav.goBack()}
-          style={({ pressed }) => [s.back, pressed && { opacity: 0.6 }]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Back to Home"
-        >
-          <Ionicons name="chevron-back" size={16} color={C.mint} />
-          <Text style={s.backText}>Home</Text>
-        </Pressable>
-
-        <View style={s.header}>
-          <Rise duration={460}>
-            <Text style={TYPE.lbl}>COLLECTION</Text>
-          </Rise>
-          <Rise duration={460} delay={55}>
-            <Text style={[TYPE.h1, h1Size(38)]} accessibilityRole="header">
-              {coll.title}
-            </Text>
-          </Rise>
-          <Rise duration={460} delay={110}>
-            <Text style={TYPE.body}>{coll.blurb}</Text>
-          </Rise>
-        </View>
-
-        <Rise duration={460} delay={165} style={s.filterRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.chips}
-            style={{ flex: 1 }}
-          >
-            <Chip
-              label={`All ${loading ? "…" : assets.length}`}
-              on={tag === "all"}
-              onPress={() => setTag("all")}
+        renderItem={({ item: a, index: i }) => {
+          const card = (
+            <CollectionCard
+              a={a}
+              onPress={() =>
+                nav.navigate("StockDetail", {
+                  symbol: a.symbol,
+                  category: a.category,
+                })
+              }
             />
-            {tags.map((t) => (
-              <Chip
-                key={t}
-                label={t}
-                on={tag === t}
-                onPress={() => setTag(t)}
-              />
-            ))}
-          </ScrollView>
-          <Pressable
-            onPress={() => {
-              hSelect();
-              setSort((m) => NEXT_SORT[m]);
-            }}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Sort by ${SORT_LABEL[sort]}. Tap to change.`}
-          >
-            <Text style={s.sort}>{SORT_LABEL[sort]} ↕</Text>
-          </Pressable>
-        </Rise>
-
-        {error ? (
-          <View style={s.errorRow}>
-            <Text style={[TYPE.sub, { color: C.loss, flex: 1 }]}>{error}</Text>
-            <Chip label="Retry" onPress={() => reload()} />
-          </View>
-        ) : null}
-
-        <View style={s.list}>
-          {loading ? (
-            [0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} height={122} radius={16} />
-            ))
-          ) : list.length === 0 ? (
-            <Text style={[TYPE.sub, s.none]}>Nothing in this filter yet.</Text>
+          );
+          // only the first screenful cascades in; cards scrolled to later just appear
+          return i < 8 ? (
+            <Rise delay={220 + i * 40} duration={420}>
+              {card}
+            </Rise>
           ) : (
-            list.map((a, i) => (
-              // keyed with the filter + sort so the list re-cascades when they change
-              <Rise
-                key={`${tag}-${sort}-${a.symbol}`}
-                delay={220 + Math.min(i, 8) * 40}
-                duration={420}
-              >
-                <CollectionCard
-                  a={a}
-                  onPress={() =>
-                    nav.navigate("StockDetail", {
-                      symbol: a.symbol,
-                      category: a.category,
-                    })
-                  }
-                />
-              </Rise>
-            ))
-          )}
-        </View>
-      </ScrollView>
+            card
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
+
+/** space between cards (the old list's gap) */
+const Gap = () => <View style={{ height: 10 }} />;
 
 function CollectionCard({ a, onPress }: { a: Asset; onPress: () => void }) {
   const isPre = a.kind === "Pre-IPO";
@@ -266,7 +282,9 @@ function CollectionCard({ a, onPress }: { a: Asset; onPress: () => void }) {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.ground },
-  page: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
+  page: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 40 },
+  // the header blocks keep the old page gap; the list starts one gap below them
+  head: { gap: 20, marginBottom: 20 },
 
   back: {
     flexDirection: "row",

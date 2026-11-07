@@ -61,7 +61,7 @@ import { loadRecents, saveRecents, withRecent } from "@/lib/recentSearches";
 import { money, pct } from "@/lib/format";
 import { hTap } from "@/lib/haptics";
 import { Dimensions } from "react-native";
-import { useTradablePerps, type TradablePerp } from "@/hooks/useTradablePerps";
+import type { TradablePerp } from "@/hooks/useTradablePerps";
 import { PerpStrip } from "@/components/perps/PerpStrip";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { TabParamList } from "@/navigation/RootTabs";
@@ -83,7 +83,6 @@ export function HomeScreen() {
   const splashDone = useSplashDone();
   const bottom = useTabBarSpace();
 
-  const featuredPerps = useTradablePerps().markets.slice(0, 3);
 
   const openPerp = (m: TradablePerp) => {
     nav.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate("Trade", {
@@ -321,7 +320,7 @@ export function HomeScreen() {
                     <Text style={s.clearAll}>All markets ›</Text>
                   </Pressable>
                 </View>
-                <PerpStrip markets={featuredPerps} onPress={openPerp} />
+                <PerpStrip count={3} onPress={openPerp} />
               </Rise>
 
               <Rise

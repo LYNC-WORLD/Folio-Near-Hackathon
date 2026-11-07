@@ -1,6 +1,6 @@
 // Big live price (flashes on each tick), stats strip, and the US market status pill.
-// Owns the 1s funding-countdown tick so only this block re-renders every second.
-import { useEffect, useState } from "react";
+// Subscribes to the live market itself, so price ticks re-render only this block.
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,17 +11,15 @@ import {
 import { C } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import { money, sPct } from "@/lib/format";
-import { fundLeft, usMarketOpen } from "@/lib/perps";
-import { AMBER, Btn } from "@/components/perps/PerpUi";
+import { usMarketOpen } from "@/lib/perps";
+import { AMBER, Btn, FundingCountdown } from "@/components/perps/PerpUi";
 import { tradeStyles } from "@/components/perps/tradeStyles";
-import type { useLiveMarket, useSocketStatus } from "@/hooks/perps";
+import { useLiveMarket, useSocketStatus } from "@/hooks/perps";
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
 
 export function MarketSummary({
   sym,
-  live,
-  socket,
   listed,
   notListed,
   marketsError,
@@ -30,8 +28,6 @@ export function MarketSummary({
   onStatus,
 }: {
   sym: string;
-  live: ReturnType<typeof useLiveMarket>;
-  socket: ReturnType<typeof useSocketStatus>;
   listed: boolean;
   notListed: boolean;
   marketsError: string | null;
@@ -40,6 +36,9 @@ export function MarketSummary({
   showStatus: boolean;
   onStatus: () => void;
 }) {
+  const live = useLiveMarket(sym);
+  const socket = useSocketStatus();
+
   // price flash on each tick
   const [flash, setFlash] = useState<null | "up" | "dn">(null);
   useEffect(() => {
@@ -49,15 +48,9 @@ export function MarketSummary({
     return () => clearTimeout(t);
   }, [live.mark]); // eslint-disable-line
 
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const i = setInterval(() => tick((n) => n + 1), 1000); // funding countdown
-    return () => clearInterval(i);
-  }, []);
-
   const open = usMarketOpen();
   const fr = live.fundingPct;
-  const stats: [string, string, "up" | "down" | null][] = [
+  const stats: [string, ReactNode, "up" | "down" | null][] = [
     ["MARK", money(live.mark), null],
     ["ORACLE", money(live.oracle), null],
     [
@@ -65,7 +58,7 @@ export function MarketSummary({
       `${fr >= 0 ? "+" : "−"}${Math.abs(fr).toFixed(4)}%`,
       fr >= 0 ? "up" : "down",
     ],
-    ["NEXT FUNDING", fundLeft(), null],
+    ["NEXT FUNDING", <FundingCountdown />, null],
     ["24H VOLUME", `$${(live.vol24Usd / 1e6).toFixed(1)}M`, null],
     ["OPEN INTEREST", `$${(live.oiUsd / 1e6).toFixed(1)}M`, null],
   ];

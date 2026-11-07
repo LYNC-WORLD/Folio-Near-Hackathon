@@ -1,7 +1,7 @@
 // Perp markets the user can trade. The backend decides WHICH markets are listed
 // (name, logo, asset id, max leverage); Hyperliquid supplies live price, 24h change
 // and volume on top, falling back to the backend's price until the feed is in.
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getPerpMarkets, type PerpMarketApi } from "@/services/perps";
 import { toCoin } from "@/services/hyperliquid/format";
@@ -31,8 +31,8 @@ const toPerp = (a: PerpMarketApi, hl?: HlMarket): TradablePerp => ({
   vol24Usd: hl?.vol24Usd ?? 0,
 });
 
-export function useTradablePerps() {
-  const query = useQuery({
+const usePerpMarketsQuery = () =>
+  useQuery({
     queryKey: ["perpMarkets"],
     queryFn: async () => {
       const res = await getPerpMarkets();
@@ -41,12 +41,39 @@ export function useTradablePerps() {
     },
     staleTime: 60_000,
   });
+
+/**
+ * One market's listing (name, logo, max leverage) without the live price feed, so it
+ * doesn't re-render on every tick. `mark` / `change` are the backend's, not live.
+ */
+export function usePerpListing(sym: string): TradablePerp | undefined {
+  const { data } = usePerpMarketsQuery();
+  return useMemo(() => {
+    const a = data?.find((m) => m.marketSymbol === sym);
+    return a ? toPerp(a) : undefined;
+  }, [data, sym]);
+}
+
+/** Every market with live prices. Re-renders on price ticks: use it where prices show. */
+export function useTradablePerps() {
+  const query = usePerpMarketsQuery();
   const live = useMarkets();
 
-  const markets = useMemo(
-    () => (query.data ?? []).map((a) => toPerp(a, live.byCoin[toCoin(a.marketSymbol)])),
-    [query.data, live.byCoin],
-  );
+  // Reuse last render's object for a market whose price didn't move, so memoized
+  // rows can skip re-rendering.
+  const prev = useRef(new Map<string, { a: PerpMarketApi; hl?: HlMarket; perp: TradablePerp }>());
+  const markets = useMemo(() => {
+    const next = new Map<string, { a: PerpMarketApi; hl?: HlMarket; perp: TradablePerp }>();
+    const list = (query.data ?? []).map((a) => {
+      const hl = live.byCoin[toCoin(a.marketSymbol)];
+      const old = prev.current.get(a.marketSymbol);
+      const perp = old && old.a === a && old.hl === hl ? old.perp : toPerp(a, hl);
+      next.set(a.marketSymbol, { a, hl, perp });
+      return perp;
+    });
+    prev.current = next;
+    return list;
+  }, [query.data, live.byCoin]);
 
   return {
     markets,

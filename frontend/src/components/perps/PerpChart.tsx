@@ -59,11 +59,11 @@ import {
   timeTicks as ticksOf,
 } from "./chart/geometry";
 
-const UP = "#37E099",
-  DN = "#F0604D",
-  AXIS = "#7C838C",
+const UP = C.mint,
+  DN = C.loss,
+  AXIS = C.ink4,
   INK = "#D6DAE0",
-  AMBER = "#E8A33D";
+  AMBER = C.amber;
 const MONO = FONT.mono400;
 type Ind = Record<IndKey, boolean>;
 const NONE_P: UiPosition[] = [];
@@ -379,7 +379,7 @@ function ChartBody({
 
   const legend: [string, string, string][] = [];
   if (ind.ma && I.ma?.[iN] != null)
-    legend.push(["MA 20", "#E8A33D", fp(I.ma[ci ?? iN] ?? I.ma[iN]!)]);
+    legend.push(["MA 20", C.amber, fp(I.ma[ci ?? iN] ?? I.ma[iN]!)]);
   if (ind.ema && I.ema?.[iN] != null)
     legend.push(["EMA 50", "#6FA8F5", fp(I.ema[ci ?? iN] ?? I.ema[iN]!)]);
   if (ind.vwap && I.vwap)
@@ -524,7 +524,7 @@ function ChartBody({
               {ind.ma ? (
                 <Path
                   d={pathOf(I.ma)}
-                  stroke="#E8A33D"
+                  stroke={C.amber}
                   strokeWidth={1.2}
                   fill="none"
                 />
@@ -571,7 +571,7 @@ function ChartBody({
             <SvgText
               x={PW + AX / 2}
               y={tagY + 0.5}
-              fill={lastUp ? "#06120D" : "#1C0805"}
+              fill={lastUp ? C.onMint : "#1C0805"}
               fontSize={10}
               fontFamily={MONO}
               textAnchor="middle"
@@ -590,13 +590,13 @@ function ChartBody({
                     q.entry,
                     `${sideTxt(q.side)} ${q.lev}x  ${sMoney(pnl)}`,
                     INK,
-                    "#0A0B0E",
+                    C.ground,
                   )}
                   {q.liq != null
                     ? lineChip("l" + q.id, q.liq, "LIQ", DN, "#1C0805", "2 4")
                     : null}
                   {q.tp != null
-                    ? lineChip("t" + q.id, q.tp, "TP", UP, "#06120D")
+                    ? lineChip("t" + q.id, q.tp, "TP", UP, C.onMint)
                     : null}
                   {q.sl != null
                     ? lineChip("s" + q.id, q.sl, "SL", DN, "#1C0805")
@@ -628,7 +628,7 @@ function ChartBody({
                       x2={PW}
                       y1={Y}
                       y2={Y}
-                      stroke="#1C2129"
+                      stroke={C.hair}
                       strokeDasharray="3 3"
                     />
                   );
@@ -709,7 +709,7 @@ function ChartBody({
                   width={AX - 2}
                   height={18}
                   rx={4}
-                  fill="#262C36"
+                  fill={C.stroke}
                 />
                 <SvgText
                   x={PW + AX / 2}
@@ -728,7 +728,7 @@ function ChartBody({
                   width={84}
                   height={16}
                   rx={4}
-                  fill="#262C36"
+                  fill={C.stroke}
                 />
                 <SvgText
                   x={Math.max(2, Math.min(PW - 84, xi(ci) - 42)) + 42}
@@ -1112,9 +1112,9 @@ const s = StyleSheet.create({
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#262C36",
+    backgroundColor: C.stroke,
     borderWidth: 1,
-    borderColor: "#3A404A",
+    borderColor: C.dotRing,
   },
   menu: {
     position: "absolute",
@@ -1124,7 +1124,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: C.raised,
     borderWidth: 1,
-    borderColor: "#262C36",
+    borderColor: C.stroke,
     zIndex: 9,
     elevation: 9,
   },
@@ -1153,6 +1153,6 @@ const s = StyleSheet.create({
     height: 16,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: "#3A404A",
+    borderColor: C.dotRing,
   },
 });

@@ -357,7 +357,7 @@ const s = StyleSheet.create({
     height: 30,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: "#262C36",
+    backgroundColor: C.stroke,
     justifyContent: "center",
   },
   pctT: { fontFamily: FONT.sans800, fontSize: 12.5, color: C.ink2 },

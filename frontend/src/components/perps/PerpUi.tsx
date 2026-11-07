@@ -29,8 +29,8 @@ import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import { MAXLEV } from "@/lib/perps";
 
-export const AMBER = "#E8A33D";
-export const ON_MINT = "#06120D";
+export const AMBER = C.amber;
+export const ON_MINT = C.onMint;
 export const ON_SHORT = "#1C0805";
 export const CARD = "#20252E";
 
@@ -152,7 +152,7 @@ export function Kv({
     <View
       style={[
         s.kv,
-        !last && { borderBottomWidth: 1, borderBottomColor: "#262C36" },
+        !last && { borderBottomWidth: 1, borderBottomColor: C.stroke },
       ]}
     >
       <Text style={s.kvK}>{k}</Text>
@@ -503,7 +503,7 @@ export function LeverageSlider({
               hTap();
               onChange(v);
             }}
-            style={[s.mark, v === value && { backgroundColor: "#262C36" }]}
+            style={[s.mark, v === value && { backgroundColor: C.stroke }]}
           >
             <Text style={[s.markT, v === value && { color: C.ink1 }]}>
               {v}x
@@ -529,14 +529,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderColor: "#262C36",
+    borderColor: C.stroke,
   },
   grab: {
     alignSelf: "center",
     width: 40,
     height: 4,
     borderRadius: 999,
-    backgroundColor: "#3A404A",
+    backgroundColor: C.dotRing,
     marginBottom: 16,
   },
   lbl: {

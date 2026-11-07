@@ -33,7 +33,7 @@ const NOTIFY_KEY = "folio.groupsNotify";
 
 // avatars on the coming-soon card
 const MEMBERS: [string, string][] = [
-  ["A", "#E8A33D"],
+  ["A", C.amber],
   ["M", "#6FA8F5"],
   ["C", "#F07F9B"],
   ["H", "#7FD8A8"],
@@ -50,7 +50,7 @@ const STEPS = [
 
 const NEG = "#F0657A";
 const PALETTE = [
-  "#E8A33D",
+  C.amber,
   "#6FA8F5",
   "#F07F9B",
   "#7FD8A8",
@@ -456,7 +456,7 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 999,
-    backgroundColor: "#262C36",
+    backgroundColor: C.stroke,
     alignItems: "center",
     justifyContent: "center",
   },

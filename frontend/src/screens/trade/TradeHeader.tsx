@@ -39,7 +39,7 @@ export function TradeHeader({
             width: 42,
             height: 42,
             borderRadius: 999,
-            backgroundColor: "#262C36",
+            backgroundColor: C.stroke,
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",

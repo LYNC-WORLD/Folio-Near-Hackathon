@@ -43,7 +43,7 @@ function Logo({
         width: size,
         height: size,
         borderRadius: 999,
-        backgroundColor: "#262C36",
+        backgroundColor: C.stroke,
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
@@ -187,7 +187,7 @@ export function UnlockSheet({
                 height={14}
                 viewBox="0 0 16 16"
                 fill="none"
-                stroke="#06120D"
+                stroke={C.onMint}
                 strokeWidth={2.4}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -493,7 +493,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#161A21",
     borderWidth: 1,
-    borderColor: "#262C36",
+    borderColor: C.stroke,
   },
   say: {
     fontFamily: FONT.sans600,
@@ -538,7 +538,7 @@ const s = StyleSheet.create({
     height: 24,
     borderRadius: 7,
     borderWidth: 1.5,
-    borderColor: "#3A404A",
+    borderColor: C.dotRing,
     alignItems: "center",
     justifyContent: "center",
   },

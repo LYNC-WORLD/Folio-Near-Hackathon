@@ -91,7 +91,7 @@ function ModeToggle({
             value === m && { backgroundColor: C.mint },
           ]}
         >
-          <Text style={[s.chipT, value === m && { color: "#06120D" }]}>
+          <Text style={[s.chipT, value === m && { color: C.onMint }]}>
             {m === "price" ? "$" : "%"}
           </Text>
         </Pressable>
@@ -228,7 +228,7 @@ export function OrderTicketSheet({
               style={[
                 s.otype,
                 t === otype && {
-                  backgroundColor: "#262C36",
+                  backgroundColor: C.stroke,
                   borderColor: "transparent",
                 },
               ]}
@@ -389,7 +389,7 @@ export function OrderTicketSheet({
         </Text>
         <View style={s.ai}>
           <View style={[s.aiDot, { backgroundColor: toneCol }]}>
-            <Svg width={12} height={12} viewBox="0 0 22 22" fill="#06120D">
+            <Svg width={12} height={12} viewBox="0 0 22 22" fill={C.onMint}>
               <Path d="M11 2.6c.6 4.1 3.7 7.2 7.8 7.8-4.1.6-7.2 3.7-7.8 7.8-.6-4.1-3.7-7.2-7.8-7.8 4.1-.6 7.2-3.7 7.8-7.8z" />
             </Svg>
           </View>
@@ -414,9 +414,9 @@ export function OrderTicketSheet({
               hTap();
               setTpOn(v);
             }}
-            trackColor={{ false: "#262C36", true: C.mint }}
+            trackColor={{ false: C.stroke, true: C.mint }}
             thumbColor="#fff"
-            ios_backgroundColor="#262C36"
+            ios_backgroundColor={C.stroke}
             accessibilityLabel="Take profit and stop loss"
           />
         </View>
@@ -689,7 +689,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 999,
-    backgroundColor: "#262C36",
+    backgroundColor: C.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -742,7 +742,7 @@ const s = StyleSheet.create({
     height: 30,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: "#262C36",
+    backgroundColor: C.stroke,
     justifyContent: "center",
   },
   pctT: { fontFamily: FONT.sans800, fontSize: 12.5, color: C.ink2 },
@@ -774,7 +774,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#161A21",
     borderWidth: 1,
-    borderColor: "#262C36",
+    borderColor: C.stroke,
   },
   say: {
     fontFamily: FONT.sans600,
@@ -810,7 +810,7 @@ const s = StyleSheet.create({
     height: 30,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: "#262C36",
+    backgroundColor: C.stroke,
     justifyContent: "center",
   },
   chipT: { fontFamily: FONT.sans800, fontSize: 12.5, color: C.ink2 },
@@ -851,7 +851,7 @@ const s = StyleSheet.create({
     height: 20,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: "#3A404A",
+    borderColor: C.dotRing,
     alignItems: "center",
     justifyContent: "center",
   },

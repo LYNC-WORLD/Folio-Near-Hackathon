@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import {
-  Gesture,
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
@@ -33,7 +32,6 @@ import {
   bands,
   ema,
   haOf,
-  niceStep,
   rsiOf,
   sma,
   vwapOf,
@@ -51,6 +49,15 @@ import {
   type UiPosition,
 } from "@/hooks/perps";
 import { sideTxt, sMoney, fmtNum } from "@/lib/format";
+import { MIN_BARS, RP, clamp, useChartViewport } from "./chart/useChartViewport";
+import {
+  candlePaths,
+  f1,
+  linePath,
+  priceGrid,
+  timeLabel,
+  timeTicks as ticksOf,
+} from "./chart/geometry";
 
 const UP = "#37E099",
   DN = "#F0604D",
@@ -62,15 +69,6 @@ type Ind = Record<IndKey, boolean>;
 const NONE_P: UiPosition[] = [];
 const NONE_O: UiOrder[] = [];
 
-// ---- viewport: how wide one candle is, and how many candles we are scrolled back
-const BW0 = 7; // default candle slot width (px)
-const BW_MIN = 2; // most zoomed out
-const BW_MAX = 30; // most zoomed in
-const RP = 35; // empty space to the right of the newest candle (px)
-const MIN_BARS = 8; // never scroll the last few candles off screen
-type Vp = { bw: number; off: number };
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const f1 = (v: number) => v.toFixed(1);
 
 const ICON: Record<ChartType, { d: string; fill?: boolean; soft?: boolean }[]> =
   {
@@ -161,19 +159,6 @@ function ChartBody({
   const mark = live.mark;
   const { bars: base, loading, error } = useCandles(sym, tf);
   const [W, setW] = useState(0);
-  const [cross, setCross] = useState<{ x: number; y: number } | null>(null);
-  const [vp, setVp] = useState<Vp>({ bw: BW0, off: 0 });
-
-  // latest geometry / callbacks for the gesture handlers (they are created once)
-  const geo = useRef({ n: 0, PW: 0 });
-  const lockRef = useRef(onScrollLock);
-  lockRef.current = onScrollLock;
-  const fling = useRef<number | null>(null);
-  const stopFling = useCallback(() => {
-    if (fling.current != null) cancelAnimationFrame(fling.current);
-    fling.current = null;
-  }, []);
-  useEffect(() => stopFling, [stopFling]);
 
   // keep the last candle glued to the live mark price
   const bars = useMemo(() => {
@@ -191,138 +176,15 @@ function ChartBody({
     [bars, type],
   );
 
-  // new market or timeframe -> snap back to the latest candle (zoom level is kept)
-  useEffect(() => {
-    stopFling();
-    setVp((v) => (v.off === 0 ? v : { ...v, off: 0 }));
-  }, [sym, tf, stopFling]);
-
-  // while you are looking at history, a new candle must not shift the view
   const lastT = bars.length ? bars[bars.length - 1].t : 0;
-  const prevT = useRef(0);
-  useEffect(() => {
-    if (prevT.current && lastT > prevT.current)
-      setVp((v) => (v.off > 0 ? { ...v, off: v.off + 1 } : v));
-    prevT.current = lastT;
-  }, [lastT]);
+  const { vp, cross, gesture, geo, toLatest } = useChartViewport({
+    sym,
+    tf,
+    fs,
+    lastT,
+    onScrollLock,
+  });
 
-  // ---- gestures
-  const gesture = useMemo(() => {
-    const fit = (bw: number, off: number): Vp => ({
-      bw: clamp(bw, BW_MIN, BW_MAX),
-      off: clamp(off, 0, Math.max(0, geo.current.n - MIN_BARS)),
-    });
-    // parent ScrollView lock, counted so overlapping gestures do not unlock each other
-    let held = 0;
-    const session = () => {
-      let on = false;
-      return {
-        start() {
-          if (on) return;
-          on = true;
-          if (held++ === 0) lockRef.current?.(true);
-        },
-        end() {
-          if (!on) return;
-          on = false;
-          held = Math.max(0, held - 1);
-          if (held === 0) lockRef.current?.(false);
-        },
-      };
-    };
-
-    // --- drag to scroll. Uses the finger position inside the chart (e.x) rather than
-    // translationX so it also works when the full-screen stage is rotated 90 degrees.
-    const ps = session();
-    let lastX = 0,
-      lastAt = 0,
-      vel = 0; // px per second
-    const pan = (
-      fs
-        ? Gesture.Pan().minDistance(6)
-        : // inline: only grab horizontal drags, leave vertical ones to the page scroll
-          Gesture.Pan().activeOffsetX([-8, 8]).failOffsetY([-14, 14])
-    )
-      .runOnJS(true)
-      .maxPointers(1)
-      .onBegin(() => stopFling())
-      .onStart((e) => {
-        lastX = e.x;
-        lastAt = Date.now();
-        vel = 0;
-        ps.start();
-      })
-      .onUpdate((e) => {
-        const now = Date.now(),
-          dx = e.x - lastX,
-          dt = Math.max(1, now - lastAt);
-        lastX = e.x;
-        lastAt = now;
-        vel = vel * 0.6 + (dx / dt) * 1000 * 0.4;
-        setVp((v) => fit(v.bw, v.off + dx / v.bw));
-      })
-      .onEnd(() => {
-        // inertia: keep gliding after a quick flick
-        if (Date.now() - lastAt > 80 || Math.abs(vel) < 150) return;
-        let v0 = vel,
-          t = Date.now();
-        const tick = () => {
-          const now = Date.now(),
-            dt = (now - t) / 1000;
-          t = now;
-          v0 *= Math.exp(-4 * dt);
-          if (Math.abs(v0) < 25) {
-            fling.current = null;
-            return;
-          }
-          setVp((v) => fit(v.bw, v.off + (v0 * dt) / v.bw));
-          fling.current = requestAnimationFrame(tick);
-        };
-        fling.current = requestAnimationFrame(tick);
-      })
-      .onFinalize(() => ps.end());
-
-    // --- pinch to zoom, keeping the candle under your fingers in place
-    const zs = session();
-    let lastScale = 1;
-    const pinch = Gesture.Pinch()
-      .runOnJS(true)
-      .onStart(() => {
-        stopFling();
-        lastScale = 1;
-        zs.start();
-      })
-      .onUpdate((e) => {
-        const k = e.scale / (lastScale || 1);
-        lastScale = e.scale;
-        const A = geo.current.PW - RP - e.focalX;
-        setVp((v) => {
-          const bw = clamp(v.bw * k, BW_MIN, BW_MAX);
-          return fit(bw, v.off + A / v.bw - A / bw);
-        });
-      })
-      .onFinalize(() => zs.end());
-
-    // --- press and hold for the crosshair
-    const cs = session();
-    const crossG = Gesture.Pan()
-      .runOnJS(true)
-      .maxPointers(1)
-      .activateAfterLongPress(220)
-      .onStart((e) => {
-        stopFling();
-        cs.start();
-        hTap();
-        setCross({ x: e.x, y: e.y });
-      })
-      .onUpdate((e) => setCross({ x: e.x, y: e.y }))
-      .onFinalize(() => {
-        cs.end();
-        setCross(null);
-      });
-
-    return Gesture.Race(crossG, Gesture.Simultaneous(pan, pinch));
-  }, [fs, stopFling]);
 
   const myPos = positions.filter((p) => p.sym === sym);
   const myOrd = orders.filter((o) => o.sym === sym);
@@ -437,64 +299,15 @@ function ChartBody({
     ci != null ? view[Math.max(0, ci - 1)] : view[Math.max(0, iN - 1)]
   ).c;
 
-  const pathOf = (arr: (number | null)[] | null) => {
-    if (!arr) return "";
-    let d = "",
-      pen = false;
-    for (let i = i0; i <= i1; i++) {
-      const v = arr[i];
-      if (v == null) {
-        pen = false;
-        continue;
-      }
-      d += (pen ? "L" : "M") + f1(xi(i)) + " " + f1(y(v));
-      pen = true;
-    }
-    return d;
-  };
+  const frame = { i0, i1, xi, y };
+  const pathOf = (arr: (number | null)[] | null) => linePath(arr, frame);
 
-  // candles / bars / volume as a handful of big paths (much cheaper to redraw while panning)
-  let wickUp = "",
-    wickDn = "",
-    bodyUp = "",
-    bodyDn = "",
-    volUp = "",
-    volDn = "";
-  const half = Math.max(0.5, bw * 0.35);
-  if (!lineOnly || ind.vol) {
-    const tick = Math.max(1.5, bw * 0.43);
-    for (let i = i0; i <= i1; i++) {
-      const b = view[i],
-        x = xi(i),
-        up = b.c >= b.o;
-      if (type === "bars") {
-        const d = `M${f1(x)} ${f1(y(b.h))}V${f1(y(b.l))}M${f1(x - tick)} ${f1(y(b.o))}H${f1(x)}M${f1(x)} ${f1(y(b.c))}H${f1(x + tick)}`;
-        if (up) wickUp += d;
-        else wickDn += d;
-      } else if (!lineOnly) {
-        const yo = y(b.o),
-          yc = y(b.c),
-          h = Math.max(1, Math.abs(yo - yc));
-        const w = `M${f1(x)} ${f1(y(b.h))}V${f1(y(b.l))}`;
-        const r = `M${f1(x - half)} ${f1(Math.min(yo, yc))}h${f1(half * 2)}v${f1(h)}h${f1(-half * 2)}Z`;
-        if (up) {
-          wickUp += w;
-          bodyUp += r;
-        } else {
-          wickDn += w;
-          bodyDn += r;
-        }
-      }
-      if (ind.vol) {
-        const h = (b.v / (vmax || 1)) * MH * 0.15;
-        const r = `M${f1(x - half)} ${f1(MH - h)}h${f1(half * 2)}v${f1(h)}h${f1(-half * 2)}Z`;
-        if (up) volUp += r;
-        else volDn += r;
-      }
-    }
-  }
+  const { wickUp, wickDn, bodyUp, bodyDn, volUp, volDn } = candlePaths(
+    view,
+    frame,
+    { type, bw, vol: !!ind.vol, vmax, MH },
+  );
 
-  const step = niceStep((hi - lo) / 5);
   const busy = [
     tagY,
     ...myPos.flatMap((q) =>
@@ -502,32 +315,9 @@ function ChartBody({
     ),
     ...myOrd.map((o) => y(o.px)),
   ];
-  const grid: number[] = [];
-  for (let p = Math.ceil(lo / step) * step; p <= hi; p += step) {
-    const Y = y(p);
-    if (Y < 6 || Y > MH - 4) continue;
-    grid.push(p);
-  }
-
-  const tLabel = (t: number, prevT?: number) => {
-    const d = new Date(t * 1000);
-    if (tf === "1W" || tf === "1D")
-      return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    if (prevT != null && new Date(prevT * 1000).getDate() !== d.getDate())
-      return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    return (
-      String(d.getHours()).padStart(2, "0") +
-      ":" +
-      String(d.getMinutes()).padStart(2, "0")
-    );
-  };
-  // one label roughly every 64px, pinned to fixed candles so they slide with the chart
-  const every = Math.max(1, Math.ceil(64 / bw));
-  const timeTicks: number[] = [];
-  for (let i = iN - Math.ceil((iN - i1) / every) * every; i >= i0; i -= every) {
-    const x = xi(i);
-    if (x > 24 && x < PW - 4) timeTicks.push(i);
-  }
+  const grid = priceGrid(lo, hi, y, MH);
+  const tLabel = (t: number, prevT?: number) => timeLabel(t, tf, prevT);
+  const { ticks: timeTicks, every } = ticksOf(iN, frame, bw, PW);
 
   // ---- overlay line helper (dashed line + left chip + axis tag)
   const lineChip = (
@@ -988,8 +778,7 @@ function ChartBody({
           <Pressable
             onPress={() => {
               hTap();
-              stopFling();
-              setVp((v) => ({ ...v, off: 0 }));
+              toLatest();
             }}
             hitSlop={8}
             accessibilityLabel="Jump to latest candle"

@@ -121,7 +121,8 @@ export function orderQuote(o: {
   // funding: margin + fee must fit in the PERP account; if not, can spot cover it?
   const need = mg + fee - o.perp;
   const canMove = o.spot >= need;
-  const needUp = Math.ceil(need * 100) / 100;
+  // round up to the cent, ignoring float dust (10 + 0.06 - 5 = 5.0600000000000005)
+  const needUp = Math.ceil(need * 100 - 1e-9) / 100;
 
   // later checks win, so the most specific problem is the one shown
   let bad = "";

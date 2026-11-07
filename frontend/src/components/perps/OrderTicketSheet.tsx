@@ -128,7 +128,7 @@ export function OrderTicketSheet({
 }) {
   const t = useOrderTicket({ sym, initialSide, perpBal, spotBal });
   const {
-    acct,
+    balLoading,
     nm,
     unit,
     mk,
@@ -310,7 +310,7 @@ export function OrderTicketSheet({
                 { fontSize: 13.5, color: "#E4E8EE", letterSpacing: 0 },
               ]}
             >
-              {acct.loading ? "…" : money(usdc)}
+              {balLoading ? "…" : money(usdc)}
             </Text>
             <Text style={[s.mono, { fontSize: 8.5, color: C.ink4 }]}>
               IN PERP ACCOUNT

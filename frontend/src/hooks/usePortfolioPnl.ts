@@ -67,7 +67,7 @@ const fundTrades = (lots: FundLot[], wallet?: string | null): Trade[] =>
 export type TokenPnl = { cost: number; pnl: number; pct: number | null };
 
 export type PerpInput = {
-  accountValue: number; // live, from useAccount
+  accountValue: number; // live perp account value
   netDeposits: number | null; // from /api/leaderboard/perp/me -> netDepositsUsdc
   positionsPnl: number; // fallback when netDeposits is unknown
 };

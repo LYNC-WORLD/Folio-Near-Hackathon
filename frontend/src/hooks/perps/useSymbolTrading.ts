@@ -5,7 +5,7 @@ import {
   tradeService,
   unwrap,
 } from "@/services/perps/tradeService";
-import { UiOrder, UiPosition } from "./useAccount";
+import { UiOrder, UiPosition } from "./account";
 
 const POLL_MS = 5000;
 export type SymPosition = UiPosition;

@@ -3,7 +3,7 @@ export * from "./useMarkets";
 export * from "./useLiveMarket";
 export * from "./useOrderBook";
 export * from "./useCandles";
-export * from "./useAccount";
+export * from "./account";
 export * from "./useTradeActions";
 export * from "./usePerpsSession";
 export * from "./useSymbolTrading";

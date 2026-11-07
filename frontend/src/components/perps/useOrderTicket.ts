@@ -5,8 +5,8 @@ import { C } from "@/theme";
 import { AMBER } from "./PerpUi";
 import { toast } from "./PerpToast";
 import { useTradablePerps } from "@/hooks/useTradablePerps";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 import {
-  useAccount,
   useLiveMarket,
   usePerpsSession,
   useRecentBars,
@@ -38,7 +38,8 @@ export function useOrderTicket({
 }) {
   const session = usePerpsSession();
   const live = useLiveMarket(sym);
-  const acct = useAccount(session.address);
+  // perpBal comes from the wallet balance query; show "…" until it has loaded
+  const balLoading = useWalletBalance().loading;
 
   const listing = useTradablePerps().markets.find((m) => m.symbol === toSym(sym));
   const nm: string = listing?.name ?? toSym(sym);
@@ -176,7 +177,7 @@ export function useOrderTicket({
 
   return {
     ...q,
-    acct,
+    balLoading,
     nm,
     unit,
     mk,

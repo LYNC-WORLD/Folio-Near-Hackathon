@@ -54,7 +54,7 @@ import { useFollowing } from "../lib/follows";
 import { dayChange, money, pct } from "../lib/format";
 import { fundPositions, useFundLots } from "../lib/fundHoldings";
 import { toFund } from "../lib/indexFunds";
-import { dayDate } from "../lib/trade";
+import { dayDate, nextOccurrence } from "../lib/trade";
 import { hSelect, hTap } from "../lib/haptics";
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { ChartPeriod } from "../hooks";
@@ -915,7 +915,7 @@ export function PortfolioScreen() {
                         <Text style={[TYPE.sub, { fontSize: 12.5 }]}>
                           Every month ·{" "}
                           {r.isActive
-                            ? `next ${dayDate(new Date(r.buyDate))}`
+                            ? `next ${dayDate(nextOccurrence(Number(r.buyDate)))}`
                             : "cancelled"}
                         </Text>
                       </View>

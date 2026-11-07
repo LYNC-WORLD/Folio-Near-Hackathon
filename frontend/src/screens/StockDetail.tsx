@@ -433,7 +433,7 @@ export function StockDetail() {
               <View style={{ gap: 4 }}>
                 <Text style={[TYPE.ttl, { fontSize: 16 }]}>{recLabel}</Text>
                 <Text style={TYPE.sub}>
-                  Next buy {dayDate(new Date(activeRec.buyDate))}
+                  Next buy {dayDate(nextOccurrence(Number(activeRec.buyDate)))}
                 </Text>
               </View>
               <Pressable

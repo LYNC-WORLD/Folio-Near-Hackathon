@@ -1,6 +1,7 @@
 // Market button (logo, ticker, name · max leverage) + "Spot ›" link.
 import { Pressable, Text, View } from "react-native";
-import Svg, { Path, SvgUri } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
+import { Image } from "expo-image";
 import { C } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import { Tag } from "@/components/perps/PerpUi";
@@ -45,7 +46,13 @@ export function TradeHeader({
             overflow: "hidden",
           }}
         >
-          {imageUrl ? <SvgUri uri={imageUrl} width={42} height={42} /> : null}
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: 42, height: 42 }}
+              contentFit="contain"
+            />
+          ) : null}
         </View>
         <View style={{ gap: 3, flexShrink: 1 }}>
           <View style={tradeStyles.rowC}>

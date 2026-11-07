@@ -37,6 +37,7 @@ import Svg, {
 } from "react-native-svg";
 import { ChartPeriod } from "@/hooks";
 import { money, money0, sideTxt } from "@/lib/format";
+import { toSym } from "@/services/hyperliquid/format";
 import type { UiPosition } from "@/hooks/perps";
 import { usePortfolioSeries } from "@/hooks/usePortfolioSeries";
 import { C, em, FONT } from "@/theme";
@@ -98,7 +99,7 @@ export function ShareSheet({
   const [rng, setRng] = useState(RNG[1]); // 7d like the prototype
   const [pct, setPct] = useState(false);
   const [showRef, setShowRef] = useState(true);
-  const [cw, setCw] = useState(0); // chart width (px)
+  const [cw, setCw] = useState(0);
   const [k, setK] = useState(1); // replay progress 0..1
   const [done, setDone] = useState<"share" | "link" | "image" | null>(null);
   const [note, setNote] = useState("");
@@ -416,25 +417,22 @@ export function ShareSheet({
                       : `${perp.positions.length} ${perp.positions.length === 1 ? "position" : "positions"} · unrealized`}
                   </Text>
                 </View>
-                {perp.positions.slice(0, 3).map((p, i) => {
-                  const r = p.roe;
+                {perp.positions.slice(0, 3).map((p) => {
+                  const name = toSym(p.sym);
+                  const v = pct ? p.roe : p.pnl;
                   return (
                     <View key={p.id} style={s.row}>
-                      <AssetAvatar
-                        symbol={p.sym}
-                        size={34}
-                        radius={999}
-                      />
+                      <AssetAvatar symbol={name} size={34} radius={999} />
                       <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={s.rowTtl}>{p.sym}</Text>
+                        <Text style={s.rowTtl}>{name}</Text>
                         <Text style={s.side}>
                           {sideTxt(p.side)} {p.lev}x
                         </Text>
                       </View>
                       <Text
-                        style={[s.rowVal, { color: r >= 0 ? C.mint : C.loss }]}
+                        style={[s.rowVal, { color: v >= 0 ? C.mint : C.loss }]}
                       >
-                        {sPct(r)}
+                        {pct ? sPct(p.roe) : sMoney(p.pnl)}
                       </Text>
                     </View>
                   );

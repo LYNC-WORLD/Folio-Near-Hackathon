@@ -97,6 +97,8 @@ const PERIOD_WORD: Record<ChartPeriod, string> = {
   All: "all time",
 };
 
+const MIN_BUY = 10;
+
 const SLIDE = LinearTransition.duration(380).easing(EASE);
 
 export function StockDetail() {
@@ -211,18 +213,24 @@ export function StockDetail() {
   const rep = mode === "recurring";
   const over = amt > balance + 1e-9;
   const zero = amt <= 0;
+  const under = !zero && amt < MIN_BUY;
+  const lowBalance = balance < MIN_BUY;
   const blockedRec = rep && !!activeRec;
-  const needFunds = !walletLoading && !blockedRec && (balance <= 0 || over);
+  const needFunds = !walletLoading && !blockedRec && (lowBalance || over);
 
   const hint = walletLoading
     ? "Checking your balance…"
     : balance <= 0
       ? "You have no USDC yet. Add funds to buy."
-      : over
-        ? `More than the ${money(balance)} you have available`
-        : zero
-          ? "Enter an amount in USDC"
-          : `≈ ${units(price ? amt / price : 0)} ${stock.symbol} at ${money(price)}`;
+      : lowBalance
+        ? `Minimum buy is ${money(MIN_BUY)}. Add funds to buy.`
+        : over
+          ? `More than the ${money(balance)} you have available`
+          : zero
+            ? "Enter an amount in USDC"
+            : under
+              ? `Minimum buy is ${money(MIN_BUY)}`
+              : `≈ ${units(price ? amt / price : 0)} ${stock.symbol} at ${money(price)}`;
 
   const buyTitle = blockedRec
     ? "Recurring buy already on"
@@ -230,11 +238,14 @@ export function StockDetail() {
       ? "Add funds"
       : zero
         ? "Enter an amount"
-        : rep
-          ? `Buy ${money(amt)} every month`
-          : `Buy ${stock.symbol}`;
+        : under
+          ? `Minimum ${money(MIN_BUY)}`
+          : rep
+            ? `Buy ${money(amt)} every month`
+            : `Buy ${stock.symbol}`;
 
-  const buyDisabled = walletLoading || blockedRec || (zero && !needFunds);
+  const buyDisabled =
+    walletLoading || blockedRec || (!needFunds && (zero || under));
 
   const pcts = [25, 50, 75, 100].map((p) => ({
     label: p === 100 ? "Max" : `${p}%`,
@@ -249,6 +260,7 @@ export function StockDetail() {
   };
   // ---------- actions ----------
   const openBuy = () => {
+    if (amt < MIN_BUY) return;
     amountRef.current?.blur();
     sheet.open(
       <BuyFlow
@@ -437,7 +449,7 @@ export function StockDetail() {
               <View style={{ gap: 4 }}>
                 <Text style={[TYPE.ttl, { fontSize: 16 }]}>{recLabel}</Text>
                 <Text style={TYPE.sub}>
-                  Next buy {dayDate(new Date(activeRec.buyDate))}
+                  Next buy {dayDate(nextOccurrence(Number(activeRec.buyDate)))}
                 </Text>
               </View>
               <Pressable
@@ -480,7 +492,7 @@ export function StockDetail() {
             availValue={walletLoading ? "…" : money(balance)}
             availLabel="USDC AVAILABLE"
             hint={hint}
-            bad={over}
+            bad={over || under}
             onFocus={() =>
               setTimeout(
                 () =>

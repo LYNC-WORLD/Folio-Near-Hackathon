@@ -2,6 +2,7 @@ import type {
   WalletBalanceResponse,
   DepositSpotToPerpResponse,
   DepositStatusResponse,
+  DepositQuoteResponse,
 } from "@/types/wallet";
 import { request } from "./api/client";
 
@@ -16,6 +17,12 @@ export const depositSpotToPerp = (depositAmount: string, token: string) =>
   });
   export const depositPerpToSpot = (depositAmount: string, token: string) =>
   request<DepositSpotToPerpResponse>("/api/deposit/perp-to-spot", {
+    token,
+    method: "POST",
+    body: { depositAmount },
+  });
+export const getDepositQuote = (depositAmount: number, token: string) =>
+  request<DepositQuoteResponse>("/api/deposit/get-deposit-quote", {
     token,
     method: "POST",
     body: { depositAmount },

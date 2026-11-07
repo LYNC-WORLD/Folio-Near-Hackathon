@@ -20,7 +20,7 @@ import type { useRecurringBuys } from "@/hooks/useTrade";
 import type { UiPosition } from "@/hooks/perps";
 import type { fundPositions } from "@/lib/fundHoldings";
 import { money, pct } from "@/lib/format";
-import { dayDate } from "@/lib/trade";
+import { dayDate, nextOccurrence } from "@/lib/trade";
 import { hSelect, hTap } from "@/lib/haptics";
 import { s } from "./styles";
 
@@ -381,7 +381,7 @@ function RecurringRow({ r, onPress }: { r: Recurring; onPress: () => void }) {
         </Text>
         <Text style={[TYPE.sub, { fontSize: 12.5 }]}>
           Every month ·{" "}
-          {r.isActive ? `next ${dayDate(new Date(r.buyDate))}` : "cancelled"}
+          {r.isActive ? `next ${dayDate(nextOccurrence(Number(r.buyDate)))}` : "cancelled"}
         </Text>
       </View>
       <View style={{ alignItems: "flex-end", gap: 5 }}>

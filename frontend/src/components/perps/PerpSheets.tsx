@@ -7,7 +7,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Svg, { Path, SvgUri } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
+import { Image } from "expo-image";
 import { C, FONT } from "@/theme";
 import { hTap } from "@/lib/haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -49,7 +50,15 @@ function Logo({
         overflow: "hidden",
       }}
     >
-      {imageUrl ? <SvgUri uri={imageUrl} width={size} height={size} /> : null}
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={{ width: size, height: size }}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
+      ) : null}
     </View>
   );
 }

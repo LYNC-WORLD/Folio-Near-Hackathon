@@ -104,3 +104,8 @@ export type DepositStatusResponse = {
     depositAmount?: string;
   };
 };
+export type DepositQuoteResponse = {
+  success: boolean;
+  message: string;
+  data: { expectedUSDC: number };
+};

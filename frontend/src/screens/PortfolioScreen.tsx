@@ -360,7 +360,7 @@ export function PortfolioScreen() {
           onClose={() => setXfer(false)}
           onMoved={() => {
             setXfer(false);
-            refresh(); // re-pull wallet balances after money moves
+            refresh();
           }}
         />
       ) : null}

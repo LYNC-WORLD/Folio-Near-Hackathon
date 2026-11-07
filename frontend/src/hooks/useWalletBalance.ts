@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getWalletBalance } from "@/services/wallet";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +24,18 @@ export function useWalletBalance() {
   const perpTotal = wallet ? Number(wallet.perpBalance.total) : 0;
   const perpHold = wallet ? Number(wallet.perpBalance.hold) : 0;
   const perpAvailable = Math.max(0, perpTotal - perpHold);
+
+  // TEMP DEBUG: remove once the $133 is explained
+  useEffect(() => {
+    if (!wallet) return;
+    console.log("[walletBalance]", {
+      rawPerpBalance: wallet.perpBalance, // exactly what the backend sent
+      perpTotal,
+      perpHold,
+      perpAvailable,
+      usdValue,
+    });
+  }, [wallet, perpTotal, perpHold, perpAvailable, usdValue]);
 
   return {
     wallet,

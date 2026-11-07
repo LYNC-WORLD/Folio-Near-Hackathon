@@ -11,6 +11,14 @@ export type GoogleSession = {
 };
 
 export type LoginResponse = {
-  token?: string;
-  [key: string]: unknown;
+  success: boolean;
+  message?: string;
+  data?: {
+    address?: string;
+    solanaAddress?: string;
+    ethereumAddress?: string;
+    email: string;
+    name: string | null;
+    formFilled: boolean;
+  };
 };

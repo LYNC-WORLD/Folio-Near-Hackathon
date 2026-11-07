@@ -1,36 +1,18 @@
 // Who you follow — kept on the device until the backend has a follow endpoint.
-// Tiny shared store so Leaders and the Investor screen always agree.
-import { useSyncExternalStore } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// Shared store so Leaders and the Investor screen always agree.
+import { persisted } from "./persisted";
 
-const KEY = "folio_following_v1";
-let following = new Set<string>();
-const listeners = new Set<() => void>();
-
-AsyncStorage.getItem(KEY)
-  .then((raw) => {
-    if (raw) {
-      following = new Set(JSON.parse(raw) as string[]);
-      listeners.forEach((l) => l());
-    }
-  })
-  .catch(() => {});
-
-function subscribe(l: () => void) {
-  listeners.add(l);
-  return () => listeners.delete(l);
-}
+const store = persisted("folio_following_v1", new Set<string>(), {
+  load: (raw) => new Set(raw as string[]),
+  save: (v) => [...v],
+});
 
 export function toggleFollow(id: string) {
-  const next = new Set(following);
+  const next = new Set(store.get());
   if (next.has(id)) next.delete(id);
   else next.add(id);
-  following = next;
-  AsyncStorage.setItem(KEY, JSON.stringify([...next])).catch(() => {});
-  listeners.forEach((l) => l());
+  store.set(next);
   return next.has(id);
 }
 
-export function useFollowing() {
-  return useSyncExternalStore(subscribe, () => following);
-}
+export const useFollowing = store.use;

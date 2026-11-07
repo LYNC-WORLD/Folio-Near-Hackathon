@@ -1,8 +1,7 @@
 // Which stocks you bought as part of an index fund — kept on the device until
 // the backend records fund buys. The wallet only sees the individual stock
 // tokens, so each fund buy is logged here and positions are rebuilt from it.
-import { useSyncExternalStore } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { persisted } from "./persisted";
 
 export type FundLeg = {
   mint: string;
@@ -18,34 +17,14 @@ export type FundLot = {
   legs: FundLeg[];
 };
 
-const KEY = "folio_fund_lots_v1";
-let lots: FundLot[] = [];
-const listeners = new Set<() => void>();
-
-AsyncStorage.getItem(KEY)
-  .then((raw) => {
-    if (raw) {
-      lots = JSON.parse(raw) as FundLot[];
-      listeners.forEach((l) => l());
-    }
-  })
-  .catch(() => {});
-
-function subscribe(l: () => void) {
-  listeners.add(l);
-  return () => listeners.delete(l);
-}
+const store = persisted<FundLot[]>("folio_fund_lots_v1", []);
 
 export function recordFundBuy(lot: FundLot) {
   if (!lot.legs.length) return;
-  lots = [...lots, lot];
-  AsyncStorage.setItem(KEY, JSON.stringify(lots)).catch(() => {});
-  listeners.forEach((l) => l());
+  store.set([...store.get(), lot]);
 }
 
-export function useFundLots() {
-  return useSyncExternalStore(subscribe, () => lots);
-}
+export const useFundLots = store.use;
 
 export type FundPosition = {
   fundId: string;

@@ -6,8 +6,7 @@
 // at the bottom (join, create, propose, …) with API calls and keep the
 // `Group` shape, and the screens won't need to change.
 
-import { useSyncExternalStore } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { persisted } from "@/lib/persisted";
 
 export const GROUPS_ARE_SAMPLE = true;
 
@@ -142,39 +141,12 @@ const SEED: Group[] = [
 ];
 
 // ---------- tiny persisted store ----------
-const KEY = "folio_groups_v1";
-let groups: Group[] = SEED;
-const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
-const save = () =>
-  AsyncStorage.setItem(KEY, JSON.stringify(groups)).catch(() => {});
-
-AsyncStorage.getItem(KEY)
-  .then((raw) => {
-    if (raw) {
-      groups = JSON.parse(raw) as Group[];
-      emit();
-    }
-  })
-  .catch(() => {});
-
-function set(next: Group[]) {
-  groups = next;
-  save();
-  emit();
-}
+const store = persisted<Group[]>("folio_groups_v1", SEED);
+const set = store.set;
 const patch = (id: string, fn: (g: Group) => Group) =>
-  set(groups.map((g) => (g.id === id ? fn(g) : g)));
+  set(store.get().map((g) => (g.id === id ? fn(g) : g)));
 
-export function useGroups() {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => groups,
-  );
-}
+export const useGroups = store.use;
 export const useGroup = (id: string) => useGroups().find((g) => g.id === id);
 
 const YOU: Member = { name: "You", color: "#37E099" };
@@ -221,7 +193,7 @@ export function createGroup(name: string, min: number, isPublic: boolean) {
       min,
       chat: [note("You", "started the group")],
     },
-    ...groups,
+    ...store.get(),
   ]);
   return id;
 }

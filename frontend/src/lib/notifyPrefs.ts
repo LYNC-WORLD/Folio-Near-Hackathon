@@ -1,6 +1,5 @@
 // "Notify me when" switches — saved on the phone until there is a push backend.
-import { useSyncExternalStore } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { persisted } from "./persisted";
 
 export const NOTIFY_OPTIONS = [
   { key: "followBuys", label: "Someone I follow buys" },
@@ -12,37 +11,20 @@ export const NOTIFY_OPTIONS = [
 export type NotifyKey = (typeof NOTIFY_OPTIONS)[number]["key"];
 type Prefs = Record<NotifyKey, boolean>;
 
-const KEY = "folio_notify_prefs_v1";
-let prefs: Prefs = {
+const DEFAULTS: Prefs = {
   followBuys: true,
   groupProposal: true,
   recurringRuns: true,
   dailyBriefing: false,
 };
-const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
 
-AsyncStorage.getItem(KEY)
-  .then((raw) => {
-    if (raw) {
-      prefs = { ...prefs, ...(JSON.parse(raw) as Partial<Prefs>) };
-      emit();
-    }
-  })
-  .catch(() => {});
+// saved prefs are merged over the defaults, so new switches get their default
+const store = persisted("folio_notify_prefs_v1", DEFAULTS, {
+  load: (raw, d) => ({ ...d, ...(raw as Partial<Prefs>) }),
+});
 
 export function setNotify(key: NotifyKey, on: boolean) {
-  prefs = { ...prefs, [key]: on };
-  AsyncStorage.setItem(KEY, JSON.stringify(prefs)).catch(() => {});
-  emit();
+  store.set({ ...store.get(), [key]: on });
 }
 
-export function useNotifyPrefs() {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => prefs,
-  );
-}
+export const useNotifyPrefs = store.use;

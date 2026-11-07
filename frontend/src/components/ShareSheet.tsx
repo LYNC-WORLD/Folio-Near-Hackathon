@@ -97,7 +97,7 @@ export function ShareSheet({
   const [rng, setRng] = useState(RNG[1]); // 7d like the prototype
   const [pct, setPct] = useState(false);
   const [showRef, setShowRef] = useState(true);
-  const [cw, setCw] = useState(0); // chart width (px)
+  const [cw, setCw] = useState(0);
   const [k, setK] = useState(1); // replay progress 0..1
   const [done, setDone] = useState<"share" | "link" | "image" | null>(null);
   const [note, setNote] = useState("");
@@ -189,8 +189,13 @@ export function ShareSheet({
   // ---- perps tab ----
   const roeOf = (p: any): number =>
     Number(p.roe ?? p.pnlPct ?? p.returnPct ?? 0) || 0;
+  // "xyz:NVDA" -> "NVDA"
+  const perpName = (sym: string) =>
+    sym.includes(":") ? sym.split(":")[1] : sym;
+
+  // ---- perps tab ----
   const bestRoe = perp.positions.length
-    ? Math.max(...perp.positions.map(roeOf))
+    ? Math.max(...perp.positions.map((p) => p.roe))
     : 0;
 
   // ---- actions ----
@@ -417,26 +422,22 @@ export function ShareSheet({
                       : `${perp.positions.length} ${perp.positions.length === 1 ? "position" : "positions"} · unrealized`}
                   </Text>
                 </View>
-                {perp.positions.slice(0, 3).map((p, i) => {
-                  const r = roeOf(p);
+                {perp.positions.slice(0, 3).map((p) => {
+                  const name = perpName(p.sym);
+                  const v = pct ? p.roe : p.pnl;
                   return (
-                    <View key={p.symbol ?? i} style={s.row}>
-                      <AssetAvatar
-                        symbol={String(p.symbol ?? "?")}
-                        size={34}
-                        radius={999}
-                      />
+                    <View key={p.id} style={s.row}>
+                      <AssetAvatar symbol={name} size={34} radius={999} />
                       <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={s.rowTtl}>{p.symbol}</Text>
+                        <Text style={s.rowTtl}>{name}</Text>
                         <Text style={s.side}>
-                          {String(p.side ?? "").toUpperCase()}
-                          {p.leverage ? ` ${p.leverage}x` : ""}
+                          {p.side > 0 ? "LONG" : "SHORT"} {p.lev}x
                         </Text>
                       </View>
                       <Text
-                        style={[s.rowVal, { color: r >= 0 ? C.mint : C.loss }]}
+                        style={[s.rowVal, { color: v >= 0 ? C.mint : C.loss }]}
                       >
-                        {sPct(r)}
+                        {pct ? sPct(p.roe) : sMoney(p.pnl)}
                       </Text>
                     </View>
                   );

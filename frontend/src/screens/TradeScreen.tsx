@@ -1,18 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Path, SvgUri } from "react-native-svg";
+import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useNavigation,
   useRoute,
@@ -20,27 +8,22 @@ import {
 } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { TAB_BAR_HEIGHT, useTabBarSpace } from "@/navigation/TabBar";
-import { hTap } from "@/lib/haptics";
+import { useTabBarSpace } from "@/navigation/TabBar";
 import {
   MarketPickerSheet,
   MarketStatusSheet,
   UnlockSheet,
   QUIZ_SEEN_KEY,
 } from "@/components/perps/PerpSheets";
-import { AMBER, Btn, Kv, ON_MINT, ON_SHORT, Tag } from "@/components/perps/PerpUi";
-import { OrderBook } from "@/components/perps/OrderBook";
 import { PerpToast, toast } from "@/components/perps/PerpToast";
 import { LivePositionSheet } from "@/components/perps/LivePositionSheet";
-import { DockBalance } from "@/components/perps/DockBalance";
+import { LiveOrderSheet } from "@/components/perps/LiveOrderSheet";
+import { TpSlSheet } from "@/components/perps/TpSlSheet";
 import { TransferSheet } from "@/components/TransferSheet";
 import { ChartStage } from "@/components/perps/PerpChart";
 import { OrderTicketSheet } from "@/components/perps/OrderTicketSheet";
-import { C, FONT } from "@/theme";
+import { tradeStyles } from "@/components/perps/tradeStyles";
 import {
-  livePnl,
-  liveRoe,
-  useAccount,
   useLiveMarket,
   useMarkets,
   usePerpsSession,
@@ -51,16 +34,17 @@ import {
   useAllOrders,
   type SymOrder,
 } from "@/hooks/perps/useSymbolTrading";
-import { TpSlSheet } from "@/components/perps/TpSlSheet";
 import { tradeService, unwrap } from "@/services/perps/tradeService";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { useTradablePerps } from "@/hooks/useTradablePerps";
 import { useTransfers } from "@/hooks/useTransfers";
-import { LiveOrderSheet } from "@/components/perps/LiveOrderSheet";
-import { TAKER, fundLeft, usMarketOpen } from "@/lib/perps";
-import { money, sMoney, sPct, sideTxt } from "@/lib/format";
+import { TransferBanner } from "./trade/TransferBanner";
+import { TradeHeader } from "./trade/TradeHeader";
+import { MarketSummary } from "./trade/MarketSummary";
+import { TradePanel } from "./trade/TradePanel";
+import { TradeDock } from "./trade/TradeDock";
+import { ROLE_LABEL, orderTone } from "./trade/orderLabels";
 
-type PTab = "pos" | "ord" | "book" | "info";
 type TransferOpts = { dir?: "in" | "out"; amt?: number; then?: () => void };
 type SheetState =
   | null
@@ -76,29 +60,9 @@ type SheetState =
 const MAX_LEV = 10;
 const DEFAULT_LEV = 10;
 
-const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
-
-const ROLE_LABEL: Record<SymOrder["role"], string> = {
-  tp: "TAKE PROFIT",
-  sl: "STOP LOSS",
-  stop: "STOP",
-  limit: "LIMIT",
-};
-const orderTone = (o: SymOrder): "long" | "short" =>
-  o.role === "tp"
-    ? "long"
-    : o.role === "sl"
-      ? "short"
-      : o.side > 0
-        ? "long"
-        : "short";
-
-const logoTxt = (sym: string) => sym.replace(/[^A-Z0-9]/g, "").slice(0, 3);
-
 export function TradeScreen() {
   const nav = useNavigation();
   const route = useRoute();
-  const insets = useSafeAreaInsets();
   const bottom = useTabBarSpace();
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
@@ -129,8 +93,6 @@ export function TradeScreen() {
 
   // transfer requests + their toasts; the phases also drive the top banner
   const transfers = useTransfers();
-  const { phase: depositPhase, amount: depositAmount } = transfers.depositStatus;
-  const { phase: withdrawPhase, amount: withdrawAmount } = transfers.withdrawStatus;
 
   const [quizSeen, setQuizSeen] = useState(false);
   useEffect(() => {
@@ -139,15 +101,9 @@ export function TradeScreen() {
       .catch(() => {});
   }, []);
 
-  const [tab, setTab] = useState<PTab>("pos");
   const [sheet, setSheet] = useState<SheetState>(null);
   const [locked, setLocked] = useState(false);
   const [chartY, setChartY] = useState(0);
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const i = setInterval(() => tick((n) => n + 1), 1000); // funding countdown
-    return () => clearInterval(i);
-  }, []);
 
   const openTransfer = (o?: TransferOpts) =>
     setSheet({
@@ -158,30 +114,17 @@ export function TradeScreen() {
     });
 
   const listing = tradable.markets.find((m) => m.symbol === sym);
-  const label = sym;
   const name: string = listing?.name ?? sym;
-  const open = usMarketOpen();
   const listed = !!live.market;
   const notListed = !markets.loading && !markets.error && !listed;
-
-  // price flash on each tick
-  const [flash, setFlash] = useState<null | "up" | "dn">(null);
-  useEffect(() => {
-    if (!live.mark || live.mark === live.prevMark) return;
-    setFlash(live.mark > live.prevMark ? "up" : "dn");
-    const t = setTimeout(() => setFlash(null), 600);
-    return () => clearTimeout(t);
-  }, [live.mark]); // eslint-disable-line
+  const maxLev = listed ? Math.min(MAX_LEV, live.maxLeverage) : MAX_LEV;
 
   const markOf = (coin: string, fallback: number) =>
     coin === live.coin ? live.mark : (markets.byCoin[coin]?.mid ?? fallback);
 
   const openTicket = (side: 1 | -1) => {
     if (!listed)
-      return toast(
-        "Not tradable",
-        `${label.toUpperCase()} ISN'T LISTED ON HYPERLIQUID`,
-      );
+      return toast("Not tradable", `${sym.toUpperCase()} ISN'T LISTED ON HYPERLIQUID`);
     setSheet(quizSeen ? { t: "ticket", side } : { t: "unlock", side });
   };
   const toChart = () =>
@@ -195,21 +138,6 @@ export function TradeScreen() {
       params: { symbol: sym, category: "us-stock" },
     });
 
-  const fr = live.fundingPct;
-  const maxLev = listed ? Math.min(MAX_LEV, live.maxLeverage) : MAX_LEV;
-  const stats: [string, string, "up" | "down" | null][] = [
-    ["MARK", money(live.mark), null],
-    ["ORACLE", money(live.oracle), null],
-    [
-      "FUNDING / 1H",
-      `${fr >= 0 ? "+" : "−"}${Math.abs(fr).toFixed(4)}%`,
-      fr >= 0 ? "up" : "down",
-    ],
-    ["NEXT FUNDING", fundLeft(), null],
-    ["24H VOLUME", `$${(live.vol24Usd / 1e6).toFixed(1)}M`, null],
-    ["OPEN INTEREST", `$${(live.oiUsd / 1e6).toFixed(1)}M`, null],
-  ];
-
   const positions = posQ.data.map((p) => ({
     ...p,
     tp: ordQ.data.find((o) => o.coin === p.coin && o.role === "tp")?.px ?? null,
@@ -220,10 +148,8 @@ export function TradeScreen() {
     sheet?.t === "position"
       ? positions.find((p) => p.id === sheet.id)
       : undefined;
-
   const sheetOrd =
     sheet?.t === "order" ? ordQ.data.find((o) => o.id === sheet.id) : undefined;
-
   const sheetTpSl =
     sheet?.t === "tpsl" ? positions.find((p) => p.id === sheet.id) : undefined;
 
@@ -238,30 +164,12 @@ export function TradeScreen() {
     refreshTrading();
   };
 
-  const levLabel = Math.min(DEFAULT_LEV, maxLev);
-
-
   return (
     <SafeAreaView style={tradeStyles.safe} edges={["top"]}>
-      {depositPhase === "depositing" || depositPhase === "confirming" ? (
-        <View style={[tradeStyles.depositBanner, { top: insets.top + 6 }]}>
-          <ActivityIndicator size="small" color={C.mint} />
-          <Text style={tradeStyles.depositBannerT}>
-            {depositPhase === "depositing"
-              ? `Sending ${money(depositAmount)} to perp…`
-              : `Confirming transfer of ${money(depositAmount)}…`}
-          </Text>
-        </View>
-      ) : withdrawPhase === "depositing" || withdrawPhase === "confirming" ? (
-        <View style={[tradeStyles.depositBanner, { top: insets.top + 6 }]}>
-          <ActivityIndicator size="small" color={C.mint} />
-          <Text style={tradeStyles.depositBannerT}>
-            {withdrawPhase === "depositing"
-              ? `Sending ${money(withdrawAmount)} to spot…`
-              : `Confirming transfer of ${money(withdrawAmount)}…`}
-          </Text>
-        </View>
-      ) : null}
+      <TransferBanner
+        deposit={transfers.depositStatus}
+        withdraw={transfers.withdrawStatus}
+      />
       <ScrollView
         ref={scrollRef}
         scrollEnabled={!locked}
@@ -269,164 +177,27 @@ export function TradeScreen() {
         // extra room: the dock is now two rows (balance + Long/Short)
         contentContainerStyle={{ paddingTop: 18, paddingBottom: bottom + 120 }}
       >
-        <View style={tradeStyles.head}>
-          <Pressable
-            style={tradeStyles.mktBtn}
-            onPress={() => {
-              hTap();
-              setSheet({ t: "market" });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Change market"
-          >
-            <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 999,
-                backgroundColor: "#262C36",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-              }}
-            >
-              {listing?.imageUrl ? (
-                <SvgUri uri={listing.imageUrl} width={42} height={42} />
-              ) : null}
-            </View>
-            <View style={{ gap: 3, flexShrink: 1 }}>
-              <View style={tradeStyles.rowC}>
-                <Text style={tradeStyles.sym}>{label}</Text>
-                <Tag label="PERP" />
-                <Svg
-                  width={14}
-                  height={14}
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke={C.ink3}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <Path d="m4 6 4 4 4-4" />
-                </Svg>
-              </View>
-              <Text style={tradeStyles.sub} numberOfLines={1}>
-                {name}
-                {listed ? ` · up to ${maxLev}x` : ""}
-              </Text>
-            </View>
-          </Pressable>
-          <Pressable
-            style={tradeStyles.spot}
-            hitSlop={{ top: 6, bottom: 6 }}
-            onPress={() => {
-              hTap();
-              goSpot();
-            }}
-            accessibilityRole="button"
-          >
-            <Text style={tradeStyles.spotT}>Spot ›</Text>
-          </Pressable>
-        </View>
+        <TradeHeader
+          sym={sym}
+          name={name}
+          imageUrl={listing?.imageUrl}
+          maxLev={maxLev}
+          listed={listed}
+          onPickMarket={() => setSheet({ t: "market" })}
+          onSpot={goSpot}
+        />
 
-        {markets.error && !listed ? (
-          <View style={[tradeStyles.empty, { paddingHorizontal: 20 }]}>
-            <Text style={tradeStyles.ttl}>Prices aren't loading</Text>
-            <Text style={tradeStyles.emptyT}>{markets.error}</Text>
-            <Btn
-              kind="ghost"
-              small
-              label="Try again"
-              onPress={() => markets.refresh()}
-            />
-          </View>
-        ) : notListed ? (
-          <View style={[tradeStyles.empty, { paddingHorizontal: 20 }]}>
-            <Text style={tradeStyles.ttl}>
-              {label} isn't on Hyperliquid yet
-            </Text>
-            <Text style={tradeStyles.emptyT}>
-              Pick another market from the list above.
-            </Text>
-          </View>
-        ) : !live.ready ? (
-          <View style={[tradeStyles.px, { height: 38 }]}>
-            <ActivityIndicator color={C.ink3} />
-          </View>
-        ) : (
-          <View style={tradeStyles.px}>
-            <Text
-              style={[
-                tradeStyles.big,
-                flash && { color: flash === "up" ? C.mint : C.loss },
-                socket !== "open" && { opacity: 0.5 },
-              ]}
-            >
-              {money(live.mark)}
-            </Text>
-            <Text style={[tradeStyles.chg, { color: tone(live.change24) }]}>
-              {sPct(live.change24)}
-            </Text>
-            <Text style={tradeStyles.h24}>
-              {socket === "open" ? "24H" : "RECONNECTING"}
-            </Text>
-          </View>
-        )}
-
-        {/* stats strip */}
-        {listed ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={tradeStyles.stats}
-            style={{ marginTop: 14 }}
-          >
-            {stats.map(([k, v, t]) => (
-              <View key={k} style={{ gap: 5 }}>
-                <Text style={tradeStyles.statK}>{k}</Text>
-                <Text
-                  style={[
-                    tradeStyles.statV,
-                    t === "up" && { color: C.mint },
-                    t === "down" && { color: C.loss },
-                  ]}
-                >
-                  {v}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        ) : null}
-
-        {/* market status */}
-        {listing ? (
-          <Pressable
-            style={tradeStyles.status}
-            hitSlop={{ top: 8, bottom: 8 }}
-            onPress={() => {
-              hTap();
-              setSheet({ t: "status" });
-            }}
-            accessibilityRole="button"
-          >
-            <View
-              style={[
-                tradeStyles.dot,
-                {
-                  backgroundColor: open ? C.mint : AMBER,
-                  shadowColor: open ? C.mint : AMBER,
-                },
-              ]}
-            />
-            <Text style={tradeStyles.statusT}>
-              US MARKET{" "}
-              {open
-                ? "OPEN · TRACKS THE LIVE PRICE"
-                : "CLOSED · PERP TRADES 24/7"}
-            </Text>
-          </Pressable>
-        ) : null}
+        <MarketSummary
+          sym={sym}
+          live={live}
+          socket={socket}
+          listed={listed}
+          notListed={notListed}
+          marketsError={markets.error}
+          onRetry={() => markets.refresh()}
+          showStatus={!!listing}
+          onStatus={() => setSheet({ t: "status" })}
+        />
 
         {/* chart */}
         {listed ? (
@@ -443,269 +214,29 @@ export function TradeScreen() {
           </View>
         ) : null}
 
-        {/* panel tabs */}
-        <View style={tradeStyles.tabs}>
-          {(
-            [
-              ["pos", "Positions", posQ.data.length],
-              ["ord", "Orders", ordQ.data.length],
-              ["book", "Order book"],
-              ["info", "Contract"],
-            ] as [PTab, string, number?][]
-          ).map(([k, t, n]) => (
-            <Pressable
-              key={k}
-              onPress={() => {
-                hTap();
-                setTab(k);
-              }}
-              style={tradeStyles.tabB}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: tab === k }}
-            >
-              <Text style={[tradeStyles.tabT, tab === k && { color: C.ink1 }]}>
-                {t}
-                {n ? <Text style={tradeStyles.tabN}> {n}</Text> : null}
-              </Text>
-              {tab === k ? <View style={tradeStyles.tabLine} /> : null}
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={tradeStyles.panel}>
-          {tab === "pos" ? (
-            posQ.loading ? (
-              <View style={tradeStyles.empty}>
-                <ActivityIndicator color={C.ink3} />
-              </View>
-            ) : posQ.error && !positions.length ? (
-              <View style={tradeStyles.empty}>
-                <Text style={tradeStyles.ttl}>Couldn't load positions</Text>
-                <Text style={tradeStyles.emptyT}>{posQ.error}</Text>
-                <Btn
-                  kind="ghost"
-                  small
-                  label="Try again"
-                  onPress={posQ.refetch}
-                />
-              </View>
-            ) : positions.length ? (
-              positions.map((p) => {
-                const mark = markOf(p.coin, p.entry),
-                  pnl = livePnl(p, mark),
-                  roe = liveRoe(p, mark);
-                return (
-                  <Pressable
-                    key={p.id}
-                    style={tradeStyles.pRow}
-                    onPress={() => {
-                      hTap();
-                      setSheet({ t: "position", id: p.id });
-                    }}
-                    accessibilityRole="button"
-                  >
-                    <View style={tradeStyles.logo}>
-                      <Text style={tradeStyles.logoT}>{logoTxt(p.sym)}</Text>
-                    </View>
-                    <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
-                      <View style={[tradeStyles.rowC, { gap: 8 }]}>
-                        <Text style={tradeStyles.ttl}>{p.sym}</Text>
-                        <Tag
-                          label={`${sideTxt(p.side)} ${p.lev}x`}
-                          tone={p.side > 0 ? "long" : "short"}
-                        />
-                      </View>
-                      <Text style={tradeStyles.entry} numberOfLines={1}>
-                        {money(p.entry)} → {money(mark)}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end", gap: 4 }}>
-                      <Text style={[tradeStyles.pnl, { color: tone(pnl) }]}>
-                        {sMoney(pnl)}
-                      </Text>
-                      <Text style={[tradeStyles.roe, { color: tone(roe) }]}>
-                        {sPct(roe)}
-                      </Text>
-                    </View>
-
-                    <Pressable
-                      onPress={() => {
-                        hTap();
-                        setSheet({ t: "tpsl", id: p.id });
-                      }}
-                      hitSlop={8}
-                      style={tradeStyles.editBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Edit take profit and stop loss for ${p.sym}`}
-                    >
-                      <Svg
-                        width={15}
-                        height={15}
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke={C.ink3}
-                        strokeWidth={1.8}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <Path d="M13.5 3.5 16.5 6.5 7 16H4v-3L13.5 3.5Z" />
-                      </Svg>
-                    </Pressable>
-                  </Pressable>
-                );
-              })
-            ) : (
-              <View style={tradeStyles.empty}>
-                <Text style={tradeStyles.ttl}>No open positions</Text>
-                <Text style={tradeStyles.emptyT}>
-                  Tap Long if you think {label} goes up, Short if you think it
-                  goes down. You can start from $10.
-                </Text>
-              </View>
-            )
-          ) : null}
-
-          {tab === "ord" ? (
-            ordQ.loading ? (
-              <View style={tradeStyles.empty}>
-                <ActivityIndicator color={C.ink3} />
-              </View>
-            ) : ordQ.error && !ordQ.data.length ? (
-              <View style={tradeStyles.empty}>
-                <Text style={tradeStyles.ttl}>Couldn't load orders</Text>
-                <Text style={tradeStyles.emptyT}>{ordQ.error}</Text>
-                <Btn
-                  kind="ghost"
-                  small
-                  label="Try again"
-                  onPress={ordQ.refetch}
-                />
-              </View>
-            ) : ordQ.data.length ? (
-              ordQ.data.map((o) => {
-                const mark = markOf(o.coin, o.px);
-                const dist = mark ? ((o.px - mark) / mark) * 100 : 0;
-                const t = orderTone(o);
-                return (
-                  <Pressable
-                    key={o.id}
-                    style={tradeStyles.pRow}
-                    onPress={() => {
-                      hTap();
-                      setSheet({ t: "order", id: o.id });
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${ROLE_LABEL[o.role].toLowerCase()} order for ${o.sym}, tap for details`}
-                  >
-                    <View style={tradeStyles.logo}>
-                      <Text style={tradeStyles.logoT}>{logoTxt(o.sym)}</Text>
-                    </View>
-                    <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
-                      <View style={[tradeStyles.rowC, { gap: 8 }]}>
-                        <Text style={tradeStyles.ttl}>{o.sym}</Text>
-                        <Tag label={ROLE_LABEL[o.role]} tone={t} />
-                      </View>
-                      <Text style={tradeStyles.entry} numberOfLines={1}>
-                        {o.isTrigger
-                          ? o.triggerText
-                          : `${o.side > 0 ? "Buy" : "Sell"} limit`}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end", gap: 4 }}>
-                      <Text
-                        style={[
-                          tradeStyles.pnl,
-                          { color: t === "long" ? C.mint : C.loss },
-                        ]}
-                      >
-                        {money(o.px)}
-                      </Text>
-                      <Text style={[tradeStyles.roe, { color: C.ink3 }]}>
-                        {sPct(dist)}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })
-            ) : (
-              <View style={tradeStyles.empty}>
-                <Text style={tradeStyles.ttl}>No open orders</Text>
-                <Text style={tradeStyles.emptyT}>
-                  Choose Limit or Stop in the ticket to trade at a price you
-                  set. Orders show on the chart.
-                </Text>
-              </View>
-            )
-          ) : null}
-
-          {tab === "book" ? (
-            listed ? (
-              <OrderBook sym={sym} label={label} />
-            ) : null
-          ) : null}
-
-          {tab === "info" && listed ? (
-            <View>
-              {(
-                [
-                  ["UNDERLYING", name],
-                  ["VENUE", "Hyperliquid · " + live.coin],
-                  ["MAX LEVERAGE", maxLev + "x"],
-                  [
-                    "FUNDING",
-                    `Every hour · ${fr >= 0 ? "+" : "−"}${Math.abs(fr).toFixed(4)}%`,
-                  ],
-                  // Hyperliquid maintenance margin = half the initial margin at max leverage
-                  [
-                    "MAINTENANCE MARGIN",
-                    (100 / (2 * live.maxLeverage)).toFixed(2) + "%",
-                  ],
-                  ["FEES", "~" + (TAKER * 100).toFixed(3) + "% taker"],
-                  ["MARGIN", "USDC · isolated per position"],
-                  ["HOURS", "24/7"],
-                ] as [string, string][]
-              ).map(([k, v]) => (
-                <Kv key={k} k={k} v={v} />
-              ))}
-              <Text style={tradeStyles.foot}>LIVE FROM HYPERLIQUID</Text>
-            </View>
-          ) : null}
-        </View>
+        <TradePanel
+          sym={sym}
+          name={name}
+          listed={listed}
+          live={live}
+          maxLev={maxLev}
+          positions={{ ...posQ, data: positions }}
+          orders={ordQ}
+          markOf={markOf}
+          onOpenPosition={(id) => setSheet({ t: "position", id })}
+          onEditTpSl={(id) => setSheet({ t: "tpsl", id })}
+          onOpenOrder={(id) => setSheet({ t: "order", id })}
+        />
       </ScrollView>
 
-      {/* dock: perp balance + transfer, then Long / Short */}
-      <LinearGradient
-        pointerEvents="box-none"
-        colors={["rgba(10,11,14,0)", C.ground]}
-        locations={[0, 0.2]}
-        style={[tradeStyles.dock, { bottom: TAB_BAR_HEIGHT + insets.bottom }]}
-      >
-        <View style={tradeStyles.dockInner}>
-          <DockBalance perp={bal.perp} onTransfer={() => openTransfer()} />
-          <View style={tradeStyles.dockRow}>
-            <Btn
-              kind="long"
-              style={{ flex: 1, opacity: listed ? 1 : 0.4 }}
-              onPress={() => openTicket(1)}
-            >
-              <Text style={[tradeStyles.dockT, { color: ON_MINT }]}>
-                Long <Text style={tradeStyles.lv}>{levLabel}x</Text>
-              </Text>
-            </Btn>
-            <Btn
-              kind="short"
-              style={{ flex: 1, opacity: listed ? 1 : 0.4 }}
-              onPress={() => openTicket(-1)}
-            >
-              <Text style={[tradeStyles.dockT, { color: ON_SHORT }]}>
-                Short <Text style={tradeStyles.lv}>{levLabel}x</Text>
-              </Text>
-            </Btn>
-          </View>
-        </View>
-      </LinearGradient>
+      <TradeDock
+        perp={bal.perp}
+        lev={Math.min(DEFAULT_LEV, maxLev)}
+        enabled={listed}
+        onTransfer={() => openTransfer()}
+        onTicket={openTicket}
+      />
 
-      {/* toast */}
       <PerpToast />
 
       {/* sheets */}
@@ -818,280 +349,3 @@ export function TradeScreen() {
     </SafeAreaView>
   );
 }
-
-export const tradeStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.ground },
-  rowC: { flexDirection: "row", alignItems: "center", gap: 8 },
-  head: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 20,
-  },
-  mktBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-    minHeight: 48,
-    minWidth: 0,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: "#262C36",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoT: { fontFamily: FONT.mono400, fontSize: 10.5, color: C.ink2 },
-  sym: {
-    fontFamily: FONT.sans800,
-    fontSize: 21,
-    letterSpacing: -0.7,
-    color: C.ink1,
-  },
-  editBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1A1F27",
-    marginLeft: 6,
-  },
-  sub: { fontFamily: FONT.sans600, fontSize: 12.5, color: C.ink3 },
-  spot: {
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#2A303A",
-    justifyContent: "center",
-  },
-  spotT: { fontFamily: FONT.sans800, fontSize: 12.5, color: C.ink2 },
-  px: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 10,
-    marginTop: 14,
-    paddingHorizontal: 20,
-    flexWrap: "wrap",
-  },
-  big: {
-    fontFamily: FONT.sans800,
-    fontSize: 34,
-    letterSpacing: -1.5,
-    lineHeight: 38,
-    color: C.ink1,
-    fontVariant: ["tabular-nums"],
-  },
-  chg: {
-    fontFamily: FONT.mono400,
-    fontSize: 13.5,
-    fontVariant: ["tabular-nums"],
-  },
-  h24: {
-    fontFamily: FONT.mono400,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: C.ink4,
-  },
-  stats: { gap: 18, paddingHorizontal: 20, paddingBottom: 2 },
-  statK: {
-    fontFamily: FONT.mono400,
-    fontSize: 8.5,
-    letterSpacing: 1.4,
-    color: C.ink4,
-  },
-  statV: {
-    fontFamily: FONT.mono400,
-    fontSize: 12,
-    color: "#D6DAE0",
-    fontVariant: ["tabular-nums"],
-  },
-  status: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    alignSelf: "flex-start",
-    marginTop: 14,
-    marginLeft: 20,
-    minHeight: 30,
-    paddingHorizontal: 11,
-    borderRadius: 999,
-    backgroundColor: C.surface,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    shadowOpacity: 0.5,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  statusT: {
-    fontFamily: FONT.mono400,
-    fontSize: 9.5,
-    letterSpacing: 1.2,
-    color: C.ink2,
-  },
-  depositBanner: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    zIndex: 60,
-    elevation: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: C.raised,
-    borderWidth: 1,
-    borderColor: "#262C36",
-  },
-  depositBannerT: {
-    fontFamily: FONT.sans600,
-    fontSize: 12.5,
-    color: C.ink1,
-    flexShrink: 1,
-  },
-  tabs: {
-    flexDirection: "row",
-    gap: 18,
-    marginTop: 6,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: C.hair,
-  },
-  tabB: { height: 46, justifyContent: "center" },
-  tabT: { fontFamily: FONT.sans800, fontSize: 14, color: C.ink4 },
-  tabN: { fontFamily: FONT.mono400, fontSize: 11, color: C.ink4 },
-  tabLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: -1,
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: C.mint,
-  },
-  panel: { paddingHorizontal: 20, minHeight: 120 },
-  pRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minHeight: 74,
-    borderBottomWidth: 1,
-    borderBottomColor: C.hair,
-  },
-  ttl: {
-    fontFamily: FONT.sans800,
-    fontSize: 15.5,
-    letterSpacing: -0.3,
-    color: C.ink1,
-  },
-  entry: { fontFamily: FONT.mono400, fontSize: 11.5, color: C.ink3 },
-  pnl: {
-    fontFamily: FONT.sans800,
-    fontSize: 15.5,
-    fontVariant: ["tabular-nums"],
-  },
-  roe: {
-    fontFamily: FONT.mono400,
-    fontSize: 11.5,
-    fontVariant: ["tabular-nums"],
-  },
-  empty: { gap: 8, paddingVertical: 20 },
-  emptyT: {
-    fontFamily: FONT.sans600,
-    fontSize: 13,
-    lineHeight: 20,
-    color: C.ink3,
-  },
-  cancel: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: C.loss,
-    justifyContent: "center",
-  },
-  cancelT: { fontFamily: FONT.sans800, fontSize: 13, color: C.loss },
-  ratio: {
-    flexDirection: "row",
-    height: 6,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  foot: {
-    marginTop: 10,
-    textAlign: "center",
-    fontFamily: FONT.mono400,
-    fontSize: 9.5,
-    letterSpacing: 1.3,
-    color: C.ink4,
-  },
-  bHd: {
-    fontFamily: FONT.mono400,
-    fontSize: 8.5,
-    letterSpacing: 1.4,
-    color: C.ink4,
-    paddingTop: 12,
-    paddingBottom: 6,
-  },
-  bRow: {
-    height: 26,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 6,
-  },
-  bBar: { position: "absolute", top: 3, bottom: 3, borderRadius: 3 },
-  bTxt: {
-    fontFamily: FONT.mono400,
-    fontSize: 11.5,
-    fontVariant: ["tabular-nums"],
-  },
-  // dock = gradient shell; dockInner stacks the balance row above the Long/Short row
-  dock: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 14,
-  },
-  dockInner: { flexDirection: "column", gap: 8, alignSelf: "stretch" },
-  dockRow: { flexDirection: "row", gap: 10, alignSelf: "stretch" },
-  dockT: { fontFamily: FONT.sans800, fontSize: 15.5, letterSpacing: -0.2 },
-  lv: { fontFamily: FONT.mono400, fontSize: 11, opacity: 0.7 },
-  toast: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    gap: 3,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: C.raised,
-    borderWidth: 1,
-    borderColor: "#262C36",
-    zIndex: 50,
-    elevation: 12,
-  },
-  toastT: {
-    fontFamily: FONT.sans800,
-    fontSize: 13,
-    letterSpacing: -0.2,
-    color: C.ink1,
-  },
-  toastS: {
-    fontFamily: FONT.mono400,
-    fontSize: 9.5,
-    letterSpacing: 1.4,
-    color: C.mint,
-  },
-});

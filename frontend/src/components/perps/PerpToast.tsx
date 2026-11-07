@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { tradeStyles } from "@/screens/TradeScreen";
+import { tradeStyles } from "./tradeStyles";
 
 // Tiny toast bus: call toast() from anywhere; every mounted <PerpToast /> shows it.
 type Toast = { id: number; title: string; sub?: string } | null;

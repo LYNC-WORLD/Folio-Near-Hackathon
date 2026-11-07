@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { C } from "@/theme";
 import { useOrderBook } from "@/hooks/perps";
 import type { BookRow } from "@/services/hyperliquid/format";
-import { tradeStyles } from "@/screens/TradeScreen";
+import { tradeStyles } from "./tradeStyles";
 import { fmtNum, money, qtyFmt } from "@/lib/format";
 
 export function OrderBook({ sym, label, depth = 10 }: { sym: string; label: string; depth?: number }) {

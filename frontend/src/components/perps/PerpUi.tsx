@@ -11,6 +11,7 @@ import {
   Text,
   View,
   type StyleProp,
+  type TextStyle,
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -89,21 +90,21 @@ export const Lbl = ({
   style,
 }: {
   children: ReactNode;
-  style?: any;
+  style?: StyleProp<TextStyle>;
 }) => <Text style={[s.lbl, style]}>{children}</Text>;
 export const H2 = ({
   children,
   style,
 }: {
   children: ReactNode;
-  style?: any;
+  style?: StyleProp<TextStyle>;
 }) => <Text style={[s.h2, style]}>{children}</Text>;
 export const Body = ({
   children,
   style,
 }: {
   children: ReactNode;
-  style?: any;
+  style?: StyleProp<TextStyle>;
 }) => <Text style={[s.body, style]}>{children}</Text>;
 
 export function Tag({

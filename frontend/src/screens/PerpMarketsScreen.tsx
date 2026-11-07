@@ -17,7 +17,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
 import type { HomeStackParamList } from "@/navigation/HomeStack";
-import type { TabParamList } from "@/navigation/types"; // ← fix path to where TabParamList lives
+import type { TabParamList } from "@/navigation/RootTabs";
 import { C, FONT, TYPE } from "@/theme";
 import { PressScale, Rise } from "@/components/ui";
 import { money, pct } from "@/lib/format";

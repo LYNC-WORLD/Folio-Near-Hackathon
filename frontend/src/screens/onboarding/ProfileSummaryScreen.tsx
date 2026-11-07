@@ -53,7 +53,7 @@ export function ProfileSummaryScreen({ navigation, route }: Props) {
       hSuccess();
       onComplete?.();
     } catch (err) {
-      console.error("Failed to submit onboarding form:", err);
+      if (__DEV__) console.error("Failed to submit onboarding form:", err);
       hError();
       setError("We couldn't save your answers. Please try again.");
     } finally {

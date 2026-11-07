@@ -7,6 +7,8 @@ import {
   useScrollToTop,
 } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { TabParamList } from "@/navigation/RootTabs";
 
 import { useTabBarSpace } from "@/navigation/TabBar";
 import {
@@ -61,7 +63,7 @@ const MAX_LEV = 10;
 const DEFAULT_LEV = 10;
 
 export function TradeScreen() {
-  const nav = useNavigation();
+  const nav = useNavigation<BottomTabNavigationProp<TabParamList, "Trade">>();
   const route = useRoute();
   const bottom = useTabBarSpace();
   const scrollRef = useRef<ScrollView>(null);
@@ -133,7 +135,7 @@ export function TradeScreen() {
       animated: true,
     });
   const goSpot = () =>
-    (nav as any).navigate("Home", {
+    nav.navigate("Home", {
       screen: "StockDetail",
       params: { symbol: sym, category: "us-stock" },
     });

@@ -173,7 +173,7 @@ export function PortfolioScreen() {
   };
   const toAccount = () => nav.navigate("Profile");
   const toOrders = () =>
-    (nav as any).navigate("Profile", {
+    nav.navigate("Profile", {
       screen: "RecurringBuys",
       initial: false,
     });

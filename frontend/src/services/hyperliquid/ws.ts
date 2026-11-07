@@ -140,7 +140,7 @@ class HlSocket {
       const ch = msg.channel;
       if (!ch || ch === "pong" || ch === "subscriptionResponse") return;
       if (ch === "error") {
-        console.warn("[hyperliquid ws]", msg.data);
+        if (__DEV__) console.warn("[hyperliquid ws]", msg.data);
         return;
       }
       this.entries.forEach((e) => {

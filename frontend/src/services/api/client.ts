@@ -69,7 +69,7 @@ export async function request<T>(
     }
     // On web, CORS blocks and mixed-content blocks land here too,
     // so log the original error to see the real cause in the console.
-    console.warn("[request] failed:", e);
+    if (__DEV__) console.warn("[request] failed:", e);
     throw new ApiError("Network error", 0, e, "NETWORK");
   } finally {
     clearTimeout(timer);

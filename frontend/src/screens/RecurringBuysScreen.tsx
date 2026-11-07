@@ -34,6 +34,8 @@ import { useSheet } from "@/components/Sheet";
 import { money, money0 } from "@/lib/format";
 import { dayDate } from "@/lib/trade";
 import { hTap } from "@/lib/haptics";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { TabParamList } from "@/navigation/RootTabs";
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, "RecurringBuys">;
 
@@ -55,7 +57,7 @@ export function RecurringBuysScreen() {
     r.usdcAmount ? money(Number(r.usdcAmount)) : `${r.stockAmount} ${r.stock.symbol}`;
 
   const openStock = (symbol: string, stockType: string) =>
-    (nav.getParent() as any)?.navigate("Home", {
+    nav.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate("Home", {
       screen: "StockDetail",
       params: { symbol, category: stockType === "PreIPO" ? "pre-ipo" : "us-stock" },
       initial: false,

@@ -84,6 +84,8 @@ import {
   PRE_IPO_LOCKED,
 } from "@/lib/trade";
 import { hTap } from "@/lib/haptics";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { TabParamList } from "@/navigation/RootTabs";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "StockDetail">;
 
@@ -268,8 +270,10 @@ export function StockDetail() {
     );
   };
 
-  const leaveTo = (route: "Portfolio" | "Profile", params?: object) => {
-    (nav.getParent() as any)?.navigate(route, params);
+  // switch tab, then quietly reset this stack behind it
+  const leaveTo = (go: (tabs: BottomTabNavigationProp<TabParamList>) => void) => {
+    const tabs = nav.getParent<BottomTabNavigationProp<TabParamList>>();
+    if (tabs) go(tabs);
     setTimeout(() => nav.popToTop(), 350);
   };
 
@@ -281,9 +285,9 @@ export function StockDetail() {
         `${stock.symbol} is in your Folio`,
         `${money(sum.amount)} · SETTLED`,
       );
-    if (o === "folio") leaveTo("Portfolio");
+    if (o === "folio") leaveTo((t) => t.navigate("Portfolio"));
     // Standing orders live in the Profile stack (opened from Folio's gear)
-    if (o === "orders") leaveTo("Profile", { screen: "RecurringBuys" });
+    if (o === "orders") leaveTo((t) => t.navigate("Profile", { screen: "RecurringBuys" }));
     if (o === "makeRecurring") {
       setMode("recurring");
       setTimeout(

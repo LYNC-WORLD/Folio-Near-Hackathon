@@ -37,7 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const authenticate = useCallback(async (g: GoogleSession) => {
-    console.log("Authenticating with Google session", g.idToken);
     const res = await loginWithGoogle(g.idToken);
     setUser(g.user);
     setSession(res);
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const g = await restoreGoogleSession();
         if (g) await authenticate(g);
       } catch (e) {
-        console.warn("Session restore failed", e);
+        if (__DEV__) console.warn("Session restore failed", e);
       } finally {
         setInitializing(false);
       }

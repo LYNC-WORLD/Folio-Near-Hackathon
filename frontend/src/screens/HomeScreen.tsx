@@ -63,7 +63,7 @@ import { Dimensions } from "react-native";
 import { useTradablePerps, type TradablePerp } from "@/hooks/useTradablePerps";
 import { PerpStrip } from "@/components/perps/PerpStrip";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { TabParamList } from "@/navigation/types";
+import type { TabParamList } from "@/navigation/RootTabs";
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<HomeStackParamList>,
@@ -90,14 +90,6 @@ export function HomeScreen() {
     });
   };
 
-  // console.log(
-  //   "route names:",
-  //   nav.getState().routeNames,
-  //   "parent:",
-  //   nav.getParent()?.getState().routeNames,
-  //   "grandparent:",
-  //   nav.getParent()?.getParent()?.getState().routeNames,
-  // );
 
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);

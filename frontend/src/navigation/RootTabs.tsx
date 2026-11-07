@@ -13,7 +13,7 @@ import { PortfolioScreen, SignalsScreen } from "@/screens";
 import { GroupsStack, type GroupsStackParamList } from "./GroupsStack";
 
 import { HomeStack, type HomeStackParamList } from "./HomeStack";
-import { ProfileStack } from "./ProfileStack";
+import { ProfileStack, type ProfileStackParamList } from "./ProfileStack";
 import { LeadersStack, type LeadersStackParamList } from "./LeadersStack";
 import { TabBar } from "./TabBar";
 import { TradeScreen } from "@/screens/TradeScreen";
@@ -24,7 +24,7 @@ export type TabParamList = {
   Portfolio: undefined;
   Signals: undefined;
   Leaders: NavigatorScreenParams<LeadersStackParamList> | undefined;
-  Profile: undefined;
+  Profile: NavigatorScreenParams<ProfileStackParamList> | undefined;
   Trade: { symbol?: string } | undefined;
   UserRecords: {
     initialTab?: "transactions" | "recurring";

@@ -44,6 +44,8 @@ import Svg, {
 } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useScrollToTop } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { TabParamList } from "@/navigation/RootTabs";
 
 import { useAuth, type OnboardingProfile } from "@/context";
 import { useWallet } from "@/context/WalletContext";
@@ -63,6 +65,7 @@ import {
   AnalystAction,
   AnalystAsset,
   AnalystContext,
+  AnalystHolding,
   answer,
   baseSym,
   briefing,
@@ -72,11 +75,19 @@ import {
 } from "@/lib/analyst";
 import { FolioAIMark } from "@/components/FolioAIMark";
 
-// ⚠️ Point this at your asset detail screen. Used by pulse tiles and
-// "Open NVIDIA"-style chips. If the detail screen lives in another tab's
-// stack, use nav.navigate("Home", { screen: "Asset", params: {...} }).
-function openAsset(nav: any, tokenAddress: string) {
-  nav.navigate("Asset", { tokenAddress });
+type Nav = BottomTabNavigationProp<TabParamList, "Signals">;
+
+/** pulse tiles and "Open NVIDIA"-style chips: the asset's page in the Home stack */
+function openAsset(nav: Nav, asset: AnalystAsset | AnalystHolding | undefined) {
+  if (!asset) return;
+  nav.navigate("Home", {
+    screen: "StockDetail",
+    params: {
+      symbol: asset.symbol,
+      category: asset.preIpo ? "pre-ipo" : "us-stock",
+    },
+    initial: false,
+  });
 }
 
 type Msg = {
@@ -109,7 +120,7 @@ const SHORT: Record<string, string> = {
 };
 
 export function SignalsScreen() {
-  const nav = useNavigation<any>();
+  const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const splashDone = useSplashDone();
   const reduced = useReducedMotion();
@@ -280,7 +291,12 @@ export function SignalsScreen() {
 
   const act = (a: AnalystAction) => {
     if ("tab" in a) nav.navigate(a.tab);
-    else openAsset(nav, a.asset);
+    else
+      openAsset(
+        nav,
+        ctx.assets.find((x) => x.tokenAddress === a.asset) ??
+          ctx.holdings.find((x) => x.tokenAddress === a.asset),
+      );
   };
 
   const chips = sugg ?? starters(ctx);
@@ -367,7 +383,7 @@ export function SignalsScreen() {
                       <PressScale
                         key={a.tokenAddress}
                         scaleTo={0.97}
-                        onPress={() => openAsset(nav, a.tokenAddress)}
+                        onPress={() => openAsset(nav, a)}
                         accessibilityRole="button"
                         accessibilityLabel={`${a.name}, ${money(a.price)}${a.change != null ? `, ${pct(a.change)} today` : ""}`}
                         style={s.tile}

@@ -58,7 +58,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     dataUpdatedAt,
     refetch,
   } = useQuery({
-    queryKey: ["walletBalance", (user as any)?.id ?? user?.email],
+    queryKey: ["walletBalance", user?.id ?? user?.email],
     queryFn: () => getWalletBalance(idToken as string),
     select: (res) => res.data,
     enabled: !!idToken,

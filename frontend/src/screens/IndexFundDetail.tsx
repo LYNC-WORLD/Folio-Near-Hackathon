@@ -55,6 +55,8 @@ import { toFund, type FundHolding } from "@/lib/indexFunds";
 import { cleanAmt, fmtIn } from "@/lib/trade";
 import { hTap } from "@/lib/haptics";
 import { tracks } from "./IndexFundsScreen";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { TabParamList } from "@/navigation/RootTabs";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "IndexFundDetail">;
 
@@ -152,7 +154,7 @@ export function IndexFundDetail() {
           sheet.close();
           toast(`${fund.name} is in your Folio`, `${money(sum.spent)} · SETTLED`);
           if (o === "folio") {
-            (nav.getParent() as any)?.navigate("Portfolio");
+            nav.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate("Portfolio");
             setTimeout(() => nav.popToTop(), 350);
           }
         }}

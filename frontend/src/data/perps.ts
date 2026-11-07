@@ -214,7 +214,7 @@ export const PERP_MARKETS: PerpMarket[] = ROWS.map(
 export const perpLabel = (m: PerpMarket) =>
   m.category === "stocks" ? m.symbol : m.short;
 
-export function searchPerps(list: PerpMarket[], q: string): PerpMarket[] {
+export function searchPerps<T extends PerpMarket>(list: T[], q: string): T[] {
   const t = q.trim().toLowerCase();
   if (!t) return list;
   const rank = (m: PerpMarket) => {

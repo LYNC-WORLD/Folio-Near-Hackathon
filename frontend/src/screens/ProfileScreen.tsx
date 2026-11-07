@@ -54,6 +54,7 @@ import { money, money0 } from "../lib/format";
 import { hTap } from "../lib/haptics";
 import { usePerpPositions } from "../hooks/usePerpPositions";
 import { useBalances } from "../hooks/useBalances";
+import { useTransfers } from "../hooks/useTransfers";
 
 const APP_VERSION = "0.9.2";
 type Nav = NativeStackNavigationProp<ProfileStackParamList, "Profile">;
@@ -92,6 +93,7 @@ export function ProfileScreen() {
   const total = useCountUp(bal.perp + usdValue);
   const [signingOut, setSigningOut] = useState(false);
   const [xfer, setXfer] = useState(false); // Transfer drawer (spot <-> perp)
+  const transfers = useTransfers(refresh);
 
   if (!user) return null;
 
@@ -383,6 +385,7 @@ export function ProfileScreen() {
 
       {xfer ? (
         <TransferSheet
+          {...transfers}
           onClose={() => setXfer(false)}
           onMoved={() => {
             setXfer(false);

@@ -24,7 +24,7 @@ import { timing } from "../theme/motion";
 import { hSelect } from "../lib/haptics";
 
 type Props<K extends string> = {
-  options: readonly [K, string][]; // [key, label]
+  options: readonly (readonly [K, string])[]; // [key, label]
   value: K;
   onChange: (k: K) => void;
   label?: string;

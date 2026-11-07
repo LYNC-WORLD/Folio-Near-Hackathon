@@ -22,8 +22,7 @@ import { useUserTransactions } from "../hooks/useUserRecords";
 import { usePortfolioSeries } from "../hooks/usePortfolioSeries";
 import { useCountUp } from "../hooks/useCountUp";
 import { useWalletBalance } from "../hooks/useWalletBalance";
-import { useSpotToPerpDeposit } from "../hooks/useSpotToPerpDeposit";
-import { toast as perpToast } from "../data/perpsStore";
+import { useTransfers } from "../hooks/useTransfers";
 import { getOnboardingProfile } from "../lib";
 import type { TabParamList } from "../navigation/RootTabs";
 import { useTabBarSpace } from "../navigation/TabBar";
@@ -108,13 +107,6 @@ export function PortfolioScreen() {
     perp: walletBal.perpAvailable,
     spot: walletBal.wallet?.usdc.balance ?? 0,
   };
-  const {
-    deposit,
-    phase: depositPhase,
-    amount: depositAmount,
-    error: depositError,
-    reset: resetDeposit,
-  } = useSpotToPerpDeposit();
   const [xfer, setXfer] = useState(false);
   const [xferDir, setXferDir] = useState<"in" | "out">("in");
 
@@ -237,17 +229,8 @@ export function PortfolioScreen() {
     return m;
   }, [us.stocks, pre.stocks]);
 
-  useEffect(() => {
-    if (depositPhase === "done") {
-      perpToast(`Moved ${money(depositAmount)} to perp`, "TRANSFER CONFIRMED");
-      refresh(); // this screen's own cash/positions numbers, not just TradeScreen's
-      resetDeposit();
-    } else if (depositPhase === "error" && depositError) {
-      perpToast("Transfer issue", depositError.toUpperCase());
-      resetDeposit();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depositPhase]);
+  // refresh this screen's own cash/positions numbers once money moves
+  const transfers = useTransfers(refresh);
 
   const positions = useMemo(
     () =>
@@ -965,7 +948,7 @@ export function PortfolioScreen() {
       {xfer ? (
         <TransferSheet
           dir={xferDir}
-          onDeposit={deposit}
+          {...transfers}
           onClose={() => setXfer(false)}
           onMoved={() => {
             setXfer(false);

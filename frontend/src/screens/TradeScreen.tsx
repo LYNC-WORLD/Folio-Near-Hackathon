@@ -27,16 +27,16 @@ import {
   MarketStatusSheet,
   UnlockSheet,
   QUIZ_SEEN_KEY,
-} from "../components/PerpSheets";
-import { AMBER, Btn, Kv, ON_MINT, ON_SHORT, Tag } from "../components/PerpUi";
+} from "../components/perps/PerpSheets";
+import { AMBER, Btn, Kv, ON_MINT, ON_SHORT, Tag } from "../components/perps/PerpUi";
 import { perpLabel } from "../data/perps";
 import { OrderBook } from "../components/perps/OrderBook";
 import { PerpToast } from "../components/perps/PerpToast";
 import { LivePositionSheet } from "../components/perps/LivePositionSheet";
-import { DockBalance } from "../components/perps/Dockbalance";
+import { DockBalance } from "../components/perps/DockBalance";
 import { TransferSheet } from "../components/TransferSheet";
-import { ChartStage } from "../components/Perpchart";
-import { OrderTicketSheet } from "../components/Orderticketsheet";
+import { ChartStage } from "../components/perps/PerpChart";
+import { OrderTicketSheet } from "../components/perps/OrderTicketSheet";
 import { C, FONT } from "../theme";
 import {
   TAKER,

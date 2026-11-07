@@ -47,7 +47,7 @@ import {
   PerpPositionList,
   PerpSummaryLine,
   PerpsHeader,
-} from "../components/PerpsPortfolio";
+} from "../components/perps/PerpsPortfolio";
 import { useFollowing } from "../lib/follows";
 import { dayChange, money, pct } from "../lib/format";
 import { fundPositions, useFundLots } from "../lib/fundHoldings";

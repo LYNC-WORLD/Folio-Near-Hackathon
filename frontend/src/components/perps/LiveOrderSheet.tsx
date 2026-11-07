@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "../PerpUi";
+import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "./PerpUi";
 import { fmtPx, sPct, toast } from "../../data/perpsStore";
 import { C } from "../../theme";
 import { errMsg } from "../../services/hyperliquid/format";

@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Body, Btn, CARD, H2, Lbl, Sheet, Tag } from "../PerpUi";
+import { Body, Btn, CARD, H2, Lbl, Sheet, Tag } from "./PerpUi";
 import { fmtPx, sMoney, sideTxt, toast } from "../../data/perpsStore";
 import { C, FONT } from "../../theme";
 import { hTap } from "../../lib/haptics";

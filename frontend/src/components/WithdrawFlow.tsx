@@ -22,7 +22,7 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { hSelect, hTap } from "../lib/haptics";
 import { money } from "../lib/format";
 import { C, em, FONT } from "../theme";
-import { Body, Btn, CARD, Check, H2, Kv, KvCard, Lbl } from "./PerpUi";
+import { Body, Btn, CARD, Check, H2, Kv, KvCard, Lbl } from "./perps/PerpUi";
 
 // TODO: set these once the chain / fee are final (prototype shows [CHAIN AT LAUNCH])
 const NETWORK = "USDC network";

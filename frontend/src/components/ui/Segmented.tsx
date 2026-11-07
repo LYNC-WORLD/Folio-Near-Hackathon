@@ -1,5 +1,9 @@
-// Segmented control with a sliding mint thumb (Buy / Recurring, One-time / Recurring).
-// Label colours follow the thumb as it moves.
+// Segmented control with a sliding thumb; label colours follow the thumb as it moves.
+//
+//   ( [ Leaderboard ]   Groups      )   ← thumb slides 340ms, label turns mint
+//
+// variant "outline" (default): transparent thumb with a mint ring (Buy / Recurring).
+// variant "raised": thumb on raised with a 1pt #313844 ring (Leaderboard / Groups).
 import { useEffect } from "react";
 import {
   Pressable,
@@ -20,14 +24,27 @@ import { FONT } from "../../theme/fonts";
 import { DUR, timing } from "../../theme/motion";
 import { hSelect } from "../../lib/haptics";
 
-type Props = {
-  options: string[];
-  index: number;
-  onChange: (i: number) => void;
+type Props<K extends string> = {
+  options: readonly (readonly [K, string])[]; // [key, label]
+  value: K;
+  onChange: (k: K) => void;
+  variant?: "outline" | "raised";
+  label?: string; // accessibility label for the tablist
   style?: StyleProp<ViewStyle>;
 };
 
-export function Segmented({ options, index, onChange, style }: Props) {
+export function Segmented<K extends string>({
+  options,
+  value,
+  onChange,
+  variant = "outline",
+  label,
+  style,
+}: Props<K>) {
+  const index = Math.max(
+    0,
+    options.findIndex(([k]) => k === value),
+  );
   const pos = useSharedValue(index);
   const width = useSharedValue(0);
   const n = options.length;
@@ -49,20 +66,22 @@ export function Segmented({ options, index, onChange, style }: Props) {
       style={[s.wrap, style]}
       onLayout={(e) => (width.value = e.nativeEvent.layout.width)}
       accessibilityRole="tablist"
+      accessibilityLabel={label}
     >
-      <Animated.View style={[s.thumb, thumb]} />
-      {options.map((label, i) => (
+      <Animated.View style={[s.thumb, s[variant], thumb]} />
+      {options.map(([k, text], i) => (
         <Pressable
-          key={label}
+          key={k}
           style={s.btn}
           accessibilityRole="tab"
-          accessibilityState={{ selected: i === index }}
+          accessibilityState={{ selected: k === value }}
           onPress={() => {
-            if (i !== index) hSelect();
-            onChange(i);
+            if (k === value) return;
+            hSelect();
+            onChange(k);
           }}
         >
-          <SegLabel label={label} i={i} pos={pos} />
+          <SegLabel label={text} i={i} pos={pos} />
         </Pressable>
       ))}
     </View>
@@ -103,9 +122,16 @@ const s = StyleSheet.create({
     bottom: 4,
     left: 4,
     borderRadius: 999,
+  },
+  outline: {
     backgroundColor: "transparent",
     borderWidth: 1.5,
     borderColor: C.mint,
+  },
+  raised: {
+    backgroundColor: C.raised,
+    borderWidth: 1,
+    borderColor: "#313844",
   },
   btn: {
     flex: 1,

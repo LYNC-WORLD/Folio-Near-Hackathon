@@ -1,4 +1,4 @@
-// src/components/Orderticketsheet.tsx — Long / Short ticket: side, order type, margin,
+// src/components/perps/OrderTicketSheet.tsx — Long / Short ticket: side, order type, margin,
 // leverage, liquidation preview, analyst check, TP/SL, fees, hold-to-confirm (25x+), success card.
 // Sends real orders through useTradeActions -> backend -> Hyperliquid.
 // Margin comes from the PERP account (perpBal); spot money is moved in with onTransfer.
@@ -24,7 +24,7 @@ import {
   sMoney,
   sideTxt,
   toast,
-} from "../data/perpsStore";
+} from "../../data/perpsStore";
 import {
   AMBER,
   Body,
@@ -42,11 +42,11 @@ import {
   Tag,
   levTone,
 } from "./PerpUi";
-import { C, FONT } from "../theme";
-import { hTap } from "../lib/haptics";
-import { useAccount, useLiveMarket, usePerpsSession } from "../hooks/perps";
-import { tradeService, unwrap } from "../services/perps/tradeService";
-import { errMsg, toSym } from "../services/hyperliquid/format";
+import { C, FONT } from "../../theme";
+import { hTap } from "../../lib/haptics";
+import { useAccount, useLiveMarket, usePerpsSession } from "../../hooks/perps";
+import { tradeService, unwrap } from "../../services/perps/tradeService";
+import { errMsg, toSym } from "../../services/hyperliquid/format";
 
 type OrderType = "Market" | "Limit";
 type MarginMode = "ISOLATED" | "CROSS";

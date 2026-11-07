@@ -127,7 +127,7 @@ export function StockDetail() {
 
   const [change, setChange] = useState<ChartChange | null>(null);
   const [scrub, setScrub] = useState<Candle | null>(null);
-  const [mode, setMode] = useState<0 | 1>(0); // 0 = Buy, 1 = Recurring
+  const [mode, setMode] = useState<"buy" | "recurring">("buy");
   const [input, setInput] = useState("");
   const [touched, setTouched] = useState(false);
   const [day, setDay] = useState(defaultDay());
@@ -206,7 +206,7 @@ export function StockDetail() {
       : C.loss;
 
   // amount validation (prototype renderAmt)
-  const rep = mode === 1;
+  const rep = mode === "recurring";
   const over = amt > balance + 1e-9;
   const zero = amt <= 0;
   const blockedRec = rep && !!activeRec;
@@ -285,7 +285,7 @@ export function StockDetail() {
     // Standing orders live in the Profile stack (opened from Folio's gear)
     if (o === "orders") leaveTo("Profile", { screen: "RecurringBuys" });
     if (o === "makeRecurring") {
-      setMode(1);
+      setMode("recurring");
       setTimeout(
         () =>
           scrollRef.current?.scrollTo({
@@ -450,9 +450,12 @@ export function StockDetail() {
 
         <View onLayout={(e) => (segY.current = e.nativeEvent.layout.y)}>
           <Segmented
-            options={["Buy", "Recurring"]}
-            index={mode}
-            onChange={(i) => setMode(i as 0 | 1)}
+            options={[
+              ["buy", "Buy"],
+              ["recurring", "Recurring"],
+            ]}
+            value={mode}
+            onChange={setMode}
           />
         </View>
 

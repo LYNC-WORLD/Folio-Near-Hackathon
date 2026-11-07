@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "../PerpUi";
+import { Body, Btn, H2, Kv, KvCard, Sheet, Tag } from "./PerpUi";
 import { fmtPx, sMoney, sPct, sideTxt, toast } from "../../data/perpsStore";
 import { C } from "../../theme";
 import { livePnl, liveRoe, type UiPosition } from "../../hooks/perps";

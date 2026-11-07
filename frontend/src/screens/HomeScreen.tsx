@@ -61,7 +61,7 @@ import { money, pct } from "../lib/format";
 import { hTap } from "../lib/haptics";
 import { Dimensions } from "react-native";
 import { PerpMarket, usePerpMarkets } from "../data/perps";
-import { PerpStrip } from "../components/PerpStrip";
+import { PerpStrip } from "../components/perps/PerpStrip";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { TabParamList } from "../navigation/types";
 

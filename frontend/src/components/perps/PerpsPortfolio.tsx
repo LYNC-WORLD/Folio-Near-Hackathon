@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
-import { PressScale } from "./ui";
-import { C, FONT, TYPE, em } from "../theme";
-import { hTap } from "../lib/haptics";
-import type { PerpCategory } from "../hooks/usePerpPositions";
-import { UiPosition } from "../hooks/perps";
+import { PressScale } from "../ui";
+import { C, FONT, TYPE, em } from "../../theme";
+import { hTap } from "../../lib/haptics";
+import type { PerpCategory } from "../../hooks/usePerpPositions";
+import { UiPosition } from "../../hooks/perps";
 
 export type PerpRow = UiPosition & { category?: PerpCategory };
 

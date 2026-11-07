@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Svg, { Polyline } from "react-native-svg";
-import { PressScale } from "./ui";
-import { C, FONT, em } from "../theme";
-import { hTap } from "../lib/haptics";
-import { pct } from "../lib/format";
-import { PerpMarket } from "../data/perps";
+import { PressScale } from "../ui";
+import { C, FONT, em } from "../../theme";
+import { hTap } from "../../lib/haptics";
+import { pct } from "../../lib/format";
+import { PerpMarket } from "../../data/perps";
 const GRID_GAP = 10;
 const GRID_PADDING = 20; // matches HomeScreen s.body paddingHorizontal
 

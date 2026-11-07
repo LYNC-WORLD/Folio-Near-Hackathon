@@ -26,7 +26,7 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
-import { sideTxt, sMoney, fmtNum } from "../data/perpsStore";
+import { sideTxt, sMoney, fmtNum } from "../../data/perpsStore";
 import {
   CIND,
   CTYPES,
@@ -41,16 +41,16 @@ import {
   type Bar,
   type ChartType,
   type IndKey,
-} from "../data/perpsChart";
-import { C, FONT } from "../theme";
-import { hTap } from "../lib/haptics";
+} from "../../data/perpsChart";
+import { C, FONT } from "../../theme";
+import { hTap } from "../../lib/haptics";
 import {
   livePnl,
   useCandles,
   useLiveMarket,
   type UiOrder,
   type UiPosition,
-} from "../hooks/perps";
+} from "../../hooks/perps";
 
 const UP = "#37E099",
   DN = "#F0604D",

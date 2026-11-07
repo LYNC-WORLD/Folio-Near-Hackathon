@@ -18,8 +18,7 @@ import { useAuth } from "../context";
 import { useLeaderboard } from "../context/LeaderboardContext";
 import { useTabBarSpace } from "../navigation/TabBar";
 import { C, FONT, TYPE, em } from "../theme";
-import { Badge, Button, PressScale, Rise } from "../components/ui";
-import { Segmented } from "../components/Segmented";
+import { Badge, Button, PressScale, Rise, Segmented } from "../components/ui";
 import { useSplashDone } from "../components/SplashIntro";
 import { useToast } from "../components/Toast";
 import { PerpLeaderboardEntry } from "../services";
@@ -92,6 +91,7 @@ export function LeadersScreen() {
           <Segmented
             options={SECTIONS}
             value={section}
+            variant="raised"
             label="Social"
             onChange={(k) => {
               setSection(k);

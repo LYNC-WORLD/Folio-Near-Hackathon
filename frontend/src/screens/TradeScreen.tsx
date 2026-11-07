@@ -12,7 +12,9 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Path, SvgUri } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
+import { Image } from "expo-image";
+
 import {
   useNavigation,
   useRoute,
@@ -360,7 +362,13 @@ export function TradeScreen() {
               }}
             >
               {selectedMarket?.imageUrl ? (
-                <SvgUri uri={selectedMarket.imageUrl} width={42} height={42} />
+                <Image
+                  source={{
+                    uri: selectedMarket.imageUrl,
+                  }}
+                  style={{ width: 42, height: 42 }}
+                  contentFit="contain"
+                />
               ) : null}
             </View>
             <View style={{ gap: 3, flexShrink: 1 }}>

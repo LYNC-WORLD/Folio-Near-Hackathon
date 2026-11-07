@@ -9,6 +9,7 @@ export type PerpMarket = {
   mark: number; // current mark price, USD
   change: number; // 24h %
   high24: number;
+  imageUrl?: string;
   low24: number;
   vol24: number; // 24h volume, USD millions
   oi: number; // open interest, USD millions

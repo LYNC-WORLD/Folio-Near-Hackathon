@@ -28,6 +28,8 @@ import { fmtPx } from "../data/perpsStore";
 import { useWalletBalance } from "../hooks/useWalletBalance";
 import { hTap } from "../lib/haptics";
 import { Btn, CARD, Check, H2, Body, Lbl, Sheet } from "./PerpUi";
+import { useAuth } from "../context";
+import { useDepositQuote } from "../hooks/useDepositQuote";
 
 export type TransferStatus = {
   phase: "idle" | "depositing" | "confirming" | "done" | "error";
@@ -159,11 +161,6 @@ export function TransferSheet({
   // Whichever direction was actually submitted drives which hook's status we watch.
   const active = inb ? depositStatus : withdrawStatus;
 
-  // Latch the outcome the instant it appears, DURING RENDER — not in an effect.
-  // TradeScreen's own effect resets the hook's phase back to "idle" right after
-  // toasting, and that reset can land before a child effect would run, so an
-  // effect-based capture here could miss the "done"/"error" value entirely.
-  // Capturing in render is synchronous with the prop arriving, so it can't be missed.
   const resultRef = useRef<
     { kind: "done"; amount: number } | { kind: "error"; message: string } | null
   >(null);
@@ -175,6 +172,13 @@ export function TransferSheet({
     }
   }
   const result = phase === "submitted" ? resultRef.current : null;
+
+  const { idToken } = useAuth();
+  const { expectedUSDC, loading: quoteLoading } = useDepositQuote(
+    amt,
+    idToken,
+    inb && phase === "form",
+  );
 
   const rot = useSharedValue(dir0 === "out" ? 1 : 0); // counts half-turns
   const swapStyle = useAnimatedStyle(() => ({
@@ -206,11 +210,6 @@ export function TransferSheet({
     },
     [],
   );
-
-  const goForm = () => {
-    resultRef.current = null;
-    setPhase("form");
-  };
 
   const submit = async () => {
     if (!ok || phase !== "form") return;
@@ -388,6 +387,21 @@ export function TransferSheet({
               <Text style={s.k}>USDC</Text>
             </View>
           </View>
+          {inb ? (
+            <View style={s.quoteRow}>
+              {quoteLoading ? (
+                <>
+                  <ActivityIndicator size="small" color={C.ink4} />
+                  <Text style={s.quoteT}>Getting quote…</Text>
+                </>
+              ) : expectedUSDC != null ? (
+                <Text style={s.quoteT}>
+                  ≈ <Text style={s.quoteV}>{expectedUSDC.toFixed(4)} USDC</Text>{" "}
+                  credited to your perp account
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
 
           {err ? (
             <View style={s.coach}>
@@ -548,5 +562,21 @@ const s = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: C.ink1,
+  },
+  quoteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: -4,
+  },
+  quoteT: {
+    fontFamily: FONT.mono400,
+    fontSize: 11.5,
+    color: C.ink4,
+  },
+  quoteV: {
+    fontFamily: FONT.sans700,
+    fontSize: 11.5,
+    color: C.ink2,
   },
 });

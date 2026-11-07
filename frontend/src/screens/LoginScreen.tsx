@@ -1,9 +1,3 @@
-// src/screens/LoginScreen.tsx — prototype: #s-signin
-//
-// No entrance animation of its own: on app open it is revealed by the splash
-// crossfade, and after sign-out it is shown with the same 280ms fade.
-// Auth logic is unchanged — this only renders useAuth().
-
 import {
   ActivityIndicator,
   Platform,

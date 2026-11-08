@@ -61,23 +61,34 @@ const usePerpMarketsQuery = () =>
  * One market's listing (name, logo, max leverage) without the live price feed, so it
  * doesn't re-render on every tick. `mark` / `change` are the backend's, not live.
  */
+const MAX_LIMIT = 30; // backend accepts 1..30
+
 const useAllPerpMarketsQuery = () =>
   useQuery({
     queryKey: ["perpMarkets", "all"],
     queryFn: async () => {
-      const res = await getPerpMarkets({ limit: 500, offset: 0 });
-      if (!res.success) throw new Error(res.message || "Failed to load markets");
-      return res.data;
+      const all: PerpMarketApi[] = [];
+      let offset = 0;
+      for (;;) {
+        const res = await getPerpMarkets({ limit: MAX_LIMIT, offset });
+        if (!res.success) throw new Error(res.message || "Failed to load markets");
+        all.push(...res.data);
+        // step by what the server actually returned
+        if (!res.pagination.hasMore || res.data.length === 0) break;
+        offset += res.data.length;
+      }
+      return all;
     },
     staleTime: 5 * 60_000,
   });
 
 export function usePerpListing(sym: string): TradablePerp | undefined {
-  const { data } = useAllPerpMarketsQuery();
+  const q = useAllPerpMarketsQuery();
+  
   return useMemo(() => {
-    const a = data?.find((m) => m.marketSymbol === sym);
+    const a = q.data?.find((m) => m.marketSymbol === sym);
     return a ? toPerp(a) : undefined;
-  }, [data, sym]);
+  }, [q.data, sym]);
 }
 
 /** Every market with live prices. Re-renders on price ticks: use it where prices show. */

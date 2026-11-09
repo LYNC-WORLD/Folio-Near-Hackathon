@@ -2,15 +2,14 @@
   "expo": {
     "name": "folio",
     "slug": "folio",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0B0E",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.folio.money",
-      "usesAppleSignIn": true
+      "bundleIdentifier": "app.folio.money"
     },
     "android": {
       "package": "app.folio.money",
@@ -47,15 +46,13 @@
         }
       ],
       "expo-web-browser",
-      "expo-image",
-      "expo-secure-store",
-      "expo-apple-authentication",
-      "expo-status-bar"
+      "expo-image"
     ],
     "extra": {
       "eas": {
-        "projectId": "02a2f198-e25d-4f24-a96a-8ca97f3bd1b8"
+        "projectId": "a2d7d699-aaaf-4606-b109-dd69e0e72c01"
       }
-    }
+    },
+    "owner": "shanu12joshi"
   }
 }

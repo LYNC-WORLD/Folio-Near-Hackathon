@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authenticate = useCallback(
     async (g: GoogleSession, method: SignInMethod) => {
       console.log("[auth] authenticate", method, g.idToken);
-      const res = await loginWithIdToken(g.idToken);
+      const res = await loginWithIdToken(g.idToken, method);
       console.log("[auth] backend login response", res);
       methodRef.current = method;
       tokenRef.current = g.idToken;

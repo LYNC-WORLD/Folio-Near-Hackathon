@@ -1,12 +1,12 @@
-import { request } from "./client";
+import { request, type AccountType } from "./client";
 import type { LoginResponse } from "@/types";
 
-// Works for Google and Apple tokens: the backend tells them apart by the `iss` claim.
-export const loginWithIdToken = (idToken: string) =>
+export const loginWithIdToken = (idToken: string, accountType: AccountType) =>
   request<LoginResponse>("/api/auth/login", {
     method: "POST",
     body: { idToken },
+    accountType,
   });
 
 // kept so nothing else breaks
-export const loginWithGoogle = loginWithIdToken;
+export const loginWithGoogle = (idToken: string) => loginWithIdToken(idToken, "google");

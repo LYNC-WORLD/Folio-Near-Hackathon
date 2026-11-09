@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -8,13 +9,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context";
+import { isAppleAvailable } from "@/services";
 import { C, FONT, TYPE, em, h1Size } from "@/theme";
 import { Button, Mark, Rise } from "@/components/ui";
+import { AppleButton } from "@/components/AppleButtont";
 
 const IS_WEB = Platform.OS === "web";
 
 export function LoginScreen() {
   const { signIn, busy, error } = useAuth();
+  const [appleOk, setAppleOk] = useState(false);
+
+  useEffect(() => {
+    isAppleAvailable()
+      .then(setAppleOk)
+      .catch(() => setAppleOk(false));
+  }, []);
 
   return (
     <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
@@ -53,13 +63,22 @@ export function LoginScreen() {
             </Rise>
           ) : null}
 
-          {/* On web the button is capped in width so it isn't a huge bar */}
-          <View style={IS_WEB ? s.buttonWrapWeb : undefined}>
+          {/* On web the buttons are capped in width so they aren't a huge bar */}
+          <View style={[s.buttons, IS_WEB && s.buttonWrapWeb]}>
+            {appleOk ? (
+              <AppleButton
+                onPress={() => {
+                  console.log("[apple] button pressed, busy =", busy);
+                  if (!busy) void signIn("apple");
+                }}
+              />
+            ) : null}
+
             <Button
-              title={busy ? "Signing in…" : "Continue with Google"}
-              onPress={busy ? undefined : signIn}
+              title={busy === "google" ? "Signing in…" : "Continue with Google"}
+              onPress={busy ? undefined : () => void signIn("google")}
               icon={
-                busy ? (
+                busy === "google" ? (
                   <ActivityIndicator size="small" color={C.onMint} />
                 ) : (
                   <View style={s.g}>
@@ -103,6 +122,7 @@ const s = StyleSheet.create({
   actions: { gap: 16 },
   actionsWeb: { alignItems: "center", marginTop: 16 },
 
+  buttons: { gap: 12 },
   // Web: small, centred button
   buttonWrapWeb: { width: 260, maxWidth: "100%", alignSelf: "center" },
 

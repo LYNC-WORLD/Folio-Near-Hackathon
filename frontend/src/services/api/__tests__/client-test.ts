@@ -6,6 +6,9 @@ const reply = (status: number, body: unknown) =>
 const authOf = (call: unknown[]) =>
   (call[1] as { headers: Record<string, string> }).headers.Authorization;
 
+const accountTypeOf = (call: unknown[]) =>
+  (call[1] as { headers: Record<string, string> }).headers.account_type;
+
 describe("request 401 retry", () => {
   const fetchMock = jest.fn();
   let unregister: () => void = () => {};
@@ -40,5 +43,15 @@ describe("request 401 retry", () => {
 
     await expect(request("/x", { token: "old" })).rejects.toBeInstanceOf(ApiError);
     expect(refresher).not.toHaveBeenCalled();
+  });
+
+  it("sends the backend account type for each provider", async () => {
+    fetchMock.mockReturnValue(reply(200, {}));
+
+    await request("/google", { accountType: "google" });
+    await request("/apple", { accountType: "apple" });
+
+    expect(accountTypeOf(fetchMock.mock.calls[0])).toBe("google");
+    expect(accountTypeOf(fetchMock.mock.calls[1])).toBe("aaple");
   });
 });

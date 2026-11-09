@@ -1,6 +1,7 @@
 import { ENV } from "@/config";
 
 export type ApiErrorCode = "TIMEOUT" | "NETWORK" | "HTTP";
+export type AccountType = "apple" | "google";
 
 export class ApiError extends Error {
   constructor(
@@ -18,6 +19,8 @@ type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   token?: string;
+  /** Adds the authentication provider required by the backend. */
+  accountType?: AccountType;
   timeoutMs?: number;
 };
 
@@ -60,7 +63,7 @@ export async function request<T>(
 
 async function send<T>(
   path: string,
-  { method = "GET", body, token, timeoutMs = 15000 }: RequestOptions,
+  { method = "GET", body, token, accountType, timeoutMs = 15000 }: RequestOptions,
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -72,6 +75,10 @@ async function send<T>(
         // Only set when there is a body, avoids needless CORS preflights on GETs
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // The API currently spells the Apple provider value as "aaple".
+        ...(accountType
+          ? { account_type: accountType === "apple" ? "aaple" : "google" }
+          : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: controller.signal,

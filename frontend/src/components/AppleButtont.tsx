@@ -5,7 +5,7 @@ export function AppleButton({ onPress }: { onPress: () => void }) {
     <AppleAuthentication.AppleAuthenticationButton
       buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
       buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-      cornerRadius={14}
+      cornerRadius={1000333}
       style={{ height: 52, width: "100%" }}
       onPress={onPress}
     />

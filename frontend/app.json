@@ -17,14 +17,12 @@
       "package": "app.folio.money",
       "adaptiveIcon": {
         "backgroundColor": "#0A0B0E",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       [
@@ -49,7 +47,10 @@
       ],
       "expo-web-browser",
       "expo-image",
-      "expo-apple-authentication"
+      "expo-secure-store",
+      "expo-apple-authentication",
+      "expo-status-bar",
+      "@crossmint/client-sdk-react-native-ui"
     ],
     "extra": {
       "eas": {

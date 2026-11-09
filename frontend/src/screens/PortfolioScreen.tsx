@@ -319,9 +319,12 @@ export function PortfolioScreen() {
               perpPnl={perpPnl}
               perpCount={allPos.data.length}
               onDeposit={() =>
-                sheet.open(<DepositFlow address={walletAddress} />, {
-                  label: "Deposit",
-                })
+                sheet.open(
+                  <DepositFlow address={walletAddress} email={user?.email} />,
+                  {
+                    label: "Deposit",
+                  },
+                )
               }
               onMore={openMore}
               onRefresh={refresh}

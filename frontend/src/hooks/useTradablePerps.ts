@@ -3,7 +3,7 @@
 // and volume on top, falling back to the backend's price until the feed is in.
 import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getPerpMarkets, type PerpMarketApi } from "@/services/perps";
+import { getPerpMarkets, PerpMarketsResponse, type PerpMarketApi } from "@/services/perps";
 import { toCoin } from "@/services/hyperliquid/format";
 import { useMarkets, type PerpMarket as HlMarket } from "./perps/useMarkets";
 
@@ -31,14 +31,29 @@ const toPerp = (a: PerpMarketApi, hl?: HlMarket): TradablePerp => ({
   vol24Usd: hl?.vol24Usd ?? 0,
 });
 
+import { useInfiniteQuery } from "@tanstack/react-query";
+
+const PAGE_SIZE = 20;
+
+const selectMarkets = (d: { pages: PerpMarketsResponse[] }) => ({
+  items: d.pages.flatMap((p) => p.data),
+  total: d.pages[0]?.pagination.total ?? 0,
+});
+
 const usePerpMarketsQuery = () =>
-  useQuery({
-    queryKey: ["perpMarkets"],
-    queryFn: async () => {
-      const res = await getPerpMarkets();
+  useInfiniteQuery({
+    queryKey: ["perpMarkets", PAGE_SIZE],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const res = await getPerpMarkets({ limit: PAGE_SIZE, offset: pageParam });
       if (!res.success) throw new Error(res.message || "Failed to load markets");
-      return res.data;
+      return res;
     },
+    getNextPageParam: (last) =>
+      last.pagination.hasMore
+        ? last.pagination.offset + last.pagination.limit
+        : undefined,
+    select: selectMarkets,
     staleTime: 60_000,
   });
 
@@ -46,12 +61,34 @@ const usePerpMarketsQuery = () =>
  * One market's listing (name, logo, max leverage) without the live price feed, so it
  * doesn't re-render on every tick. `mark` / `change` are the backend's, not live.
  */
+const MAX_LIMIT = 30; // backend accepts 1..30
+
+const useAllPerpMarketsQuery = () =>
+  useQuery({
+    queryKey: ["perpMarkets", "all"],
+    queryFn: async () => {
+      const all: PerpMarketApi[] = [];
+      let offset = 0;
+      for (;;) {
+        const res = await getPerpMarkets({ limit: MAX_LIMIT, offset });
+        if (!res.success) throw new Error(res.message || "Failed to load markets");
+        all.push(...res.data);
+        // step by what the server actually returned
+        if (!res.pagination.hasMore || res.data.length === 0) break;
+        offset += res.data.length;
+      }
+      return all;
+    },
+    staleTime: 5 * 60_000,
+  });
+
 export function usePerpListing(sym: string): TradablePerp | undefined {
-  const { data } = usePerpMarketsQuery();
+  const q = useAllPerpMarketsQuery();
+  
   return useMemo(() => {
-    const a = data?.find((m) => m.marketSymbol === sym);
+    const a = q.data?.find((m) => m.marketSymbol === sym);
     return a ? toPerp(a) : undefined;
-  }, [data, sym]);
+  }, [q.data, sym]);
 }
 
 /** Every market with live prices. Re-renders on price ticks: use it where prices show. */
@@ -64,7 +101,7 @@ export function useTradablePerps() {
   const prev = useRef(new Map<string, { a: PerpMarketApi; hl?: HlMarket; perp: TradablePerp }>());
   const markets = useMemo(() => {
     const next = new Map<string, { a: PerpMarketApi; hl?: HlMarket; perp: TradablePerp }>();
-    const list = (query.data ?? []).map((a) => {
+    const list = (query.data?.items ?? []).map((a) => {
       const hl = live.byCoin[toCoin(a.marketSymbol)];
       const old = prev.current.get(a.marketSymbol);
       const perp = old && old.a === a && old.hl === hl ? old.perp : toPerp(a, hl);
@@ -77,9 +114,14 @@ export function useTradablePerps() {
 
   return {
     markets,
-    loading: query.isPending,
-    error: query.error instanceof Error ? query.error.message : null,
-    refetch: query.refetch,
+  total: query.data?.total ?? 0,
+  loading: query.isPending,
+  error: query.error instanceof Error ? query.error.message : null,
+  refetch: query.refetch,
+  hasMore: !!query.hasNextPage,
+  loadingMore: query.isFetchingNextPage,
+  loadMoreError: query.isFetchNextPageError,
+  loadMore: query.fetchNextPage,
   };
 }
 

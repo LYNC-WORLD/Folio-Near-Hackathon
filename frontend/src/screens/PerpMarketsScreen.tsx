@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -32,14 +32,17 @@ type Nav = CompositeNavigationProp<
 export function PerpMarketsScreen() {
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { markets, loading, error, refetch } = useTradablePerps();
-
-  // most traded first
-  const list = useMemo(
-    () =>
-      [...markets].sort((a, b) => b.vol24Usd - a.vol24Usd),
-    [markets],
-  );
+  const {
+    markets,
+    total,
+    loading,
+    error,
+    refetch,
+    hasMore,
+    loadingMore,
+    loadMoreError,
+    loadMore,
+  } = useTradablePerps();
 
   // stable so memoized rows don't re-render on every price tick
   const open = useCallback(
@@ -49,6 +52,31 @@ export function PerpMarketsScreen() {
       setTimeout(() => nav.popToTop(), 450);
     },
     [nav],
+  );
+
+  const onEndReached = useCallback(() => {
+    if (hasMore && !loadingMore && !loadMoreError) loadMore();
+  }, [hasMore, loadingMore, loadMoreError, loadMore]);
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: TradablePerp; index: number }) => {
+      const row = (
+        <PerpRow
+          m={item}
+          last={!hasMore && index === markets.length - 1}
+          onPress={open}
+        />
+      );
+      // only the first screenful cascades in; rows scrolled to later just appear
+      return index < 14 ? (
+        <Rise delay={Math.min(index, 8) * 25} duration={300}>
+          {row}
+        </Rise>
+      ) : (
+        row
+      );
+    },
+    [hasMore, markets.length, open],
   );
 
   const header = (
@@ -67,9 +95,7 @@ export function PerpMarketsScreen() {
           <Text style={s.backChev}>‹</Text>
         </Pressable>
         <Text style={TYPE.lbl}>PERP MARKETS</Text>
-        <Text style={TYPE.h2}>
-          Long or short any of {markets.length}
-        </Text>
+        <Text style={TYPE.h2}>Long or short any of {total}</Text>
       </View>
       {loading ? (
         <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
@@ -81,35 +107,30 @@ export function PerpMarketsScreen() {
     </>
   );
 
+  const footer = loadingMore ? (
+    <ActivityIndicator color={C.mint} style={{ paddingVertical: 16 }} />
+  ) : loadMoreError ? (
+    <Pressable onPress={() => loadMore()}>
+      <Text style={s.note}>Couldn't load more. Tap to retry.</Text>
+    </Pressable>
+  ) : null;
+
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
       <FlatList
-        data={list}
+        data={markets}
         keyExtractor={(m) => m.symbol}
         ListHeaderComponent={header}
+        ListFooterComponent={footer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: 8,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 24,
         }}
-        renderItem={({ item, index }) => {
-          const row = (
-            <PerpRow
-              m={item}
-              last={index === list.length - 1}
-              onPress={open}
-            />
-          );
-          // only the first screenful cascades in; rows scrolled to later just appear
-          return index < 14 ? (
-            <Rise delay={Math.min(index, 8) * 25} duration={300}>
-              {row}
-            </Rise>
-          ) : (
-            row
-          );
-        }}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        renderItem={renderItem}
       />
     </SafeAreaView>
   );

@@ -12,11 +12,24 @@ export type PerpMarketApi = {
   szDecimals: number;
 };
 
+export type PerpMarketsPagination = {
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
 export type PerpMarketsResponse = {
   success: boolean;
   message: string;
   data: PerpMarketApi[];
+  pagination: PerpMarketsPagination;
 };
 
-export const getPerpMarkets = () =>
-  request<PerpMarketsResponse>("/api/stocks/perp-markets");
+export const getPerpMarkets = ({
+  limit = 20,
+  offset = 0,
+}: { limit?: number; offset?: number } = {}) =>
+  request<PerpMarketsResponse>(
+    `/api/stocks/perp-markets?limit=${limit}&offset=${offset}`,
+  );

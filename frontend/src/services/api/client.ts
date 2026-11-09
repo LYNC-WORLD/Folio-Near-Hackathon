@@ -31,11 +31,20 @@ const BASE_URL = ENV.API_URL.replace(/\/+$/, "");
 type TokenRefresher = (staleToken: string) => Promise<string | null>;
 let refreshToken: TokenRefresher | null = null;
 
+type AccountTypeProvider = () => AccountType | null;
+let getAccountType: AccountTypeProvider | null = null;
+
 /** AuthProvider registers how to get a fresh token; returns an unregister function. */
 export function setTokenRefresher(fn: TokenRefresher) {
   refreshToken = fn;
   return () => {
     if (refreshToken === fn) refreshToken = null;
+  };
+}
+export function setAccountTypeProvider(fn: AccountTypeProvider) {
+  getAccountType = fn;
+  return () => {
+    if (getAccountType === fn) getAccountType = null;
   };
 }
 
@@ -65,6 +74,9 @@ async function send<T>(
   path: string,
   { method = "GET", body, token, account_type, timeoutMs = 15000 }: RequestOptions,
 ): Promise<T> {
+  const resolvedAccountType = account_type ?? getAccountType?.();
+  console.log(resolvedAccountType);
+  
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -75,9 +87,12 @@ async function send<T>(
         // Only set when there is a body, avoids needless CORS preflights on GETs
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        // The API currently spells the Apple provider value as "aaple".
-        ...(account_type
-          ? { account_type: account_type === "apple" ? "aaple" : "google" }
+        // The API currently spells the Apple provider value as "apple".
+        ...(resolvedAccountType
+          ? {
+              account_type:
+                resolvedAccountType === "apple" ? "apple" : "google",
+            }
           : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

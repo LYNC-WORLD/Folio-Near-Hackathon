@@ -14,6 +14,7 @@ import {
   refreshGoogleSession,
   restoreAppleSession,
   restoreGoogleSession,
+  setAccountTypeProvider,
   setTokenRefresher,
   signInWithApple,
   signInWithGoogle,
@@ -37,6 +38,7 @@ type AuthState = {
   user: GoogleUser | null;
   session: LoginResponse | null;
   idToken: string | null;
+  signInMethod: SignInMethod | null;
   initializing: boolean;
   busy: SignInMethod | null;
   error: string | null;
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [session, setSession] = useState<LoginResponse | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
+  const [signInMethod, setSignInMethod] = useState<SignInMethod | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [busy, setBusy] = useState<SignInMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await loginWithIdToken(g.idToken, method);
       console.log("[auth] backend login response", res);
       methodRef.current = method;
+      setSignInMethod(method);
       tokenRef.current = g.idToken;
       setUser(g.user);
       setSession(res);
@@ -75,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearSession = useCallback(() => {
     methodRef.current = null;
+    setSignInMethod(null);
     tokenRef.current = null;
     setUser(null);
     setSession(null);
@@ -123,6 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }),
     [refresh],
   );
+
+  // request() is called by service modules outside React, so provide it the
+  // current context login method without having those modules call useAuth().
+  useEffect(() => setAccountTypeProvider(() => methodRef.current), []);
 
   // refresh shortly before the token expires
   useEffect(() => {
@@ -208,13 +217,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       session,
       idToken,
+      signInMethod,
       initializing,
       busy,
       error,
       signIn,
       signOut,
     }),
-    [user, session, idToken, initializing, busy, error, signIn, signOut],
+    [
+      user,
+      session,
+      idToken,
+      signInMethod,
+      initializing,
+      busy,
+      error,
+      signIn,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

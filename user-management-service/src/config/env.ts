@@ -13,6 +13,7 @@ export const env = {
   PRIVY_AUTH_ADDRESS: process.env.PRIVY_AUTH_ADDRESS,
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
   JUPITER_API_KEY: process.env.JUPITER_API_KEY,
+  CORS_ORIGINS: process.env.CORS_ORIGINS ?? "http://localhost:8081",
 };
 
 for (const [name, value] of Object.entries(env)) {

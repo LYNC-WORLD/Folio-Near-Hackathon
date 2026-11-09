@@ -293,9 +293,12 @@ export function ProfileScreen() {
                 scaleTo={0.95}
                 onPress={() => {
                   hTap();
-                  sheet.open(<DepositFlow address={walletAddress} />, {
-                    label: "Deposit",
-                  });
+                  sheet.open(
+                    <DepositFlow address={walletAddress} email={user?.email} />,
+                    {
+                      label: "Deposit",
+                    },
+                  );
                 }}
                 style={s.pill}
                 accessibilityRole="button"

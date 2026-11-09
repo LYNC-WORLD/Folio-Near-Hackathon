@@ -82,7 +82,7 @@ export function CardDeposit({
     return (
       <Step id="card-checkout">
         {back}
-        <Text style={TYPE.h2}>Pay with card</Text>
+        <Text style={TYPE.h2}>Pay with Apple Pay or card</Text>
         <View style={s.checkout}>
           <CrossmintProvider apiKey={CLIENT_KEY}>
             <CrossmintEmbeddedCheckout
@@ -107,7 +107,7 @@ export function CardDeposit({
   return (
     <Step id="card">
       {back}
-      <Text style={TYPE.h2}>Buy USDC with card</Text>
+      <Text style={TYPE.h2}>Buy USDC with Apple Pay or card</Text>
       <Text style={[TYPE.body, { fontSize: 13.5, marginTop: -6 }]}>
         Pay by card and the USDC lands in your Folio wallet.
         {ONRAMP_ENV === "staging"

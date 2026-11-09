@@ -274,9 +274,10 @@ export async function depositToHyperliquid(
         sendAmount.toString(),
         depositAddress,
       );
-      sendStatus = await getTransectionResults(solanaWalletId, sentSOl.id).catch(
-        () => "pending",
-      );
+      sendStatus = await getTransectionResults(
+        solanaWalletId,
+        sentSOl.id,
+      ).catch(() => "pending");
     } catch (error) {
       console.error("sol transfer to hyperliquid failed: ", error);
       sendStatus = "failed";
@@ -355,11 +356,15 @@ export async function convertUSOL(
   return sellSolForUsdc(usolAmount, agentSecret, market);
 }
 
-export async function makeUnifiedAccount(walletId: string, walletAddress: string) {
+export async function makeUnifiedAccount(
+  walletId: string,
+  walletAddress: string,
+) {
   const current = await hyperliquidInfoClient.userAbstraction({
     user: walletAddress as `0x${string}`,
   });
-  if (current === "unifiedAccount" || current === "portfolioMargin") return true;
+  if (current === "unifiedAccount" || current === "portfolioMargin")
+    return true;
   const nonce = Date.now();
   const signature = await privy
     .wallets()
@@ -431,11 +436,6 @@ export async function makeUnifiedAccount(walletId: string, walletAddress: string
   });
 
   return isExchangeOk(response);
-}
-interface UsolMarket {
-  assetId: number;
-  szDecimals: number;
-  mid: number;
 }
 
 export async function sellUsdcForSol(usdcAmount: string, privateKey: string) {
@@ -583,13 +583,18 @@ export async function spotSolToUsdc(
   );
   if (!swapResult.succeeded || !swapResult.outputAmount) {
     return { success: false, message: "sol to usdc swap failed" };
-  }
-  else {
-    return {success: true, message: "USDC sent to wallet"}
+  } else {
+    return { success: true, message: "USDC sent to wallet" };
   }
 }
 
 interface depositAddressResponce {
   address?: string;
   [key: string]: any;
+}
+
+interface UsolMarket {
+  assetId: number;
+  szDecimals: number;
+  mid: number;
 }

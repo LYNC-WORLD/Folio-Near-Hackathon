@@ -103,6 +103,58 @@ export class DepositController {
     }
   };
 
+  public getDepositQuote = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      if (
+        !req.user ||
+        !req.user.solanaWalletId ||
+        !req.user.ethereumWalletId ||
+        !req.user.solanaWalletAddress ||
+        !req.user.ethereumWalletAddress
+      ) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+      const depositAmount: DepositRequestBody = req.body;
+      if (!depositAmount.depositAmount) {
+        res.status(400).json({
+          success: false,
+          message: "Bad request",
+        });
+        return;
+      }
+      const depositQuote = await this.depositService.getDepositQuote(
+        Number(depositAmount.depositAmount),
+        req.user.ethereumWalletAddress,
+      );
+      if (depositQuote == undefined || depositQuote == null) {
+        res.status(400).json({
+          success: false,
+          message: "Cant fetch quote",
+        });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        message: "Deposit quote",
+        data: { expectedUSDC: depositQuote.expectedUSDC },
+      });
+      return;
+    } catch (error) {
+      console.log("deposit status error: ", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
+
   public createWithdrawRequest = async (
     req: Request,
     res: Response,

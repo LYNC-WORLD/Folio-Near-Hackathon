@@ -2,12 +2,17 @@ import { workers } from "node:cluster";
 import {
   depositToHyperliquid,
   getHyperliquidSpotBalances,
+  getUsolMarket,
   getWithdrawAddress,
+  hyperliquidInfoClient,
   makeUnifiedAccount,
   sellUsdcForSol,
   sendSolToSpot,
 } from "../lib/hyperliquid";
 import { prisma } from "../lib/prisma";
+import { env } from "../config/env";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { formatSize } from "@nktkas/hyperliquid/utils";
 
 export class DepositService {
   public async createDepositRequest(
@@ -34,7 +39,8 @@ export class DepositService {
         console.error("makeUnifiedAccount error: ", error);
         return false;
       });
-      if (!unified) console.error(`unified account not set for ${ethereumAddress}`);
+      if (!unified)
+        console.error(`unified account not set for ${ethereumAddress}`);
     }
     return result;
   }
@@ -48,6 +54,89 @@ export class DepositService {
         createdAt: "desc",
       },
     });
+  }
+
+  public async getDepositQuote(
+    depositAmount: number,
+    ethereumWalletAddress: string,
+  ) {
+    const USDC_DECIMALS = 6;
+    const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    const SOL_MINT = "So11111111111111111111111111111111111111112";
+    const HYPERUNIT_FEE_URL = "https://api.hyperunit.xyz/v2/estimate-fees";
+
+    async function fetchJson<T>(
+      url: string,
+      options?: RequestInit,
+    ): Promise<T> {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed (${response.status}): ${url}`);
+      }
+
+      return (await response.json()) as T;
+    }
+
+    const rawUsdc = Math.round(depositAmount * 10 ** USDC_DECIMALS);
+
+    if (!Number.isSafeInteger(rawUsdc) || rawUsdc <= 0) {
+      throw new Error("Invalid USDC amount");
+    }
+
+    const quoteUrl = new URL("https://api.jup.ag/swap/v1/quote");
+
+    quoteUrl.searchParams.set("inputMint", USDC_MINT);
+    quoteUrl.searchParams.set("outputMint", SOL_MINT);
+    quoteUrl.searchParams.set("amount", String(rawUsdc));
+    quoteUrl.searchParams.set("slippageBps", "50");
+    quoteUrl.searchParams.set("swapMode", "ExactIn");
+
+    const quote = await fetchJson<{
+      inAmount: string;
+      outAmount: string;
+      otherAmountThreshold: string;
+      slippageBps: number;
+      priceImpactPct: string;
+    }>(quoteUrl.toString(), {
+      headers: { "x-api-key": env.JUPITER_API_KEY! },
+    });
+
+    const expectedSol = Number(quote.outAmount) / LAMPORTS_PER_SOL;
+
+    const feeResponse = await fetchJson<{
+      solana?: {
+        "deposit-fee-in-units"?: number | string;
+        depositFee?: number | string;
+        "withdrawal-fee-in-units"?: number | string;
+        withdrawalFee?: number | string;
+      };
+    }>(HYPERUNIT_FEE_URL);
+
+    const solanaFees = Number(feeResponse.solana?.["deposit-fee-in-units"]);
+    if (!solanaFees) {
+      return;
+    }
+    const USOLDetails = await getUsolMarket();
+
+    const depositSol = expectedSol - solanaFees;
+
+    let expectedUSDC = Number(formatSize(depositSol, 3)) * USOLDetails.mid;
+
+    const accountEquity = await hyperliquidInfoClient.spotClearinghouseState({
+      user: ethereumWalletAddress,
+    });
+    let totalBalance = 0;
+    accountEquity.balances.forEach((balance) => {
+      totalBalance += Number(balance.total);
+    });
+    if (totalBalance <= 0) {
+      expectedUSDC = expectedUSDC - 0.5;
+    }
+    return { expectedUSDC: expectedUSDC };
   }
 
   public async createWithdrawlRequest(

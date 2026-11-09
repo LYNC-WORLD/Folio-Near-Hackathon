@@ -86,6 +86,7 @@ import {
 import { hTap } from "@/lib/haptics";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { TabParamList } from "@/navigation/RootTabs";
+import { useAuth } from "@/context/AuthContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "StockDetail">;
 
@@ -138,6 +139,7 @@ export function StockDetail() {
 
   const balance = usdc?.balance ?? 0;
   const amt = parseFloat(input) || 0;
+  const { user, idToken, signOut } = useAuth();
 
   // Prototype starts at $100 — only when you have it, and only until you type.
   useEffect(() => {
@@ -253,7 +255,7 @@ export function StockDetail() {
   }));
   const openDeposit = () => {
     amountRef.current?.blur();
-    sheet.open(<DepositFlow address={walletAddress} />, {
+    sheet.open(<DepositFlow address={walletAddress} email={user?.email} />, {
       label: "Add funds",
       onClose: () => refreshWallet(), // pick up a deposit as soon as the sheet closes
     });
@@ -283,7 +285,9 @@ export function StockDetail() {
   };
 
   // switch tab, then quietly reset this stack behind it
-  const leaveTo = (go: (tabs: BottomTabNavigationProp<TabParamList>) => void) => {
+  const leaveTo = (
+    go: (tabs: BottomTabNavigationProp<TabParamList>) => void,
+  ) => {
     const tabs = nav.getParent<BottomTabNavigationProp<TabParamList>>();
     if (tabs) go(tabs);
     setTimeout(() => nav.popToTop(), 350);
@@ -299,7 +303,8 @@ export function StockDetail() {
       );
     if (o === "folio") leaveTo((t) => t.navigate("Portfolio"));
     // Standing orders live in the Profile stack (opened from Folio's gear)
-    if (o === "orders") leaveTo((t) => t.navigate("Profile", { screen: "RecurringBuys" }));
+    if (o === "orders")
+      leaveTo((t) => t.navigate("Profile", { screen: "RecurringBuys" }));
     if (o === "makeRecurring") {
       setMode("recurring");
       setTimeout(

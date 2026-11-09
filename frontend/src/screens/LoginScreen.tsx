@@ -63,7 +63,6 @@ export function LoginScreen() {
             </Rise>
           ) : null}
 
-          {/* On web the buttons are capped in width so they aren't a huge bar */}
           <View style={[s.buttons, IS_WEB && s.buttonWrapWeb]}>
             {appleOk ? (
               <AppleButton

@@ -48,7 +48,8 @@
       "expo-image",
       "expo-secure-store",
       "expo-apple-authentication",
-      "expo-status-bar"
+      "expo-status-bar",
+      "@crossmint/client-sdk-react-native-ui"
     ],
     "extra": {
       "eas": {

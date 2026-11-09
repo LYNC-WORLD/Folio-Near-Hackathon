@@ -1,6 +1,13 @@
 // Sheets opened from Folio: Deposit (menu → crypto / exchanges), Activity, and the "…" menu.
 import { useState } from "react";
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Dimensions,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import * as Clipboard from "expo-clipboard";
 import QRCode from "react-native-qrcode-svg";
 import Svg, { Path, Rect } from "react-native-svg";
@@ -20,15 +27,20 @@ import { PressScale } from "@/components/ui/PressScale";
 import { Rise } from "@/components/ui/Enter";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Step } from "@/components/trade/SheetParts";
+import { CardDeposit } from "@/components/CardDeposit";
 
-export const shortAddr = (a?: string) => (a ? `${a.slice(0, 4)}…${a.slice(-4)}` : "—");
+export const shortAddr = (a?: string) =>
+  a ? `${a.slice(0, 4)}…${a.slice(-4)}` : "—";
 
 function useCopy() {
   const toast = useToast();
   return async (text: string, title: string) => {
     try {
       await Clipboard.setStringAsync(text);
-      toast(title, text.length > 24 ? `${text.slice(0, 6)}…${text.slice(-4)}` : text);
+      toast(
+        title,
+        text.length > 24 ? `${text.slice(0, 6)}…${text.slice(-4)}` : text,
+      );
     } catch {
       toast("Copy did not work", "SELECT IT BY HAND");
     }
@@ -38,40 +50,92 @@ function useCopy() {
 // ---------------------------------------------------------------- deposit
 
 const DEP_ICONS = {
+  card: (
+    <Svg
+      width={26}
+      height={26}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={C.ink1}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Rect x="2.5" y="5.5" width="19" height="13" rx="2.2" />
+      <Path d="M2.5 10h19M6.5 14.5h3" />
+    </Svg>
+  ),
   crypto: (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={C.ink1} strokeWidth={1.8} strokeLinejoin="round">
+    <Svg
+      width={26}
+      height={26}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={C.ink1}
+      strokeWidth={1.8}
+      strokeLinejoin="round"
+    >
       <Rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.2" />
       <Rect x="14" y="3.5" width="6.5" height="6.5" rx="1.2" />
       <Rect x="3.5" y="14" width="6.5" height="6.5" rx="1.2" />
-      <Path d="M14 14h2.6v2.6H14zM18 18h2.5v2.5H18zM14 18.5v2M18.5 14h2" strokeLinecap="round" />
+      <Path
+        d="M14 14h2.6v2.6H14zM18 18h2.5v2.5H18zM14 18.5v2M18.5 14h2"
+        strokeLinecap="round"
+      />
     </Svg>
   ),
   exch: (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={C.ink1} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Svg
+      width={26}
+      height={26}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={C.ink1}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <Path d="M4 8h14.5l-3.4-3.4M20 16H5.5l3.4 3.4" />
     </Svg>
   ),
 };
 
-export function DepositFlow({ address }: { address?: string }) {
-  const [step, setStep] = useState<"menu" | "crypto" | "exch">("menu");
+export function DepositFlow({
+  address,
+  email,
+}: {
+  address?: string;
+  email?: string;
+}) {
+  const [step, setStep] = useState<"menu" | "card" | "crypto" | "exch">("menu");
   const copy = useCopy();
 
   if (!address) {
     return (
       <Step id="noaddr">
         <Text style={[TYPE.h2, { fontSize: 21 }]}>Deposit</Text>
-        <Text style={TYPE.body}>Your wallet address hasn't loaded yet. Pull down on Folio to refresh, then try again.</Text>
+        <Text style={TYPE.body}>
+          Your wallet address hasn't loaded yet. Pull down on Folio to refresh,
+          then try again.
+        </Text>
       </Step>
     );
   }
-
   const back = (
-    <Pressable onPress={() => setStep("menu")} style={s.back} hitSlop={8} accessibilityRole="button">
+    <Pressable
+      onPress={() => setStep("menu")}
+      style={s.back}
+      hitSlop={8}
+      accessibilityRole="button"
+    >
       <Ionicons name="chevron-back" size={16} color={C.mint} />
       <Text style={s.backText}>Deposit with</Text>
     </Pressable>
   );
+
+  if (step === "card") {
+    return <CardDeposit address={address} email={email} back={back} />;
+  }
 
   if (step === "crypto") {
     return (
@@ -79,10 +143,20 @@ export function DepositFlow({ address }: { address?: string }) {
         {back}
         <Text style={TYPE.h2}>Receive USDC</Text>
         <Text style={[TYPE.body, { fontSize: 13.5, marginTop: -6 }]}>
-          Send USDC from any wallet to this address. It lands as cash you can invest straight away.
+          Send USDC from any wallet to this address. It lands as cash you can
+          invest straight away.
         </Text>
-        <View style={s.qrBox} accessibilityLabel="QR code of your wallet address">
-          <QRCode value={address} size={176} color="#0A0B0E" backgroundColor="#FFFFFF" ecl="M" />
+        <View
+          style={s.qrBox}
+          accessibilityLabel="QR code of your wallet address"
+        >
+          <QRCode
+            value={address}
+            size={176}
+            color="#0A0B0E"
+            backgroundColor="#FFFFFF"
+            ecl="M"
+          />
         </View>
         <View style={s.addrCard}>
           <View style={[s.addrRow, s.hair]}>
@@ -96,8 +170,13 @@ export function DepositFlow({ address }: { address?: string }) {
             <Text style={s.net}>Solana</Text>
           </View>
         </View>
-        <Text style={s.warn}>Only send USDC on Solana. Other tokens or networks may be lost.</Text>
-        <Button title="Copy address" onPress={() => copy(address, "Address copied")} />
+        <Text style={s.warn}>
+          Only send USDC on Solana. Other tokens or networks may be lost.
+        </Text>
+        <Button
+          title="Copy address"
+          onPress={() => copy(address, "Address copied")}
+        />
       </Step>
     );
   }
@@ -114,16 +193,18 @@ export function DepositFlow({ address }: { address?: string }) {
         {back}
         <Text style={TYPE.h2}>From an exchange or app</Text>
         <View style={{ gap: 10 }}>
-          {["Copy your Folio address below.", "In the app, withdraw USDC on Solana to that address.", "It shows up here as cash in your wallet."].map(
-            (t, i) => (
-              <View key={i} style={s.stepRow}>
-                <View style={s.stepNum}>
-                  <Text style={s.stepNumText}>{i + 1}</Text>
-                </View>
-                <Text style={s.stepText}>{t}</Text>
+          {[
+            "Copy your Folio address below.",
+            "In the app, withdraw USDC on Solana to that address.",
+            "It shows up here as cash in your wallet.",
+          ].map((t, i) => (
+            <View key={i} style={s.stepRow}>
+              <View style={s.stepNum}>
+                <Text style={s.stepNumText}>{i + 1}</Text>
               </View>
-            ),
-          )}
+              <Text style={s.stepText}>{t}</Text>
+            </View>
+          ))}
         </View>
         <View>
           {APPS.map(([n, c], i) => (
@@ -142,24 +223,46 @@ export function DepositFlow({ address }: { address?: string }) {
               </View>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={TYPE.ttl}>{n}</Text>
-                <Text style={TYPE.sub}>Tap to copy your address, then open {n}</Text>
+                <Text style={TYPE.sub}>
+                  Tap to copy your address, then open {n}
+                </Text>
               </View>
               <Text style={s.chev}>›</Text>
             </PressScale>
           ))}
         </View>
-        <Button title="Copy address" onPress={() => copy(address, "Address copied")} />
+        <Button
+          title="Copy address"
+          onPress={() => copy(address, "Address copied")}
+        />
       </Step>
     );
   }
 
   const OPTS = [
-    { id: "crypto" as const, t: "Crypto", s: "Receive USDC from a crypto wallet" },
-    { id: "exch" as const, t: "Exchanges and apps", s: "Coinbase, Binance, Kraken, OKX" },
+    {
+      id: "card" as const,
+      t: "Card",
+      s: "Buy USDC with a debit or credit card",
+    },
+    {
+      id: "crypto" as const,
+      t: "Crypto",
+      s: "Receive USDC from a crypto wallet",
+    },
+    {
+      id: "exch" as const,
+      t: "Exchanges and apps",
+      s: "Coinbase, Binance, Kraken, OKX",
+    },
   ];
   return (
     <Step id="menu">
-      <Text style={[TYPE.h2, { fontSize: 21, textAlign: "center", marginTop: 2 }]}>Deposit with</Text>
+      <Text
+        style={[TYPE.h2, { fontSize: 21, textAlign: "center", marginTop: 2 }]}
+      >
+        Deposit with
+      </Text>
       <View style={{ gap: 12 }}>
         {OPTS.map((o, i) => (
           <Rise key={o.id} delay={i * 55} duration={420}>
@@ -193,7 +296,9 @@ export function ActivitySheet() {
   const sheet = useSheet();
   const { idToken } = useAuth();
   const q = useUserTransactions(idToken ?? undefined);
-  const list = [...(q.data?.data ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  const list = [...(q.data?.data ?? [])].sort(
+    (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+  );
 
   return (
     <Step id="activity">
@@ -201,7 +306,10 @@ export function ActivitySheet() {
         <Text style={TYPE.lbl}>ACTIVITY</Text>
         <Text style={TYPE.h2}>Everything you have done</Text>
       </View>
-      <ScrollView style={{ maxHeight: Dimensions.get("window").height * 0.52 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ maxHeight: Dimensions.get("window").height * 0.52 }}
+        showsVerticalScrollIndicator={false}
+      >
         {q.isPending ? (
           <View style={{ gap: 14 }}>
             {[0, 1, 2, 3].map((i) => (
@@ -209,20 +317,28 @@ export function ActivitySheet() {
             ))}
           </View>
         ) : q.error ? (
-          <Text style={[TYPE.sub, { color: C.loss }]}>Couldn't load your activity. Close and try again.</Text>
+          <Text style={[TYPE.sub, { color: C.loss }]}>
+            Couldn't load your activity. Close and try again.
+          </Text>
         ) : list.length === 0 ? (
-          <Text style={TYPE.sub}>Nothing yet. Your buys and sales will show up here.</Text>
+          <Text style={TYPE.sub}>
+            Nothing yet. Your buys and sales will show up here.
+          </Text>
         ) : (
           list.map((tx, i) => {
             const sold = String(tx.type).toUpperCase() === "SELL";
             return (
-              <View key={tx.id} style={[s.actRow, i < list.length - 1 && s.hair]}>
+              <View
+                key={tx.id}
+                style={[s.actRow, i < list.length - 1 && s.hair]}
+              >
                 <View style={{ flex: 1, gap: 3 }}>
                   <Text style={TYPE.ttl}>
                     {sold ? "Sold" : "Bought"} · {tx.stock?.symbol}
                   </Text>
                   <Text style={TYPE.sub}>
-                    {units(Number(tx.amount))} at {money(Number(tx.price))} · {timeAgo(tx.createdAt)}
+                    {units(Number(tx.amount))} at {money(Number(tx.price))} ·{" "}
+                    {timeAgo(tx.createdAt)}
                   </Text>
                 </View>
                 <Text style={[s.fig, { color: sold ? C.mint : "#D6DAE0" }]}>
@@ -234,7 +350,12 @@ export function ActivitySheet() {
           })
         )}
       </ScrollView>
-      <Button variant="quiet" size="sm" title="Close" onPress={() => sheet.close()} />
+      <Button
+        variant="quiet"
+        size="sm"
+        title="Close"
+        onPress={() => sheet.close()}
+      />
     </Step>
   );
 }
@@ -295,33 +416,118 @@ export function MoreSheet({
 }
 
 const s = StyleSheet.create({
-  back: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", minHeight: 40, marginLeft: -4, marginBottom: -10, marginTop: -10 },
+  back: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    minHeight: 40,
+    marginLeft: -4,
+    marginBottom: -10,
+    marginTop: -10,
+  },
   backText: { fontFamily: FONT.sans600, fontSize: 13, color: C.mint },
   hair: { borderBottomWidth: 1, borderBottomColor: C.hair },
 
-  depOpt: { minHeight: 88, paddingVertical: 16, paddingHorizontal: 20, borderRadius: 20, backgroundColor: "#20252E", flexDirection: "row", alignItems: "center", gap: 14 },
-  depTitle: { fontFamily: FONT.sans700, fontSize: 18, letterSpacing: em(18, -0.02), color: C.ink1 },
+  depOpt: {
+    minHeight: 88,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "#20252E",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  depTitle: {
+    fontFamily: FONT.sans700,
+    fontSize: 18,
+    letterSpacing: em(18, -0.02),
+    color: C.ink1,
+  },
   depSub: { fontFamily: FONT.sans400, fontSize: 14, color: C.ink3 },
 
-  qrBox: { alignSelf: "center", padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF" },
-  addrCard: { backgroundColor: C.surface, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 4 },
+  qrBox: {
+    alignSelf: "center",
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+  },
+  addrCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
   addrRow: { gap: 6, paddingVertical: 12 },
-  miniLbl: { fontFamily: FONT.mono400, fontSize: 9.5, letterSpacing: em(9.5, 0.16), color: C.ink4 },
-  addr: { fontFamily: FONT.mono400, fontSize: 12.5, lineHeight: 19, color: C.ink1 },
+  miniLbl: {
+    fontFamily: FONT.mono400,
+    fontSize: 9.5,
+    letterSpacing: em(9.5, 0.16),
+    color: C.ink4,
+  },
+  addr: {
+    fontFamily: FONT.mono400,
+    fontSize: 12.5,
+    lineHeight: 19,
+    color: C.ink1,
+  },
   netRow: { minHeight: 46, flexDirection: "row", alignItems: "center" },
   net: { fontFamily: FONT.mono400, fontSize: 12, color: C.ink3 },
-  warn: { fontFamily: FONT.sans400, fontSize: 12.5, lineHeight: 19, color: C.loss },
+  warn: {
+    fontFamily: FONT.sans400,
+    fontSize: 12.5,
+    lineHeight: 19,
+    color: C.loss,
+  },
 
   stepRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  stepNum: { width: 22, height: 22, borderRadius: 999, backgroundColor: C.stroke, alignItems: "center", justifyContent: "center" },
+  stepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: C.stroke,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   stepNumText: { fontFamily: FONT.mono500, fontSize: 11, color: C.mint },
-  stepText: { flex: 1, fontFamily: FONT.sans400, fontSize: 13.5, lineHeight: 20, color: C.ink2 },
+  stepText: {
+    flex: 1,
+    fontFamily: FONT.sans400,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: C.ink2,
+  },
 
-  appRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 14 },
-  appLogo: { width: 40, height: 40, borderRadius: 999, backgroundColor: "#1B2029", borderWidth: 1, borderColor: C.stroke, alignItems: "center", justifyContent: "center" },
+  appRow: {
+    minHeight: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  appLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    backgroundColor: "#1B2029",
+    borderWidth: 1,
+    borderColor: C.stroke,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   appCode: { fontFamily: FONT.mono500, fontSize: 11, color: C.ink2 },
   chev: { fontSize: 17, color: C.ink4 },
 
-  actRow: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
-  fig: { fontFamily: FONT.mono400, fontSize: 13, fontVariant: ["tabular-nums"] },
+  actRow: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 8,
+  },
+  fig: {
+    fontFamily: FONT.mono400,
+    fontSize: 13,
+    fontVariant: ["tabular-nums"],
+  },
 });

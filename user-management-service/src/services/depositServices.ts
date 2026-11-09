@@ -1,4 +1,3 @@
-import { workers } from "node:cluster";
 import {
   depositToHyperliquid,
   getHyperliquidSpotBalances,

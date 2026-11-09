@@ -9,10 +9,11 @@
     "backgroundColor": "#0A0B0E",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aditya.folio"
+      "bundleIdentifier": "app.folio.money",
+      "usesAppleSignIn": true
     },
     "android": {
-      "package": "com.aditya.folio",
+      "package": "app.folio.money",
       "adaptiveIcon": {
         "backgroundColor": "#0A0B0E",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -46,7 +47,10 @@
         }
       ],
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {

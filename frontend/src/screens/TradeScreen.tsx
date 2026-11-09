@@ -25,11 +25,7 @@ import { TransferSheet } from "@/components/TransferSheet";
 import { ChartStage } from "@/components/perps/PerpChart";
 import { OrderTicketSheet } from "@/components/perps/OrderTicketSheet";
 import { tradeStyles } from "@/components/perps/tradeStyles";
-import {
-  refreshMarkets,
-  useMarkOf,
-  useMarketsSelect,
-} from "@/hooks/perps";
+import { refreshMarkets, useMarkOf, useMarketsSelect } from "@/hooks/perps";
 import { toCoin } from "@/services/hyperliquid/format";
 import {
   useAllPositions,
@@ -61,7 +57,6 @@ type SheetState =
   | { t: "tpsl"; id: string }
   | { t: "transfer"; dir: "in" | "out"; amt?: number; then?: () => void };
 
-
 export function TradeScreen() {
   const nav = useNavigation<BottomTabNavigationProp<TabParamList, "Trade">>();
   const route = useRoute();
@@ -80,7 +75,9 @@ export function TradeScreen() {
   const { idToken } = useAuth();
   const coin = toCoin(sym);
   const listed = useMarketsSelect((s) => !!s.byCoin[coin]);
-  const exchangeMaxLev = useMarketsSelect((s) => s.byCoin[coin]?.maxLeverage ?? 1);
+  const exchangeMaxLev = useMarketsSelect(
+    (s) => s.byCoin[coin]?.maxLeverage ?? 1,
+  );
   const marketsLoading = useMarketsSelect((s) => s.loading);
   const marketsError = useMarketsSelect((s) => s.error);
   const listing = usePerpListing(sym);
@@ -124,7 +121,10 @@ export function TradeScreen() {
 
   const openTicket = (side: 1 | -1) => {
     if (!listed)
-      return toast("Not tradable", `${sym.toUpperCase()} ISN'T LISTED ON HYPERLIQUID`);
+      return toast(
+        "Not tradable",
+        `${sym.toUpperCase()} ISN'T LISTED ON HYPERLIQUID`,
+      );
     setSheet(quizSeen ? { t: "ticket", side } : { t: "unlock", side });
   };
   const toChart = () =>

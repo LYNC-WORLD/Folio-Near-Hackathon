@@ -322,15 +322,31 @@ export function MarketPickerSheet({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const { markets, loading, error, refetch } = useTradablePerps();
+  const {
+    markets,
+    total,
+    loading,
+    error,
+    refetch,
+    hasMore,
+    loadingMore,
+    loadMoreError,
+    loadMore,
+  } = useTradablePerps();
 
   const list = useMemo(() => searchPerps(markets, q), [markets, q]);
+  const searching = q.trim().length > 0;
+
+  // while searching, keep pulling pages so a match on a later page still shows up
+  useEffect(() => {
+    if (searching && hasMore && !loadingMore && !loadMoreError) loadMore();
+  }, [searching, hasMore, loadingMore, loadMoreError, loadMore]);
 
   return (
     <Sheet onClose={onClose}>
       <View style={{ gap: 6 }}>
         <Lbl>PERP MARKETS</Lbl>
-        <H2>Long or short any of {markets.length}</H2>
+        <H2>Long or short any of {total || markets.length}</H2>
       </View>
 
       <View style={s.search}>
@@ -368,61 +384,96 @@ export function MarketPickerSheet({
             </Text>
           </Pressable>
         ) : list.length ? (
-          list.map((m, i) => (
-            <Pressable
-              key={m.symbol}
-              onPress={() => {
-                hTap();
-                onPick(m.symbol);
-              }}
-              style={[
-                s.mRow,
-                i < list.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: C.hair,
-                },
-              ]}
-            >
-              <Logo sym={m.symbol} imageUrl={m.imageUrl} size={38} />
-              <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-                <View style={[s.rowC, { gap: 7 }]}>
+          <>
+            {list.map((m, i) => (
+              <Pressable
+                key={m.symbol}
+                onPress={() => {
+                  hTap();
+                  onPick(m.symbol);
+                }}
+                style={[
+                  s.mRow,
+                  i < list.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: C.hair,
+                  },
+                ]}
+              >
+                <Logo sym={m.symbol} imageUrl={m.imageUrl} size={38} />
+                <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
+                  <View style={[s.rowC, { gap: 7 }]}>
+                    <Text
+                      style={{
+                        fontFamily: FONT.sans800,
+                        fontSize: 15,
+                        color: C.ink1,
+                      }}
+                    >
+                      {m.symbol}
+                    </Text>
+                    {m.symbol === current ? <Tag label="VIEWING" /> : null}
+                  </View>
+                  <Text style={s.sub} numberOfLines={1}>
+                    {m.name} · up to {m.maxLev}x
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end", gap: 3 }}>
                   <Text
                     style={{
-                      fontFamily: FONT.sans800,
-                      fontSize: 15,
+                      fontFamily: FONT.mono400,
+                      fontSize: 13,
                       color: C.ink1,
                     }}
                   >
-                    {m.symbol}
+                    {money(m.mark)}
                   </Text>
-                  {m.symbol === current ? <Tag label="VIEWING" /> : null}
+                  <Text
+                    style={{
+                      fontFamily: FONT.mono400,
+                      fontSize: 11.5,
+                      color: tone(m.change),
+                    }}
+                  >
+                    {sPct(m.change)}
+                  </Text>
                 </View>
-                <Text style={s.sub} numberOfLines={1}>
-                  {m.name} · up to {m.maxLev}x
+              </Pressable>
+            ))}
+
+            {loadingMore ? (
+              <ActivityIndicator
+                color={C.mint}
+                style={{ paddingVertical: 14 }}
+              />
+            ) : loadMoreError ? (
+              <Pressable onPress={() => loadMore()}>
+                <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+                  Couldn't load more. Tap to retry.
                 </Text>
-              </View>
-              <View style={{ alignItems: "flex-end", gap: 3 }}>
-                <Text
-                  style={{
-                    fontFamily: FONT.mono400,
-                    fontSize: 13,
-                    color: C.ink1,
-                  }}
-                >
-                  {money(m.mark)}
+              </Pressable>
+            ) : hasMore && !searching ? (
+              <Pressable
+                onPress={() => {
+                  hTap();
+                  loadMore();
+                }}
+              >
+                <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+                  Load more
                 </Text>
-                <Text
-                  style={{
-                    fontFamily: FONT.mono400,
-                    fontSize: 11.5,
-                    color: tone(m.change),
-                  }}
-                >
-                  {sPct(m.change)}
-                </Text>
-              </View>
-            </Pressable>
-          ))
+              </Pressable>
+            ) : null}
+          </>
+        ) : loadMoreError ? (
+          <Pressable onPress={() => loadMore()}>
+            <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+              Couldn't load more. Tap to retry.
+            </Text>
+          </Pressable>
+        ) : hasMore || loadingMore ? (
+          // nothing matched yet, but more pages are still coming
+          <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
         ) : (
           <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
             No stock found for that.
@@ -432,7 +483,6 @@ export function MarketPickerSheet({
     </Sheet>
   );
 }
-
 // =============================================================== market status
 export function MarketStatusSheet({
   sym,

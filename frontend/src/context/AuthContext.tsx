@@ -10,28 +10,37 @@ import {
 } from "react";
 import { AppState } from "react-native";
 import {
+  refreshAppleSession,
   refreshGoogleSession,
+  restoreAppleSession,
   restoreGoogleSession,
   setTokenRefresher,
+  signInWithApple,
   signInWithGoogle,
+  signOutApple,
   signOutGoogle,
-  loginWithGoogle,
+  loginWithIdToken,
 } from "@/services";
 import { queryClient } from "@/lib/queryClient";
 import { jwtExpiresAt } from "@/lib/jwt";
 import type { GoogleSession, GoogleUser, LoginResponse } from "@/types";
 
-// Google idTokens last ~1h. Swap for a fresh one this long before it runs out.
+export type SignInMethod = "google" | "apple";
+
+// Google idTokens last ~1h, Apple's are much shorter. Swap for a fresh one this long
+// before it runs out.
 const REFRESH_EARLY_MS = 5 * 60_000;
+// Never refresh more often than this, so a short-lived token can't cause a loop.
+const MIN_REFRESH_DELAY_MS = 30_000;
 
 type AuthState = {
   user: GoogleUser | null;
   session: LoginResponse | null;
   idToken: string | null;
   initializing: boolean;
-  busy: boolean;
+  busy: SignInMethod | null;
   error: string | null;
-  signIn: () => Promise<void>;
+  signIn: (method: SignInMethod) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -42,22 +51,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<LoginResponse | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<SignInMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // latest token for callbacks outside React (the API client's 401 retry)
   const tokenRef = useRef<string | null>(null);
+  const methodRef = useRef<SignInMethod | null>(null);
   const refreshing = useRef<Promise<string | null> | null>(null);
 
-  const authenticate = useCallback(async (g: GoogleSession) => {
-    const res = await loginWithGoogle(g.idToken);
-    tokenRef.current = g.idToken;
-    setUser(g.user);
-    setSession(res);
-    setIdToken(g.idToken);
-  }, []);
+  const authenticate = useCallback(
+    async (g: GoogleSession, method: SignInMethod) => {
+      const res = await loginWithIdToken(g.idToken);
+      methodRef.current = method;
+      tokenRef.current = g.idToken;
+      setUser(g.user);
+      setSession(res);
+      setIdToken(g.idToken);
+    },
+    [],
+  );
 
   const clearSession = useCallback(() => {
+    methodRef.current = null;
     tokenRef.current = null;
     setUser(null);
     setSession(null);
@@ -71,7 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshing.current ??= (async () => {
       let g: GoogleSession | null;
       try {
-        g = await refreshGoogleSession();
+        g =
+          methodRef.current === "apple"
+            ? await refreshAppleSession()
+            : await refreshGoogleSession();
       } catch (e) {
         // probably offline: keep the session and try again on the next 401 / foreground
         if (__DEV__) console.warn("Token refresh failed", e);
@@ -110,7 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const exp = jwtExpiresAt(idToken);
     if (!exp) return;
     const due = () => exp - REFRESH_EARLY_MS - Date.now();
-    const timer = setTimeout(() => void refresh(), Math.max(0, due()));
+    const timer = setTimeout(
+      () => void refresh(),
+      Math.max(MIN_REFRESH_DELAY_MS, due()),
+    );
     // timers don't run while the app is in the background: catch up on return
     const sub = AppState.addEventListener("change", (s) => {
       if (s === "active" && due() <= 0) void refresh();
@@ -124,8 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const g = await restoreGoogleSession();
-        if (g) await authenticate(g);
+        let method: SignInMethod = "google";
+        let g = await restoreGoogleSession().catch(() => null);
+        if (!g) {
+          method = "apple";
+          g = await restoreAppleSession().catch(() => null);
+        }
+        if (g) await authenticate(g, method);
       } catch (e) {
         if (__DEV__) console.warn("Session restore failed", e);
       } finally {
@@ -134,24 +160,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, [authenticate]);
 
-  const signIn = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const g = await signInWithGoogle();
-      if (!g) return;
-      await authenticate(g);
-    } catch (e) {
-      await signOutGoogle().catch(() => {});
-      setError(e instanceof Error ? e.message : "Sign-in failed");
-    } finally {
-      setBusy(false);
-    }
-  }, [authenticate]);
+  const signIn = useCallback(
+    async (method: SignInMethod) => {
+      console.log("[auth] signIn start", method);
+      setBusy(method);
+      setError(null);
+      try {
+        const g =
+          method === "apple"
+            ? await signInWithApple()
+            : await signInWithGoogle();
+
+        console.log(
+          "[auth] provider result",
+          method,
+          g ? "got session" : "null (cancelled)",
+        );
+
+        if (!g) return;
+        await authenticate(g, method);
+        console.log("[auth] backend login OK");
+      } catch (e) {
+        console.log("[auth] FAILED", method, e);
+        await (method === "apple" ? signOutApple() : signOutGoogle()).catch(
+          () => {},
+        );
+        setError(e instanceof Error ? e.message : "Sign-in failed");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [authenticate],
+  );
 
   const signOut = useCallback(async () => {
     try {
-      await signOutGoogle();
+      await (methodRef.current === "apple" ? signOutApple() : signOutGoogle());
     } finally {
       clearSession();
     }

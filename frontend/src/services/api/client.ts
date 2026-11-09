@@ -20,7 +20,7 @@ type RequestOptions = {
   body?: unknown;
   token?: string;
   /** Adds the authentication provider required by the backend. */
-  accountType?: AccountType;
+  account_type?: AccountType;
   timeoutMs?: number;
 };
 
@@ -63,7 +63,7 @@ export async function request<T>(
 
 async function send<T>(
   path: string,
-  { method = "GET", body, token, accountType, timeoutMs = 15000 }: RequestOptions,
+  { method = "GET", body, token, account_type, timeoutMs = 15000 }: RequestOptions,
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -76,8 +76,8 @@ async function send<T>(
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         // The API currently spells the Apple provider value as "aaple".
-        ...(accountType
-          ? { accountType: accountType === "apple" ? "aaple" : "google" }
+        ...(account_type
+          ? { account_type: account_type === "apple" ? "aaple" : "google" }
           : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

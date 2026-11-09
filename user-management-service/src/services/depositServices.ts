@@ -13,6 +13,7 @@ import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { formatSize } from "@nktkas/hyperliquid/utils";
+import { decrypt } from "../utils/encryption";
 
 export class DepositService {
   public async createDepositRequest(
@@ -168,9 +169,10 @@ export class DepositService {
           message: "can not fetch wallet details",
         };
       }
+      const apiSecret = decrypt(walletDetails.hyperLiquidDetails.agentApiSecret);
       const spotSwap = await sellUsdcForSol(
         withdrawAmountInDollar,
-        walletDetails.hyperLiquidDetails.agentApiSecret,
+        apiSecret,
       );
       if (spotSwap.responce.status != "ok") {
         return {

@@ -7,7 +7,7 @@ const authOf = (call: unknown[]) =>
   (call[1] as { headers: Record<string, string> }).headers.Authorization;
 
 const accountTypeOf = (call: unknown[]) =>
-  (call[1] as { headers: Record<string, string> }).headers.account_type;
+  (call[1] as { headers: Record<string, string> }).headers.accountType;
 
 describe("request 401 retry", () => {
   const fetchMock = jest.fn();

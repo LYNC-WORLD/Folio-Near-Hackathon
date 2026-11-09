@@ -7,6 +7,3 @@ export const loginWithIdToken = (idToken: string, accountType: AccountType) =>
     body: { idToken },
     accountType,
   });
-
-// kept so nothing else breaks
-export const loginWithGoogle = (idToken: string) => loginWithIdToken(idToken, "google");

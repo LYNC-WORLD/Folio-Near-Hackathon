@@ -77,7 +77,7 @@ async function send<T>(
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         // The API currently spells the Apple provider value as "aaple".
         ...(accountType
-          ? { account_type: accountType === "apple" ? "aaple" : "google" }
+          ? { accountType: accountType === "apple" ? "aaple" : "google" }
           : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

@@ -9,7 +9,9 @@
     "backgroundColor": "#0A0B0E",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.folio.money"
+      "bundleIdentifier": "app.folio.money",
+      "appleTeamId": "39GQR656YG",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "app.folio.money",
@@ -46,7 +48,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

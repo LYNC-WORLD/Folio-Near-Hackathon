@@ -20,7 +20,7 @@ jobs:
           script: |
             set -e
 
-            cd ~/folio-backend
+            cd ~/folio-be
 
             echo "Pulling latest code..."
             git pull https://${{ secrets.GIT_HUB_USER_NAME }}:${{ secrets.GIT_HUB_SECRET }}@github.com/LYNC-WORLD/folio-backend.git main

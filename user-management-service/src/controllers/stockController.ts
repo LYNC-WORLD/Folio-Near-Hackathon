@@ -158,19 +158,52 @@ export class StockController {
       });
     }
   };
-  
+
   public getPerpStocks = async (req: Request, res: Response): Promise<void> => {
     try {
-      const perpStocks = await this.stockService.getPerpStocks();
+      const DEFAULT_LIMIT = 15;
+      const MAX_LIMIT = 30;
+
+      const rawLimit = req.query.limit as string | undefined;
+      const rawOffset = req.query.offset as string | undefined;
+
+      const limit = rawLimit !== undefined ? Number(rawLimit) : DEFAULT_LIMIT;
+      const offset = rawOffset !== undefined ? Number(rawOffset) : 0;
+
+      if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
+        res.status(400).json({
+          success: false,
+          message: `limit must be an integer between 1 and ${MAX_LIMIT}`,
+        });
+        return;
+      }
+
+      if (!Number.isInteger(offset) || offset < 0) {
+        res.status(400).json({
+          success: false,
+          message: "offset must be a non-negative integer",
+        });
+        return;
+      }
+
+      const { stocks, total } = await this.stockService.getPerpStocks(
+        limit,
+        offset,
+      );
 
       res.status(200).json({
         success: true,
         message: "list of perp stocks",
-        data: perpStocks,
+        data: stocks,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + stocks.length < total,
+        },
       });
     } catch (error) {
       console.error("can not fetch perp stocks:", error);
-
       res.status(500).json({
         success: false,
         message: "Internal server error",

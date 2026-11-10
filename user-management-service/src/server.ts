@@ -4,7 +4,7 @@ import { startRecurringBuyCron } from "./cron/recurringBuy";
 import { startPerpLeaderboardCron } from "./cron/perpLeaderboard";
 import { startPerpDepositCron } from "./cron/hyperLiquidDepositRequest";
 
-import {authRoute} from "./routes/authRoutes";
+import { authRoute } from "./routes/authRoutes";
 import { stockRoutes } from "./routes/stockRoutes";
 import { tradeRoutes } from "./routes/tradeRoutes";
 import { userRoutes } from "./routes/userRoutes";
@@ -15,14 +15,22 @@ import { startPerpWithdrawCron } from "./cron/hyperLiquidWithdrawRequest";
 
 const app = express();
 
-const corsOrigins = new Set(env.CORS_ORIGINS.split(",").map((origin) => origin.trim()));
+const corsOrigins = new Set(
+  env.CORS_ORIGINS.split(",").map((origin) => origin.trim()),
+);
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.vary("Origin");
   if (origin && corsOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
   }
   if (req.method === "OPTIONS") {
     res.sendStatus(204);
@@ -41,7 +49,7 @@ app.use((req, res, next) => {
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
-    message: "Server is running"
+    message: "Server is running",
   });
 });
 

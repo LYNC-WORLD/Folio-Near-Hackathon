@@ -148,6 +148,7 @@ export class DepositService {
     solanaAddress: string,
   ) {
     try {
+      withdrawAmountInDollar = (Number(withdrawAmountInDollar) - 1).toString();
       const walletDetails = await prisma.wallet.findFirst({
         where: {
           walletAddress: ethAddress,

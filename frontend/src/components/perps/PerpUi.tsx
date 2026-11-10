@@ -1,6 +1,10 @@
 // src/components/perps/PerpUi.tsx — small primitives shared by the Trade screen and its sheets
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -78,42 +82,50 @@ export function Sheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Animated.View
-        entering={FadeIn.duration(180)}
-        exiting={FadeOut.duration(140)}
-        style={s.backdrop}
-      >
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityLabel="Close"
-        />
-      </Animated.View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={s.wrap}
-        pointerEvents="box-none"
-      >
+      {/* A React Native Modal is rendered in a separate native root. Keep the
+          gesture root inside it so the pull-down handler receives its touches. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View
-          entering={SlideInDown.duration(280)}
-          style={[
-            s.sheet,
-            { paddingBottom: insets.bottom + 16 },
-            dragStyle,
-          ]}
+          entering={FadeIn.duration(180)}
+          exiting={FadeOut.duration(140)}
+          style={s.backdrop}
         >
-          <GestureDetector gesture={panGesture}>
-            <View style={{ paddingVertical: 8 }}>
-              <View style={s.grab} />
-            </View>
-          </GestureDetector>
-
-          <View style={{ gap: 18, paddingBottom: 4 }}>
-            {children}
-          </View>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityLabel="Close"
+          />
         </Animated.View>
-      </KeyboardAvoidingView>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={s.wrap}
+          pointerEvents="box-none"
+        >
+          <Animated.View
+            entering={SlideInDown.duration(280)}
+            style={[
+              s.sheet,
+              { paddingBottom: insets.bottom + 16 },
+              dragStyle,
+            ]}
+          >
+            <GestureDetector gesture={panGesture}>
+              <View
+                style={{ paddingVertical: 12 }}
+                accessibilityRole="adjustable"
+                accessibilityLabel="Drag down to close"
+              >
+                <View style={s.grab} />
+              </View>
+            </GestureDetector>
+
+            <View style={{ gap: 18, paddingBottom: 4 }}>
+              {children}
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

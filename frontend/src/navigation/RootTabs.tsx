@@ -9,19 +9,20 @@ import { Easing } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
-import { PortfolioScreen, SignalsScreen } from "@/screens";
+import { SignalsScreen } from "@/screens";
 import { GroupsStack, type GroupsStackParamList } from "./GroupsStack";
 
 import { HomeStack, type HomeStackParamList } from "./HomeStack";
 import { ProfileStack, type ProfileStackParamList } from "./ProfileStack";
 import { LeadersStack, type LeadersStackParamList } from "./LeadersStack";
+import { PortfolioStack, type PortfolioStackParamList } from "./PortfolioStack";
 import { TabBar } from "./TabBar";
 import { TradeScreen } from "@/screens/TradeScreen";
 
 export type TabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Groups: NavigatorScreenParams<GroupsStackParamList> | undefined;
-  Portfolio: undefined;
+  Portfolio: NavigatorScreenParams<PortfolioStackParamList> | undefined;
   Signals: undefined;
   Leaders: NavigatorScreenParams<LeadersStackParamList> | undefined;
   Profile: NavigatorScreenParams<ProfileStackParamList> | undefined;
@@ -51,7 +52,7 @@ export function RootTabs() {
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Groups" component={GroupsStack} />
       <Tab.Screen name="Trade" component={TradeScreen} />
-      <Tab.Screen name="Portfolio" component={PortfolioScreen} />
+      <Tab.Screen name="Portfolio" component={PortfolioStack} />
       <Tab.Screen name="Leaders" component={LeadersStack} />
       <Tab.Screen name="Signals" component={SignalsScreen} />
       <Tab.Screen name="Profile" component={ProfileStack} />

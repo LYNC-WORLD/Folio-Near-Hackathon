@@ -9,18 +9,14 @@ import {
 } from "@/screens";
 import { stackOptions } from "./stackOptions";
 import { PerpMarketsScreen } from "@/screens/PerpMarketsScreen";
+import type { AssetStackParamList } from "./AssetStackRoutes";
 
-export type HomeStackParamList = {
+export type HomeStackParamList = AssetStackParamList & {
   HomeMain: undefined;
   Stocks: undefined;
   PerpMarkets: undefined;
   PreIPO: undefined;
   IndexFunds: undefined;
-  IndexFundDetail: { id: string };
-  StockDetail: {
-    symbol: string;
-    category: "us-stock" | "pre-ipo";
-  };
 };
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 

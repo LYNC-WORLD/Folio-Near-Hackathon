@@ -47,6 +47,14 @@ type Fund = ReturnType<typeof fundPositions>[number];
 type Recurring = ReturnType<typeof useRecurringBuys>["recurringBuys"][number];
 type RiseProps = { when: boolean; delay: number; duration: number };
 
+function calculatePnl(value: number, change: number | null): number | null {
+  if (change == null || !Number.isFinite(change) || change <= -100) {
+    return null;
+  }
+
+  return value * (change / (100 + change));
+}
+
 export function HoldingsSection({
   headerRise,
   positions,
@@ -236,8 +244,8 @@ export function HoldingsSection({
           )
         ) : cat === "index" ? (
           <Text style={s.empty}>
-            Index funds are one-time buys for now. Recurring buys work on
-            single stocks and pre-IPOs.
+            Index funds are one-time buys for now. Recurring buys work on single
+            stocks and pre-IPOs.
           </Text>
         ) : shownRec.length === 0 ? (
           <Text style={s.empty}>
@@ -352,7 +360,20 @@ function HoldingRow({ p, onPress }: { p: Holding; onPress: () => void }) {
       </View>
       <View style={{ alignItems: "flex-end", gap: 4 }}>
         <Text style={s.val}>{money(p.value)}</Text>
-        {p.change != null ? <Move n={p.change} /> : null}
+        {p.change != null ? (
+          <View style={{ alignItems: "flex-end", gap: 2 }}>
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: "600",
+                color: p.change >= 0 ? C.mint : C.loss,
+              }}
+            >
+              {calculatePnl(p.value, p.change)! >= 0 ? "+" : ""}
+              {money(calculatePnl(p.value, p.change)!)}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </PressScale>
   );
@@ -381,7 +402,9 @@ function RecurringRow({ r, onPress }: { r: Recurring; onPress: () => void }) {
         </Text>
         <Text style={[TYPE.sub, { fontSize: 12.5 }]}>
           Every month ·{" "}
-          {r.isActive ? `next ${dayDate(nextOccurrence(Number(r.buyDate)))}` : "cancelled"}
+          {r.isActive
+            ? `next ${dayDate(nextOccurrence(Number(r.buyDate)))}`
+            : "cancelled"}
         </Text>
       </View>
       <View style={{ alignItems: "flex-end", gap: 5 }}>

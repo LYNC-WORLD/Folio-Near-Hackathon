@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { InteractionManager } from "react-native";
 import { fetchCandles } from "@/services";
 
 export const CHART_PERIODS = ["1D", "1W", "1M", "1Y", "All"] as const;
@@ -31,9 +30,14 @@ export function useStockChart(mint: string | undefined, period: ChartPeriod) {
   // wait for the screen transition to finish before fetching
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => setReady(true));
-    return () => task.cancel();
-  }, []);
+  const callbackId = requestIdleCallback(() => {
+    setReady(true);
+  });
+
+  return () => {
+    cancelIdleCallback(callbackId);
+  };
+}, []);
 
   const query = useQuery({
     queryKey: ["stockChart", mint, period],

@@ -145,7 +145,7 @@ export function PortfolioScreen() {
 
   // ---------- navigation ----------
   const openAsset = (symbol: string, stockType: string) =>
-    nav.navigate("Home", {
+    nav.navigate("Portfolio", {
       screen: "StockDetail",
       params: {
         symbol,
@@ -154,7 +154,7 @@ export function PortfolioScreen() {
       initial: false,
     });
   const openFund = (id: string) =>
-    nav.navigate("Home", {
+    nav.navigate("Portfolio", {
       screen: "IndexFundDetail",
       params: { id },
       initial: false,

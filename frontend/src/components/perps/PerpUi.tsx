@@ -1,5 +1,6 @@
 // src/components/perps/PerpUi.tsx — small primitives shared by the Trade screen and its sheets
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -16,8 +17,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
+  runOnJS,
   Easing,
   FadeIn,
+  withSpring,
   FadeOut,
   SlideInDown,
   useAnimatedStyle,
@@ -43,6 +46,31 @@ export function Sheet({
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(0);
+
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetY(8)
+    .failOffsetX([-20, 20])
+    .onUpdate((event) => {
+      // Only allow dragging down
+      translateY.value = Math.max(0, event.translationY);
+    })
+    .onEnd((event) => {
+      if (translateY.value > 120 || event.velocityY > 900) {
+        runOnJS(onClose)();
+      } else {
+        // Snap back if the drag wasn't far enough
+        translateY.value = withSpring(0, {
+          damping: 22,
+          stiffness: 220,
+        });
+      }
+    });
+
   return (
     <Modal
       transparent
@@ -61,6 +89,7 @@ export function Sheet({
           accessibilityLabel="Close"
         />
       </Animated.View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={s.wrap}
@@ -68,16 +97,21 @@ export function Sheet({
       >
         <Animated.View
           entering={SlideInDown.duration(280)}
-          style={[s.sheet, { paddingBottom: insets.bottom + 16 }]}
+          style={[
+            s.sheet,
+            { paddingBottom: insets.bottom + 16 },
+            dragStyle,
+          ]}
         >
-          <View style={s.grab} />
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ gap: 18, paddingBottom: 4 }}
-          >
+          <GestureDetector gesture={panGesture}>
+            <View style={{ paddingVertical: 8 }}>
+              <View style={s.grab} />
+            </View>
+          </GestureDetector>
+
+          <View style={{ gap: 18, paddingBottom: 4 }}>
             {children}
-          </ScrollView>
+          </View>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>

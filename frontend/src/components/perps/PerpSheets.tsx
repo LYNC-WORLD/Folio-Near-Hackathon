@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -28,6 +30,7 @@ import {
 import { searchPerps, useTradablePerps } from "@/hooks/useTradablePerps";
 import { HOLD_FROM_LEV, MAX_LEV, usMarketOpen } from "@/lib/perps";
 import { money, sPct } from "@/lib/format";
+
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
 function Logo({
@@ -322,6 +325,7 @@ export function MarketPickerSheet({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
+  const { height: screenH } = useWindowDimensions();
   const {
     markets,
     total,
@@ -341,6 +345,94 @@ export function MarketPickerSheet({
   useEffect(() => {
     if (searching && hasMore && !loadingMore && !loadMoreError) loadMore();
   }, [searching, hasMore, loadingMore, loadMoreError, loadMore]);
+
+  // infinite scroll: fetch the next page when the user nears the bottom
+  const onEndReached = useCallback(() => {
+    if (hasMore && !loadingMore && !loadMoreError) loadMore();
+  }, [hasMore, loadingMore, loadMoreError, loadMore]);
+
+  const renderItem = useCallback(
+    ({ item: m, index }: { item: (typeof markets)[number]; index: number }) => (
+      <Pressable
+        onPress={() => {
+          hTap();
+          onPick(m.symbol);
+        }}
+        style={[
+          s.mRow,
+          index < list.length - 1 && {
+            borderBottomWidth: 1,
+            borderBottomColor: C.hair,
+          },
+        ]}
+      >
+        <Logo sym={m.symbol} imageUrl={m.imageUrl} size={38} />
+        <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
+          <View style={[s.rowC, { gap: 7 }]}>
+            <Text
+              style={{ fontFamily: FONT.sans800, fontSize: 15, color: C.ink1 }}
+            >
+              {m.symbol}
+            </Text>
+            {m.symbol === current ? <Tag label="VIEWING" /> : null}
+          </View>
+          <Text style={s.sub} numberOfLines={1}>
+            {m.name} · up to {m.maxLev}x
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end", gap: 3 }}>
+          <Text
+            style={{ fontFamily: FONT.mono400, fontSize: 13, color: C.ink1 }}
+          >
+            {money(m.mark)}
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONT.mono400,
+              fontSize: 11.5,
+              color: tone(m.change),
+            }}
+          >
+            {sPct(m.change)}
+          </Text>
+        </View>
+      </Pressable>
+    ),
+    [current, list.length, onPick]
+  );
+
+  const footer = loadingMore ? (
+  <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+) : loadMoreError ? (
+  <Pressable onPress={() => loadMore()}>
+    <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+      Couldn't load more. Tap to retry.
+    </Text>
+  </Pressable>
+) : undefined;
+
+  const empty = loading ? (
+    <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+  ) : error ? (
+    <Pressable onPress={() => refetch()}>
+      <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+        Couldn't load markets. Tap to retry.
+      </Text>
+    </Pressable>
+  ) : loadMoreError ? (
+    <Pressable onPress={() => loadMore()}>
+      <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+        Couldn't load more. Tap to retry.
+      </Text>
+    </Pressable>
+  ) : hasMore || loadingMore ? (
+    // nothing matched yet, but more pages are still coming
+    <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+  ) : (
+    <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+      No stock found for that.
+    </Text>
+  );
 
   return (
     <Sheet onClose={onClose}>
@@ -374,112 +466,19 @@ export function MarketPickerSheet({
         />
       </View>
 
-      <View style={{ marginTop: -6 }}>
-        {loading ? (
-          <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
-        ) : error ? (
-          <Pressable onPress={() => refetch()}>
-            <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
-              Couldn't load markets. Tap to retry.
-            </Text>
-          </Pressable>
-        ) : list.length ? (
-          <>
-            {list.map((m, i) => (
-              <Pressable
-                key={m.symbol}
-                onPress={() => {
-                  hTap();
-                  onPick(m.symbol);
-                }}
-                style={[
-                  s.mRow,
-                  i < list.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: C.hair,
-                  },
-                ]}
-              >
-                <Logo sym={m.symbol} imageUrl={m.imageUrl} size={38} />
-                <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-                  <View style={[s.rowC, { gap: 7 }]}>
-                    <Text
-                      style={{
-                        fontFamily: FONT.sans800,
-                        fontSize: 15,
-                        color: C.ink1,
-                      }}
-                    >
-                      {m.symbol}
-                    </Text>
-                    {m.symbol === current ? <Tag label="VIEWING" /> : null}
-                  </View>
-                  <Text style={s.sub} numberOfLines={1}>
-                    {m.name} · up to {m.maxLev}x
-                  </Text>
-                </View>
-                <View style={{ alignItems: "flex-end", gap: 3 }}>
-                  <Text
-                    style={{
-                      fontFamily: FONT.mono400,
-                      fontSize: 13,
-                      color: C.ink1,
-                    }}
-                  >
-                    {money(m.mark)}
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: FONT.mono400,
-                      fontSize: 11.5,
-                      color: tone(m.change),
-                    }}
-                  >
-                    {sPct(m.change)}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-
-            {loadingMore ? (
-              <ActivityIndicator
-                color={C.mint}
-                style={{ paddingVertical: 14 }}
-              />
-            ) : loadMoreError ? (
-              <Pressable onPress={() => loadMore()}>
-                <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
-                  Couldn't load more. Tap to retry.
-                </Text>
-              </Pressable>
-            ) : hasMore && !searching ? (
-              <Pressable
-                onPress={() => {
-                  hTap();
-                  loadMore();
-                }}
-              >
-                <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
-                  Load more
-                </Text>
-              </Pressable>
-            ) : null}
-          </>
-        ) : loadMoreError ? (
-          <Pressable onPress={() => loadMore()}>
-            <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
-              Couldn't load more. Tap to retry.
-            </Text>
-          </Pressable>
-        ) : hasMore || loadingMore ? (
-          // nothing matched yet, but more pages are still coming
-          <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
-        ) : (
-          <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
-            No stock found for that.
-          </Text>
-        )}
-      </View>
+      <FlatList
+        // fixed height so the list scrolls itself and onEndReached works
+        style={{ height: Math.round(screenH * 0.5), marginTop: -6 }}
+        data={loading || error ? [] : list}
+        keyExtractor={(m) => m.symbol}
+        renderItem={renderItem}
+        ListEmptyComponent={empty}
+        ListFooterComponent={footer}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      />
     </Sheet>
   );
 }

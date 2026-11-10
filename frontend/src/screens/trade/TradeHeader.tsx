@@ -77,17 +77,6 @@ export function TradeHeader({
           </Text>
         </View>
       </Pressable>
-      <Pressable
-        style={tradeStyles.spot}
-        hitSlop={{ top: 6, bottom: 6 }}
-        onPress={() => {
-          hTap();
-          onSpot();
-        }}
-        accessibilityRole="button"
-      >
-        <Text style={tradeStyles.spotT}>Spot ›</Text>
-      </Pressable>
     </View>
   );
 }

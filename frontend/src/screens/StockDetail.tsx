@@ -51,7 +51,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useStockDetail } from "@/hooks/useStockDetail";
 import type { Candle, ChartPeriod } from "@/hooks";
 import { useWallet } from "@/context/WalletContext";
-import type { HomeStackParamList } from "@/navigation/HomeStack";
+import type { AssetStackParamList } from "@/navigation/AssetStackRoutes";
 import { C, EASE, FONT, TYPE, em, h1Size } from "@/theme";
 import { timing } from "@/theme/motion";
 import {
@@ -88,7 +88,7 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { TabParamList } from "@/navigation/RootTabs";
 import { useAuth } from "@/context/AuthContext";
 
-type Nav = NativeStackNavigationProp<HomeStackParamList, "StockDetail">;
+type Nav = NativeStackNavigationProp<AssetStackParamList, "StockDetail">;
 
 const PERIOD_WORD: Record<ChartPeriod, string> = {
   "1D": "today",
@@ -105,7 +105,7 @@ const SLIDE = LinearTransition.duration(380).easing(EASE);
 export function StockDetail() {
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { params } = useRoute<RouteProp<HomeStackParamList, "StockDetail">>();
+  const { params } = useRoute<RouteProp<AssetStackParamList, "StockDetail">>();
   const {
     stock,
     investment,

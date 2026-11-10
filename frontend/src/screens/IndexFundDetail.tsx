@@ -42,7 +42,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useIndexFunds } from "@/hooks";
 import { useWallet } from "@/context/WalletContext";
-import type { HomeStackParamList } from "@/navigation/HomeStack";
+import type { AssetStackParamList } from "@/navigation/AssetStackRoutes";
 import { C, FONT, TYPE, em, h1Size } from "@/theme";
 import { Bar, Button, PressScale, Rise, Skeleton } from "@/components/ui";
 import { AmountField } from "@/components/AmountField";
@@ -58,7 +58,7 @@ import { tracks } from "./IndexFundsScreen";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { TabParamList } from "@/navigation/RootTabs";
 
-type Nav = NativeStackNavigationProp<HomeStackParamList, "IndexFundDetail">;
+type Nav = NativeStackNavigationProp<AssetStackParamList, "IndexFundDetail">;
 
 // allocation bar segments, heaviest first
 const SEG_COLORS = [C.mint, "#2BB27A", "#20855C", "#1A6247", "#164835", "#123527"];
@@ -66,7 +66,7 @@ const SEG_COLORS = [C.mint, "#2BB27A", "#20855C", "#1A6247", "#164835", "#123527
 export function IndexFundDetail() {
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { params } = useRoute<RouteProp<HomeStackParamList, "IndexFundDetail">>();
+  const { params } = useRoute<RouteProp<AssetStackParamList, "IndexFundDetail">>();
   const { funds, loading, error, reload } = useIndexFunds();
   const raw = funds.find((f) => f.id === params.id);
   const fund = useMemo(() => (raw ? toFund(raw) : null), [raw]);

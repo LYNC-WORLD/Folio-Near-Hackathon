@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { Prisma } from "../generated/client";
 
 const XSTOCKS_API = "https://api.xstocks.fi/api/v2";
 const HYPERLIQUID_INFO_URL = "https://api.hyperliquid.xyz/info";
@@ -120,6 +121,105 @@ async function updatePreStocksPrice(updateDailyPrice: boolean) {
   return;
 }
 
+// async function updatePerpStockPrice() {
+//   try {
+//     const response = await fetch(HYPERLIQUID_INFO_URL, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({
+//         type: "metaAndAssetCtxs",
+//         dex: "xyz",
+//       }),
+//     });
+//     if (!response.ok) {
+//       throw new Error(
+//         `Hyperliquid API error: ${response.status} ${response.statusText}`,
+//       );
+//     }
+//     const data = (await response.json()) as HyperliquidResponse;
+//     const [meta, assetContexts] = data;
+//     const stocks = await prisma.perpStocks.findMany();
+
+//     if (stocks.length === 0) {
+//       console.log("No perp stocks found in database");
+//       return;
+//     }
+
+//     const marketMap = new Map<
+//       string,
+//       {
+//         asset: HyperliquidAsset;
+//         context: AssetContext;
+//       }
+//     >();
+//     meta.universe.forEach((asset, index) => {
+//       const context = assetContexts[index];
+
+//       if (!context) {
+//         return;
+//       }
+
+//       marketMap.set(asset.name, {
+//         asset,
+//         context,
+//       });
+//     });
+//     const updates = [];
+//     for (const stock of stocks) {
+//       const hyperliquidMarket = `xyz:${stock.marketSymbol}`;
+
+//       const market = marketMap.get(hyperliquidMarket);
+
+//       if (!market) {
+//         console.warn(`Hyperliquid market not found: ${hyperliquidMarket}`);
+//         continue;
+//       }
+
+//       const { context } = market;
+
+//       const markPx = Number(context.markPx);
+//       const prevDayPx = Number(context.prevDayPx);
+
+//       if (
+//         !Number.isFinite(markPx) ||
+//         !Number.isFinite(prevDayPx) ||
+//         prevDayPx === 0
+//       ) {
+//         console.warn(`Invalid price data for ${stock.marketSymbol}`, {
+//           markPx: context.markPx,
+//           prevDayPx: context.prevDayPx,
+//         });
+
+//         continue;
+//       }
+//       const changeInPrice = ((markPx - prevDayPx) / prevDayPx) * 100;
+
+//       updates.push(
+//         prisma.perpStocks.update({
+//           where: {
+//             id: stock.id,
+//           },
+//           data: {
+//             price: markPx.toString(),
+//             changeInPrice: changeInPrice.toFixed(4),
+//           },
+//         }),
+//       );
+//     }
+//     if (updates.length === 0) {
+//       console.log("No stocks needed updating");
+//       return;
+//     }
+
+//     await prisma.$transaction(updates);
+
+//     console.log(`Successfully updated ${updates.length} perp stocks`);
+//   } catch (error) {
+//     console.log("error: ", error);
+//   }
+// }
 async function updatePerpStockPrice() {
   try {
     const response = await fetch(HYPERLIQUID_INFO_URL, {
@@ -132,13 +232,16 @@ async function updatePerpStockPrice() {
         dex: "xyz",
       }),
     });
+
     if (!response.ok) {
       throw new Error(
         `Hyperliquid API error: ${response.status} ${response.statusText}`,
       );
     }
+
     const data = (await response.json()) as HyperliquidResponse;
     const [meta, assetContexts] = data;
+
     const stocks = await prisma.perpStocks.findMany();
 
     if (stocks.length === 0) {
@@ -146,37 +249,31 @@ async function updatePerpStockPrice() {
       return;
     }
 
-    const marketMap = new Map<
-      string,
-      {
-        asset: HyperliquidAsset;
-        context: AssetContext;
-      }
-    >();
+    const marketMap = new Map<string, AssetContext>();
+
     meta.universe.forEach((asset, index) => {
       const context = assetContexts[index];
 
-      if (!context) {
-        return;
+      if (context) {
+        marketMap.set(asset.name, context);
       }
-
-      marketMap.set(asset.name, {
-        asset,
-        context,
-      });
     });
-    const updates = [];
+
+    // Prepare data instead of creating individual Prisma queries.
+    const updates: {
+      id: string;
+      price: string;
+      changeInPrice: string;
+    }[] = [];
+
     for (const stock of stocks) {
-      const hyperliquidMarket = `xyz:${stock.marketSymbol}`;
+      const marketName = `xyz:${stock.marketSymbol}`;
+      const context = marketMap.get(marketName);
 
-      const market = marketMap.get(hyperliquidMarket);
-
-      if (!market) {
-        console.warn(`Hyperliquid market not found: ${hyperliquidMarket}`);
+      if (!context) {
+        console.warn(`Hyperliquid market not found: ${marketName}`);
         continue;
       }
-
-      const { context } = market;
 
       const markPx = Number(context.markPx);
       const prevDayPx = Number(context.prevDayPx);
@@ -186,37 +283,47 @@ async function updatePerpStockPrice() {
         !Number.isFinite(prevDayPx) ||
         prevDayPx === 0
       ) {
-        console.warn(`Invalid price data for ${stock.marketSymbol}`, {
-          markPx: context.markPx,
-          prevDayPx: context.prevDayPx,
-        });
-
+        console.warn(`Invalid price data for ${stock.marketSymbol}`);
         continue;
       }
+
       const changeInPrice = ((markPx - prevDayPx) / prevDayPx) * 100;
 
-      updates.push(
-        prisma.perpStocks.update({
-          where: {
-            id: stock.id,
-          },
-          data: {
-            price: markPx.toString(),
-            changeInPrice: changeInPrice.toFixed(4),
-          },
-        }),
-      );
+      updates.push({
+        id: stock.id,
+        price: markPx.toString(),
+        changeInPrice: changeInPrice.toFixed(4),
+      });
     }
+
     if (updates.length === 0) {
       console.log("No stocks needed updating");
       return;
     }
 
-    await prisma.$transaction(updates);
+    // PostgreSQL: update every stock with one SQL statement.
+    const values = updates.map(
+      (stock) => Prisma.sql`
+        (${stock.id}, ${stock.price}, ${stock.changeInPrice})
+      `,
+    );
 
-    console.log(`Successfully updated ${updates.length} perp stocks`);
+    const updatedCount = await prisma.$executeRaw(
+      Prisma.sql`
+        UPDATE "PerpStocks" AS p
+        SET
+          "price" = v.price,
+          "changeInPrice" = v.change_in_price
+        FROM (
+          VALUES ${Prisma.join(values)}
+        ) AS v(id, price, change_in_price)
+        WHERE p.id = v.id
+      `,
+    );
+
+    console.log(`Successfully updated ${updatedCount} perp stocks`);
   } catch (error) {
-    console.log("error: ", error);
+    console.error("Error updating perp stock prices:", error);
   }
 }
 interface PreStock {

@@ -29,6 +29,7 @@ import { SheetProvider } from "./src/components/Sheet";
 import { ToastProvider } from "./src/components/Toast";
 import { AppFlowContext } from "./src/context/AppFlowContext";
 import { LeaderboardProvider } from "./src/context/LeaderboardContext";
+import { WebPhoneFrame } from "./src/components/WebPhoneFrame";
 
 // Keep the native splash up until fonts are loaded and <SplashIntro> has drawn
 // its first frame (it hides the native splash itself).
@@ -177,11 +178,13 @@ export default function App() {
       {canRender && (
         <QueryClientProvider client={queryClient}>
           <SafeAreaProvider>
-            <AuthProvider>
-              <WalletProvider>
-                <Root />
-              </WalletProvider>
-            </AuthProvider>
+            <WebPhoneFrame>
+              <AuthProvider>
+                <WalletProvider>
+                  <Root />
+                </WalletProvider>
+              </AuthProvider>
+            </WebPhoneFrame>
           </SafeAreaProvider>
         </QueryClientProvider>
       )}

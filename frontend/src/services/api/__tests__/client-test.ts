@@ -1,4 +1,9 @@
-import { ApiError, request, setTokenRefresher } from "../client";
+import {
+  ApiError,
+  request,
+  setAccountTypeProvider,
+  setTokenRefresher,
+} from "../client";
 
 const reply = (status: number, body: unknown) =>
   Promise.resolve({ ok: status < 400, status, text: () => Promise.resolve(JSON.stringify(body)) });
@@ -12,11 +17,15 @@ const accountTypeOf = (call: unknown[]) =>
 describe("request 401 retry", () => {
   const fetchMock = jest.fn();
   let unregister: () => void = () => {};
+  let unregisterAccountType: () => void = () => {};
   beforeEach(() => {
     fetchMock.mockReset();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
-  afterEach(() => unregister());
+  afterEach(() => {
+    unregister();
+    unregisterAccountType();
+  });
 
   it("refreshes the token once and retries", async () => {
     fetchMock.mockReturnValueOnce(reply(401, {})).mockReturnValueOnce(reply(200, { ok: 1 }));
@@ -48,10 +57,28 @@ describe("request 401 retry", () => {
   it("sends the backend account type for each provider", async () => {
     fetchMock.mockReturnValue(reply(200, {}));
 
-    await request("/google", { accountType: "google" });
-    await request("/apple", { accountType: "apple" });
+    await request("/google", { account_type: "google" });
+    await request("/apple", { account_type: "apple" });
 
     expect(accountTypeOf(fetchMock.mock.calls[0])).toBe("google");
-    expect(accountTypeOf(fetchMock.mock.calls[1])).toBe("aaple");
+    expect(accountTypeOf(fetchMock.mock.calls[1])).toBe("apple");
+  });
+
+  it("uses the provider registered by AuthProvider when omitted", async () => {
+    fetchMock.mockReturnValue(reply(200, {}));
+    unregisterAccountType = setAccountTypeProvider(() => "apple");
+
+    await request("/from-context");
+
+    expect(accountTypeOf(fetchMock.mock.calls[0])).toBe("apple");
+  });
+
+  it("prefers an explicit account type over the registered provider", async () => {
+    fetchMock.mockReturnValue(reply(200, {}));
+    unregisterAccountType = setAccountTypeProvider(() => "apple");
+
+    await request("/explicit", { account_type: "google" });
+
+    expect(accountTypeOf(fetchMock.mock.calls[0])).toBe("google");
   });
 });

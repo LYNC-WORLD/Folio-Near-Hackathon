@@ -108,12 +108,12 @@ export class StockService {
     try {
       const indexFunds = await prisma.indexFunds.findMany({
         include: {
-          stocks: true
-        }
+          stocks: true,
+        },
       });
-      indexFunds.forEach(indexFund => {
+      indexFunds.forEach((indexFund) => {
         var totalPrice = 0;
-        indexFund.stocks.forEach(stock => {
+        indexFund.stocks.forEach((stock) => {
           totalPrice += Number(stock.price);
         });
         indexFund.price = (
@@ -127,13 +127,16 @@ export class StockService {
     }
   }
 
-  public async getPerpStocks() {
-    try {
-      const perpStocks = await prisma.perpStocks.findMany();
-      return perpStocks;
-    } catch (error) {
-      console.error(error);
-      return;
-    }
+  public async getPerpStocks(limit = 15, offset = 0) {
+    const [stocks, total] = await prisma.$transaction([
+      prisma.perpStocks.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { id: "asc" },
+      }),
+      prisma.perpStocks.count(),
+    ]);
+
+    return { stocks, total };
   }
 }

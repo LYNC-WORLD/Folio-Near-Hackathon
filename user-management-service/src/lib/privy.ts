@@ -10,19 +10,31 @@ export async function createUser(
   subjectId: string,
   mail: string,
   name: string,
-  accountType: "google" | "apple"
+  accountType: "google" | "apple",
 ) {
   try {
-    const user = await privy.users().create({
-      linked_accounts: [
-        {
-          type: accountType == "apple" ? "apple_oauth" :"google_oauth",
-          subject: subjectId,
-          email: mail,
-          name: name,
-        },
-      ],
-    });
+    let user;
+    if (accountType == "apple") {
+      user = await privy.users().create({
+        linked_accounts: [
+          {
+            type: "apple_oauth",
+            subject: subjectId,
+          },
+        ],
+      });
+    } else {
+      user = await privy.users().create({
+        linked_accounts: [
+          {
+            type: "google_oauth",
+            subject: subjectId,
+            email: mail,
+            name: name,
+          },
+        ],
+      });
+    }
     return {
       userId: user.id,
     };
@@ -90,21 +102,25 @@ export async function getTransectionResults(
     await sleep(1000);
   }
 }
-export async function sendSOl(walletId: string, solAmount: string, depositAddress: string){
-      const response = await privy.wallets().transfer(walletId, {
-      source: {
-        chain: "solana",
-        asset: "sol",
-        amount: solAmount,
-      },
-      destination: {
-        address: depositAddress,
-      },
-      authorization_context: {
-        authorization_private_keys: [env.PRIVY_AUTH_KEY!],
-      },
-    });
-    return response;
+export async function sendSOl(
+  walletId: string,
+  solAmount: string,
+  depositAddress: string,
+) {
+  const response = await privy.wallets().transfer(walletId, {
+    source: {
+      chain: "solana",
+      asset: "sol",
+      amount: solAmount,
+    },
+    destination: {
+      address: depositAddress,
+    },
+    authorization_context: {
+      authorization_private_keys: [env.PRIVY_AUTH_KEY!],
+    },
+  });
+  return response;
 }
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

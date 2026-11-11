@@ -24,7 +24,8 @@ export class AuthService {
       const result = await verifyAppleIdToken(accessToken);
       subjectId = result.subjectId;
       username = user_name ?? "user";
-      email = result.email;
+      email =
+        result.email == "" ? "temp." + result.subjectId + "@privaterelay.appleid.com" : result.email;
       user = await prisma.user.findUnique({
         where: {
           appleSubjectId: subjectId,
@@ -37,7 +38,7 @@ export class AuthService {
       const result = await verifyGoogleIdToken(accessToken);
       subjectId = result.subjectId;
       username = result.username;
-      email = result.email == "" ? result.subjectId + "@appleid.com" : result.email;
+      email = result.email;
       user = await prisma.user.findUnique({
         where: {
           googleSubjectId: subjectId,

@@ -55,10 +55,10 @@ app.get("/health", (_req, res) => {
 
 const PORT = env.PORT;
 
-// startRecurringBuyCron();
-// startPerpLeaderboardCron();
-// startPerpDepositCron();
-// startPerpWithdrawCron();
+startRecurringBuyCron();
+startPerpLeaderboardCron();
+startPerpDepositCron();
+startPerpWithdrawCron();
 
 app.use("/api/auth", authRoute);
 app.use("/api/stocks", stockRoutes);

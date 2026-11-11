@@ -11,7 +11,7 @@ export async function authMiddleware(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
-    const accountType = req.headers.accountType ?? "google";
+    const accountType = req.headers["account-type"] ?? "google";
 
     if (!authHeader) {
       res.status(401).json({

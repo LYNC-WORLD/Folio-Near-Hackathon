@@ -9,7 +9,7 @@ export class AuthController {
   public createUser = async (req: Request, res: Response): Promise<void> => {
     try {
       const { idToken } = req.body;
-      const requestType = req.headers.account_type;
+      const requestType = req.headers.accountType;
       const username = req.body.username;
 
       if(!idToken) {

@@ -4,14 +4,20 @@
 //   COLLECTION
 //   Index funds
 //   Several companies in one buy. …
-//   ┌ card ─────────────────────────────┐
-//   │ GPU  GPU Infra           $433.78  │
-//   │      Tracks NVIDIA · AMD  +0.4%   │
-//   │ [2 STOCKS]  Top: NVDAx · AMDx     │
-//   └───────────────────────────────────┘
+//   ┌ basket card ──────────────────────────────┐
+//   │ GPU  GPU Infra                   $433.78  │
+//   │      Tracks NVIDIA and AMD         +0.4%  │
+//   │ [2 STOCKS] (logos) NVDAx · AMDx           │
+//   └───────────────────────────────────────────┘
+//   ┌ ETF card ─────────────────────────────────┐
+//   │ [logo]  iShares Core S&P 500 ETF  $760.67 │
+//   │                                    +0.7%  │
+//   │ [ETF]  IVV                                │
+//   └───────────────────────────────────────────┘
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -107,9 +113,9 @@ export function IndexFundsScreen() {
         <View style={s.note}>
           <Text style={s.noteDot}>●</Text>
           <Text style={s.noteText}>
-            One buy splits your USDC across every stock in the fund. You hold
-            the stocks themselves, in your wallet, and can sell each one on its
-            own.
+            You hold the tokens themselves, in your wallet. A basket splits one
+            buy across every stock in it; an ETF is a single token. Sell
+            whenever you like.
           </Text>
         </View>
       </ScrollView>
@@ -117,8 +123,55 @@ export function IndexFundsScreen() {
   );
 }
 
+/** Round logo; falls back to the first letters of the symbol. */
+function Logo({
+  uri,
+  symbol,
+  size,
+  overlap,
+}: {
+  uri?: string;
+  symbol: string;
+  size: number;
+  overlap?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  const box = [
+    s.logoWrap,
+    {
+      width: size,
+      height: size,
+      borderRadius: size === 40 ? 12 : size / 2,
+    },
+    size !== 40 && s.logoRing,
+    overlap && { marginLeft: -8 },
+  ];
+
+  if (!uri || failed) {
+    return (
+      <View style={box}>
+        <Text style={s.logoFallback}>{symbol.slice(0, 2).toUpperCase()}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={box}>
+      <Image
+        source={{ uri }}
+        style={{ width: size, height: size }}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+        accessibilityIgnoresInvertColors
+      />
+    </View>
+  );
+}
+
 function FundCard({ f, onPress }: { f: Fund; onPress: () => void }) {
   const n = f.holdings.length;
+  const isEtf = f.kind === "etf";
+  const top = f.holdings.slice(0, 3);
   return (
     <PressScale
       scaleTo={0.985}
@@ -128,19 +181,29 @@ function FundCard({ f, onPress }: { f: Fund; onPress: () => void }) {
       }}
       style={s.card}
       accessibilityRole="button"
-      accessibilityLabel={`${f.name}, ${n} stocks, ${money(f.price)}`}
+      accessibilityLabel={
+        isEtf
+          ? `${f.name}, ETF, ${money(f.price)}`
+          : `${f.name}, ${n} stocks, ${money(f.price)}`
+      }
     >
       <View style={s.cardTop}>
-        <View style={s.code}>
-          <Text style={s.codeText}>{fundCode(f.name)}</Text>
-        </View>
+        {isEtf ? (
+          <Logo uri={f.imageUrl} symbol={f.symbol ?? f.name} size={40} />
+        ) : (
+          <View style={s.code}>
+            <Text style={s.codeText}>{fundCode(f.name)}</Text>
+          </View>
+        )}
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.cardName} numberOfLines={1}>
+          <Text style={s.cardName} numberOfLines={isEtf ? 2 : 1}>
             {f.name}
           </Text>
-          <Text style={TYPE.sub} numberOfLines={2}>
-            {tracks(f)}
-          </Text>
+          {isEtf ? null : (
+            <Text style={TYPE.sub} numberOfLines={2}>
+              {tracks(f)}
+            </Text>
+          )}
         </View>
         <View style={{ alignItems: "flex-end", gap: 3 }}>
           <Text style={s.fig}>{money(f.price)}</Text>
@@ -157,11 +220,39 @@ function FundCard({ f, onPress }: { f: Fund; onPress: () => void }) {
         </View>
       </View>
       <View style={s.cardFoot}>
-        <Badge label={`${n} ${n === 1 ? "STOCK" : "STOCKS"}`} />
-        {f.hasPreIpo ? <Badge label="PRE-IPO" variant="mint" /> : null}
-        <Text style={[TYPE.sub, { fontSize: 12.5, flex: 1 }]} numberOfLines={1}>
-          Top: {f.holdings.slice(0, 3).map((h) => h.stock.symbol).join(" · ")}
-        </Text>
+        {isEtf ? (
+          <>
+            <Badge label="ETF" />
+            <Text
+              style={[TYPE.sub, { fontSize: 12.5, flex: 1 }]}
+              numberOfLines={1}
+            >
+              {f.symbol}
+            </Text>
+          </>
+        ) : (
+          <>
+            <Badge label={`${n} ${n === 1 ? "STOCK" : "STOCKS"}`} />
+            {f.hasPreIpo ? <Badge label="PRE-IPO" variant="mint" /> : null}
+            <View style={s.logoRow}>
+              {top.map((h, i) => (
+                <Logo
+                  key={h.stock.tokenAddress}
+                  uri={h.stock.imageUrl}
+                  symbol={h.stock.symbol}
+                  size={24}
+                  overlap={i > 0}
+                />
+              ))}
+            </View>
+            <Text
+              style={[TYPE.sub, { fontSize: 12.5, flex: 1 }]}
+              numberOfLines={1}
+            >
+              {top.map((h) => h.stock.symbol).join(" · ")}
+            </Text>
+          </>
+        )}
       </View>
     </PressScale>
   );
@@ -171,7 +262,8 @@ function FundCard({ f, onPress }: { f: Fund; onPress: () => void }) {
 export function tracks(f: Fund) {
   const names = f.holdings.map((h) => h.stock.name.replace(/ PreStocks$/i, ""));
   if (names.length <= 2) return `Tracks ${names.join(" and ")}`;
-  if (names.length === 3) return `Tracks ${names[0]}, ${names[1]} and ${names[2]}`;
+  if (names.length === 3)
+    return `Tracks ${names[0]}, ${names[1]} and ${names[2]}`;
   return `Tracks ${names[0]}, ${names[1]} and ${names.length - 2} more`;
 }
 
@@ -219,6 +311,16 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   cardFoot: { flexDirection: "row", alignItems: "center", gap: 8 },
+
+  logoRow: { flexDirection: "row", alignItems: "center" },
+  logoWrap: {
+    backgroundColor: "#20252F",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  logoRing: { borderWidth: 2, borderColor: C.surface },
+  logoFallback: { fontFamily: FONT.mono500, fontSize: 10, color: C.mint },
 
   errorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
 

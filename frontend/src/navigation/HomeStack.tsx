@@ -19,7 +19,7 @@ export type HomeStackParamList = {
   IndexFundDetail: { id: string };
   StockDetail: {
     symbol: string;
-    category: "us-stock" | "pre-ipo";
+    category: "us-stock" | "pre-ipo" | "index-fund";
   };
 };
 const Stack = createNativeStackNavigator<HomeStackParamList>();

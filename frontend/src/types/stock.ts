@@ -4,10 +4,9 @@ export type Stock = {
   name: string;
   decimals: number;
   symbol: string;
-  imageUrl: string;
-  marketOpenPrice?: string;
-  stockType?: string;
-};
+  imageUrl?: string;   // make sure this exists
+  marketOpenPrice: string;
+ stockType: "USStock" | "PreIPO" | "IndexFunds"; };
 
 export type StocksResponse = {
   success: boolean;
@@ -87,8 +86,10 @@ export type IndexFund = {
   stocks: Stock[];
 };
 
+export type IndexFundItem = IndexFund | Stock;
+
 export type IndexFundsResponse = {
   success: boolean;
   message: string;
-  data: IndexFund[];
+  data: IndexFundItem[];
 };

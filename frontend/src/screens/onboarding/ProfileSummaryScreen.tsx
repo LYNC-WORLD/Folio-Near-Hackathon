@@ -43,7 +43,7 @@ export function ProfileSummaryScreen({ navigation, route }: Props) {
 
       const payload = {
         interestedStocks,
-        amountToPutIn: resolvedAmount,
+        amountToPutIn: resolvedAmount?.toString() ?? "100",
         question1: NOT_SENT,
         question2: NOT_SENT,
       };

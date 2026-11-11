@@ -102,10 +102,7 @@ export function HomeScreen() {
     [pre.stocks],
   );
   const all = useMemo(() => [...stocks, ...preIpos], [stocks, preIpos]);
-  const funds = useMemo(
-    () => idx.funds.filter((f) => Array.isArray(f.stocks)).map(toFund),
-    [idx.funds],
-  );
+  const funds = useMemo(() => idx.funds.map(toFund), [idx.funds]);
 
   // ---------- search ----------
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);

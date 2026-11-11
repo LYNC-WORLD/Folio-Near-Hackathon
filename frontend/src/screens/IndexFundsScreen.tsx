@@ -4,6 +4,7 @@
 //   COLLECTION
 //   Index funds
 //   Several companies in one buy. …
+//   [ search ………………………………… ]            ← /api/stocks/search?type=IndexFunds
 //   ┌ basket card ──────────────────────────────┐
 //   │ GPU  GPU Infra                   $433.78  │
 //   │      Tracks NVIDIA and AMD         +0.4%  │
@@ -14,13 +15,15 @@
 //   │                                    +0.7%  │
 //   │ [ETF]  IVV                                │
 //   └───────────────────────────────────────────┘
+//   …scroll to the end and the next page loads
 
 import { useMemo, useState } from "react";
 import {
+  FlatList,
   Image,
+  Keyboard,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -30,10 +33,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useIndexFunds } from "@/hooks";
+import { useStockSearch } from "@/hooks/useStockSearch";
 import type { HomeStackParamList } from "@/navigation/HomeStack";
 import { C, FONT, TYPE, em, h1Size } from "@/theme";
 import { Badge, Chip, PressScale, Rise, Skeleton } from "@/components/ui";
+import { SearchBar } from "@/components/SearchBar";
 import { COLLECTIONS } from "@/lib/assets";
 import { fundCode, toFund, type Fund } from "@/lib/indexFunds";
 import { money, pct } from "@/lib/format";
@@ -42,86 +46,158 @@ import { hTap } from "@/lib/haptics";
 export function IndexFundsScreen() {
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const coll = COLLECTIONS["index-fund"];
-  const { funds, loading, refreshing, error, refresh, reload } =
-    useIndexFunds();
-  const list = useMemo(() => funds.map(toFund), [funds]);
+
+  const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+  const {
+    stocks,
+    searching,
+    loading,
+    refreshing,
+    loadingMore,
+    loadMore,
+    hasMore,
+    error,
+    refresh,
+    reload,
+  } = useStockSearch("index-fund", query);
+
+  const list = useMemo(() => stocks.map(toFund), [stocks]);
+
+  const openFund = (f: Fund) => {
+    if (f.kind === "etf" && f.symbol) {
+      nav.navigate("StockDetail", { symbol: f.symbol, category: "index-fund" });
+    } else {
+      nav.navigate("IndexFundDetail", { id: f.id });
+    }
+  };
+
+  const header = (
+    <View style={s.head}>
+      <Pressable
+        onPress={() => nav.goBack()}
+        style={({ pressed }) => [s.back, pressed && { opacity: 0.6 }]}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Back to Home"
+      >
+        <Ionicons name="chevron-back" size={16} color={C.mint} />
+        <Text style={s.backText}>Home</Text>
+      </Pressable>
+
+      <View style={s.header}>
+        <Rise duration={460}>
+          <Text style={TYPE.lbl}>COLLECTION</Text>
+        </Rise>
+        <Rise duration={460} delay={55}>
+          <Text style={[TYPE.h1, h1Size(38)]} accessibilityRole="header">
+            {coll.title}
+          </Text>
+        </Rise>
+        <Rise duration={460} delay={110}>
+          <Text style={TYPE.body}>{coll.blurb}</Text>
+        </Rise>
+      </View>
+
+      <Rise duration={460} delay={140}>
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          active={focused || query.length > 0}
+          onFocus={() => setFocused(true)}
+          onCancel={() => {
+            setQuery("");
+            setFocused(false);
+            Keyboard.dismiss();
+          }}
+          onClear={() => setQuery("")}
+          onSubmit={() => Keyboard.dismiss()}
+        />
+      </Rise>
+
+      {error ? (
+        <View style={s.errorRow}>
+          <Text style={[TYPE.sub, { color: C.loss, flex: 1 }]}>{error}</Text>
+          <Chip label="Retry" onPress={() => void reload()} />
+        </View>
+      ) : null}
+    </View>
+  );
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
-      <ScrollView
+      <FlatList
+        data={loading ? [] : list}
+        keyExtractor={(f) => f.id}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          <View style={s.list}>
+            {loading ? (
+              [0, 1, 2].map((i) => (
+                <Skeleton key={i} height={116} radius={16} />
+              ))
+            ) : error ? null : (
+              <Text style={[TYPE.sub, s.none]}>
+                {searching
+                  ? `No match for “${query.trim()}”`
+                  : "No funds open yet."}
+              </Text>
+            )}
+          </View>
+        }
+        ListFooterComponent={
+          <View style={s.footer}>
+            {loadingMore ? (
+              <Skeleton height={116} radius={16} />
+            ) : !hasMore && list.length > 0 ? (
+              <View style={s.note}>
+                <Text style={s.noteDot}>●</Text>
+                <Text style={s.noteText}>
+                  You hold the tokens themselves, in your wallet. A basket
+                  splits one buy across every stock in it; an ETF is a single
+                  token. Sell whenever you like.
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        }
+        ItemSeparatorComponent={Gap}
         contentContainerStyle={s.page}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        // scroll-based paging: ask for the next page near the end
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => refresh()}
+            onRefresh={() => {
+              void refresh();
+            }}
             tintColor={C.mint}
             colors={[C.mint]}
             progressBackgroundColor={C.raised}
           />
         }
-      >
-        <Pressable
-          onPress={() => nav.goBack()}
-          style={({ pressed }) => [s.back, pressed && { opacity: 0.6 }]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Back to Home"
-        >
-          <Ionicons name="chevron-back" size={16} color={C.mint} />
-          <Text style={s.backText}>Home</Text>
-        </Pressable>
-
-        <View style={s.header}>
-          <Rise duration={460}>
-            <Text style={TYPE.lbl}>COLLECTION</Text>
-          </Rise>
-          <Rise duration={460} delay={55}>
-            <Text style={[TYPE.h1, h1Size(38)]} accessibilityRole="header">
-              {coll.title}
-            </Text>
-          </Rise>
-          <Rise duration={460} delay={110}>
-            <Text style={TYPE.body}>{coll.blurb}</Text>
-          </Rise>
-        </View>
-
-        {error ? (
-          <View style={s.errorRow}>
-            <Text style={[TYPE.sub, { color: C.loss, flex: 1 }]}>{error}</Text>
-            <Chip label="Retry" onPress={() => reload()} />
-          </View>
-        ) : null}
-
-        <View style={s.list}>
-          {loading ? (
-            [0, 1, 2].map((i) => <Skeleton key={i} height={116} radius={16} />)
-          ) : list.length === 0 && !error ? (
-            <Text style={[TYPE.sub, s.none]}>No funds open yet.</Text>
+        renderItem={({ item: f, index: i }) => {
+          const card = <FundCard f={f} onPress={() => openFund(f)} />;
+          // only the first screenful cascades in; later pages just appear
+          return i < 8 ? (
+            <Rise delay={200 + i * 40} duration={420}>
+              {card}
+            </Rise>
           ) : (
-            list.map((f, i) => (
-              <Rise key={f.id} delay={165 + Math.min(i, 8) * 40} duration={420}>
-                <FundCard
-                  f={f}
-                  onPress={() => nav.navigate("IndexFundDetail", { id: f.id })}
-                />
-              </Rise>
-            ))
-          )}
-        </View>
-
-        <View style={s.note}>
-          <Text style={s.noteDot}>●</Text>
-          <Text style={s.noteText}>
-            You hold the tokens themselves, in your wallet. A basket splits one
-            buy across every stock in it; an ETF is a single token. Sell
-            whenever you like.
-          </Text>
-        </View>
-      </ScrollView>
+            card
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
+
+/** space between cards */
+const Gap = () => <View style={{ height: 10 }} />;
 
 /** Round logo; falls back to the first letters of the symbol. */
 function Logo({
@@ -269,7 +345,9 @@ export function tracks(f: Fund) {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.ground },
-  page: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
+  page: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 40 },
+  // the header blocks keep the old page gap; the list starts one gap below them
+  head: { gap: 20, marginBottom: 20 },
 
   back: {
     flexDirection: "row",
@@ -285,6 +363,7 @@ const s = StyleSheet.create({
   header: { gap: 8 },
 
   list: { gap: 10 },
+  footer: { paddingTop: 10 },
   none: { fontSize: 13.5, lineHeight: 21, paddingVertical: 14 },
 
   card: { backgroundColor: C.surface, borderRadius: 16, padding: 16, gap: 14 },

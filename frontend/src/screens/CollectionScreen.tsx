@@ -5,15 +5,18 @@
 //   COLLECTION
 //   Pre-IPOs                              ┐ rise in, 55ms apart
 //   Private companies, priced off …       ┘
+//   [ search ………………………………… ]            ← /api/stocks/search, debounced
 //   [All 8] [AI] [Space] [Fintech]      Sort · Price high–low
 //   ┌ card ─────────────────────────────┐
 //   │ SPA  SpaceX             LOCKED    │
 //   │ PRICE   VS LAST ROUND  LAST ROUND │
 //   └───────────────────────────────────┘
+//   …scroll to the end and the next page loads
 
 import { useMemo, useState } from "react";
 import {
   FlatList,
+  Keyboard,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,16 +29,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { useStocks } from "@/hooks";
+import { useStockSearch } from "@/hooks/useStockSearch";
 import type { StockCategory } from "@/services";
 import type { HomeStackParamList } from "@/navigation/HomeStack";
 import { C, FONT, TYPE, em, h1Size } from "@/theme";
-import { Badge, Chip, PressScale, Rise, Skeleton } from "@/components/ui";
+import { Chip, PressScale, Rise, Skeleton } from "@/components/ui";
 import { AssetAvatar } from "@/components/AssetAvatar";
+import { SearchBar } from "@/components/SearchBar";
 import { COLLECTIONS, toAsset, type Asset } from "@/lib/assets";
 import { money, pct } from "@/lib/format";
 import { hSelect, hTap } from "@/lib/haptics";
-import { PRE_IPO_LOCKED } from "@/lib/trade";
 
 type SortMode = "priceDesc" | "priceAsc" | "name";
 const SORT_LABEL: Record<SortMode, string> = {
@@ -49,12 +52,24 @@ const NEXT_SORT: Record<SortMode, SortMode> = {
   name: "priceDesc",
 };
 
-
 export function CollectionScreen({ category }: { category: StockCategory }) {
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const coll = COLLECTIONS[category];
-  const { stocks, loading, refreshing, error, refresh, reload } =
-    useStocks(category);
+
+  const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+  const {
+    stocks,
+    searching,
+    loading,
+    refreshing,
+    loadingMore,
+    loadMore,
+    hasMore,
+    error,
+    refresh,
+    reload,
+  } = useStockSearch(category, query);
 
   const assets = useMemo(
     () => stocks.map((s) => toAsset(s, category)),
@@ -71,6 +86,7 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
   const [tag, setTag] = useState("all");
   const [sort, setSort] = useState<SortMode>("priceDesc");
 
+  // filter + sort apply to the pages loaded so far
   const list = useMemo(() => {
     const filtered =
       tag === "all" ? assets : assets.filter((a) => a.preIpo?.category === tag);
@@ -79,6 +95,11 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
       return sort === "priceAsc" ? a.price - b.price : b.price - a.price;
     });
   }, [assets, tag, sort]);
+
+  const onChangeQuery = (t: string) => {
+    setQuery(t);
+    setTag("all"); // a tag from the old results may not exist in the new ones
+  };
 
   const header = (
     <View style={s.head}>
@@ -107,25 +128,37 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
         </Rise>
       </View>
 
+      <Rise duration={460} delay={140}>
+        <SearchBar
+          value={query}
+          onChangeText={onChangeQuery}
+          active={focused || query.length > 0}
+          onFocus={() => setFocused(true)}
+          onCancel={() => {
+            onChangeQuery("");
+            setFocused(false);
+            Keyboard.dismiss();
+          }}
+          onClear={() => onChangeQuery("")}
+          onSubmit={() => Keyboard.dismiss()}
+        />
+      </Rise>
+
       <Rise duration={460} delay={165} style={s.filterRow}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.chips}
           style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
         >
           <Chip
-            label={`All ${loading ? "…" : assets.length}`}
+            label={`All ${loading ? "…" : assets.length}${hasMore ? "+" : ""}`}
             on={tag === "all"}
             onPress={() => setTag("all")}
           />
           {tags.map((t) => (
-            <Chip
-              key={t}
-              label={t}
-              on={tag === t}
-              onPress={() => setTag(t)}
-            />
+            <Chip key={t} label={t} on={tag === t} onPress={() => setTag(t)} />
           ))}
         </ScrollView>
         <Pressable
@@ -144,7 +177,7 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
       {error ? (
         <View style={s.errorRow}>
           <Text style={[TYPE.sub, { color: C.loss, flex: 1 }]}>{error}</Text>
-          <Chip label="Retry" onPress={() => reload()} />
+          <Chip label="Retry" onPress={() => void reload()} />
         </View>
       ) : null}
     </View>
@@ -155,7 +188,7 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
       <FlatList
         data={loading ? [] : list}
         // keyed with the filter + sort so the list re-cascades when they change
-        keyExtractor={(a) => `${tag}-${sort}-${a.symbol}`}
+        keyExtractor={(a) => `${tag}-${sort}-${a.category}-${a.symbol}`}
         ListHeaderComponent={header}
         ListEmptyComponent={
           <View style={s.list}>
@@ -164,17 +197,33 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
                 <Skeleton key={i} height={122} radius={16} />
               ))
             ) : (
-              <Text style={[TYPE.sub, s.none]}>Nothing in this filter yet.</Text>
+              <Text style={[TYPE.sub, s.none]}>
+                {searching
+                  ? `No match for “${query.trim()}”`
+                  : "Nothing in this filter yet."}
+              </Text>
             )}
           </View>
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={s.footer}>
+              <Skeleton height={122} radius={16} />
+            </View>
+          ) : undefined
         }
         ItemSeparatorComponent={Gap}
         contentContainerStyle={s.page}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        // scroll-based paging: ask for the next page near the end
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => refresh()}
+            onRefresh={() => void refresh()}
             tintColor={C.mint}
             colors={[C.mint]}
             progressBackgroundColor={C.raised}
@@ -192,7 +241,7 @@ export function CollectionScreen({ category }: { category: StockCategory }) {
               }
             />
           );
-          // only the first screenful cascades in; cards scrolled to later just appear
+          // only the first screenful cascades in; later pages just appear
           return i < 8 ? (
             <Rise delay={220 + i * 40} duration={420}>
               {card}
@@ -304,6 +353,7 @@ const s = StyleSheet.create({
   sort: { fontFamily: FONT.sans600, fontSize: 12.5, color: C.mint },
 
   list: { gap: 10 },
+  footer: { paddingTop: 10 },
   none: { fontSize: 13.5, lineHeight: 21, paddingVertical: 14 },
 
   card: { backgroundColor: C.surface, borderRadius: 16, padding: 16, gap: 14 },
@@ -313,11 +363,6 @@ const s = StyleSheet.create({
     fontSize: 17,
     letterSpacing: em(17, -0.04),
     color: C.ink1,
-  },
-  fig: {
-    fontFamily: FONT.mono400,
-    fontSize: 13,
-    fontVariant: ["tabular-nums"],
   },
 
   stats: { flexDirection: "row", gap: 8 },
@@ -336,20 +381,4 @@ const s = StyleSheet.create({
   },
 
   errorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-
-  note: {
-    flexDirection: "row",
-    gap: 12,
-    backgroundColor: C.sunk,
-    borderRadius: 18,
-    padding: 16,
-  },
-  noteDot: { color: C.mint, fontSize: 13, lineHeight: 17 },
-  noteText: {
-    flex: 1,
-    fontFamily: FONT.sans400,
-    fontSize: 12.5,
-    lineHeight: 19,
-    color: C.ink2,
-  },
 });

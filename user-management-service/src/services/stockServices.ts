@@ -106,19 +106,10 @@ export class StockService {
 
   public async getIndexFunds() {
     try {
-      const indexFunds = await prisma.indexFunds.findMany({
-        include: {
-          stocks: true,
-        },
-      });
-      indexFunds.forEach((indexFund) => {
-        var totalPrice = 0;
-        indexFund.stocks.forEach((stock) => {
-          totalPrice += Number(stock.price);
-        });
-        indexFund.price = (
-          totalPrice / (indexFund.stocks.length || 1)
-        ).toString();
+      const indexFunds = await prisma.stocks.findMany({
+        where: {
+          stockType: "IndexFunds"
+        }
       });
       return indexFunds;
     } catch (error) {

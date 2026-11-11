@@ -22,9 +22,16 @@ router.get(
   stockController.getStockBySymbol,
 );
 
+router.get("/index-funds", stockController.getIndexFunds);
+
+router.get(
+  "/index-funds/:indexFundSymbol",
+  authMiddleware,
+  stockController.getStockBySymbol,
+);
+
 router.get("/trades", stockController.getLatestBuy);
 
-router.get("/index-funds", stockController.getIndexFunds);
 
 router.get("/perp-markets", stockController.getPerpStocks);
 

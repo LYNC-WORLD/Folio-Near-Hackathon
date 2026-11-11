@@ -318,103 +318,103 @@ export class TradeController {
       });
     }
   };
-  public buyIndexFunds = async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
-        res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-        return;
-      }
-      const body = req.body as buyOrSellIndexFunds;
-      if (invalidAmounts(body.indexFundAmount, body.usdcAmount) || !body.indexFundId) {
-        res.status(400).json({
-          success: false,
-          message:
-            "indexFundAmount, usdcAmount and indexFundAddress is required",
-        });
-        return;
-      }
-      const responce = await this.tradeService.buyIndexFunds(
-        body.indexFundId,
-        body.indexFundAmount,
-        body.usdcAmount,
-        req.user.solanaWalletId,
-        req.user.id,
-        req.user.solanaWalletAddress,
-      );
-      if (!responce) {
-        res.status(500).json({
-          success: false,
-          message: "request failed",
-        });
-        return;
-      }
-      res.status(200).json({
-        success: true,
-        message: "index funds bought",
-        data: responce,
-      });
-      return;
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  };
-  public sellIndexFunds = async (
-    req: Request,
-    res: Response,
-  ): Promise<void> => {
-    try {
-      if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
-        res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-        return;
-      }
-      const body = req.body as buyOrSellIndexFunds;
-      if (invalidAmounts(body.indexFundAmount, body.usdcAmount) || !body.indexFundId) {
-        res.status(400).json({
-          success: false,
-          message:
-            "indexFundAmount, usdcAmount and indexFundAddress is required",
-        });
-        return;
-      }
-      const responce = await this.tradeService.sellIndexFunds(
-        body.indexFundId,
-        body.indexFundAmount,
-        body.usdcAmount,
-        req.user.solanaWalletId,
-        req.user.id,
-        req.user.solanaWalletAddress,
-      );
-      if (!responce) {
-        res.status(500).json({
-          success: false,
-          message: "request failed",
-        });
-        return;
-      }
-      res.status(200).json({
-        success: true,
-        message: "Index fund sold",
-        data: responce,
-      });
-      return;
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  };
+  // public buyIndexFunds = async (req: Request, res: Response): Promise<void> => {
+  //   try {
+  //     if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
+  //       res.status(404).json({
+  //         success: false,
+  //         message: "User not found",
+  //       });
+  //       return;
+  //     }
+  //     const body = req.body as buyOrSellIndexFunds;
+  //     if (invalidAmounts(body.indexFundAmount, body.usdcAmount) || !body.indexFundId) {
+  //       res.status(400).json({
+  //         success: false,
+  //         message:
+  //           "indexFundAmount, usdcAmount and indexFundAddress is required",
+  //       });
+  //       return;
+  //     }
+  //     const responce = await this.tradeService.buyIndexFunds(
+  //       body.indexFundId,
+  //       body.indexFundAmount,
+  //       body.usdcAmount,
+  //       req.user.solanaWalletId,
+  //       req.user.id,
+  //       req.user.solanaWalletAddress,
+  //     );
+  //     if (!responce) {
+  //       res.status(500).json({
+  //         success: false,
+  //         message: "request failed",
+  //       });
+  //       return;
+  //     }
+  //     res.status(200).json({
+  //       success: true,
+  //       message: "index funds bought",
+  //       data: responce,
+  //     });
+  //     return;
+  //   } catch (error) {
+  //     console.log(error);
+  //     res.status(500).json({
+  //       success: false,
+  //       message: "Internal server error",
+  //     });
+  //   }
+  // };
+  // public sellIndexFunds = async (
+  //   req: Request,
+  //   res: Response,
+  // ): Promise<void> => {
+  //   try {
+  //     if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
+  //       res.status(404).json({
+  //         success: false,
+  //         message: "User not found",
+  //       });
+  //       return;
+  //     }
+  //     const body = req.body as buyOrSellIndexFunds;
+  //     if (invalidAmounts(body.indexFundAmount, body.usdcAmount) || !body.indexFundId) {
+  //       res.status(400).json({
+  //         success: false,
+  //         message:
+  //           "indexFundAmount, usdcAmount and indexFundAddress is required",
+  //       });
+  //       return;
+  //     }
+  //     const responce = await this.tradeService.sellIndexFunds(
+  //       body.indexFundId,
+  //       body.indexFundAmount,
+  //       body.usdcAmount,
+  //       req.user.solanaWalletId,
+  //       req.user.id,
+  //       req.user.solanaWalletAddress,
+  //     );
+  //     if (!responce) {
+  //       res.status(500).json({
+  //         success: false,
+  //         message: "request failed",
+  //       });
+  //       return;
+  //     }
+  //     res.status(200).json({
+  //       success: true,
+  //       message: "Index fund sold",
+  //       data: responce,
+  //     });
+  //     return;
+  //   } catch (error) {
+  //     console.log(error);
+  //     res.status(500).json({
+  //       success: false,
+  //       message: "Internal server error",
+  //     });
+  //   }
+  // };
 }
 
 function respondSwapFailure(res: Response, result: Extract<TradeSwapResult, { status: "failed" }>) {

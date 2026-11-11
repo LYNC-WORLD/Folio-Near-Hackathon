@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import { Prisma } from "../generated/client";
 
 const XSTOCKS_API = "https://api.xstocks.fi/api/v2";
+const JUPITER_API = "https://api.jup.ag/price/v3?ids=";
 const HYPERLIQUID_INFO_URL = "https://api.hyperliquid.xyz/info";
 
 export async function updateStockPrices(): Promise<void> {
@@ -9,6 +10,7 @@ export async function updateStockPrices(): Promise<void> {
     await Promise.all([
       updateUSStocksPrice(false),
       updatePreStocksPrice(false),
+      updateETFPrice(false),
       updatePerpStockPrice(),
     ]);
     console.log("Stock price update completed");
@@ -19,7 +21,11 @@ export async function updateStockPrices(): Promise<void> {
 
 export async function updateDailyOpenPrices(): Promise<void> {
   try {
-    await Promise.all([updateUSStocksPrice(true), updatePreStocksPrice(true)]);
+    await Promise.all([
+      updateUSStocksPrice(true),
+      updatePreStocksPrice(true),
+      updateETFPrice(true),
+    ]);
     console.log("[DailyOpenPrice] Update completed");
   } catch (error) {
     console.error("[DailyOpenPrice] Cron failed:", error);
@@ -121,105 +127,64 @@ async function updatePreStocksPrice(updateDailyPrice: boolean) {
   return;
 }
 
-// async function updatePerpStockPrice() {
-//   try {
-//     const response = await fetch(HYPERLIQUID_INFO_URL, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify({
-//         type: "metaAndAssetCtxs",
-//         dex: "xyz",
-//       }),
-//     });
-//     if (!response.ok) {
-//       throw new Error(
-//         `Hyperliquid API error: ${response.status} ${response.statusText}`,
-//       );
-//     }
-//     const data = (await response.json()) as HyperliquidResponse;
-//     const [meta, assetContexts] = data;
-//     const stocks = await prisma.perpStocks.findMany();
+async function updateETFPrice(updateDailyPrice: boolean) {
+  const requestCount = 40;
+  const ETFs = await prisma.stocks.findMany({
+    where: { stockType: "IndexFunds" },
+    select: {
+      tokenAddress: true,
+      symbol: true,
+      name: true,
+    },
+  });
+  console.log(`Updating ${ETFs.length} etf...`);
 
-//     if (stocks.length === 0) {
-//       console.log("No perp stocks found in database");
-//       return;
-//     }
+  while (ETFs.length != 0) {
+    let requestURL = JUPITER_API;
+    let numberOfStocks;
+    if (requestCount < ETFs.length) {
+      numberOfStocks = requestCount;
+    } else {
+      numberOfStocks = ETFs.length;
+    }
+    for (let index = 0; index < numberOfStocks; index++) {
+      requestURL += `${ETFs[ETFs.length - 1].tokenAddress},`;
+      ETFs.pop();
+    }
 
-//     const marketMap = new Map<
-//       string,
-//       {
-//         asset: HyperliquidAsset;
-//         context: AssetContext;
-//       }
-//     >();
-//     meta.universe.forEach((asset, index) => {
-//       const context = assetContexts[index];
+    const response = await fetch(requestURL);
 
-//       if (!context) {
-//         return;
-//       }
+    const data: Record<string, TokenPriceData> = await response.json();
 
-//       marketMap.set(asset.name, {
-//         asset,
-//         context,
-//       });
-//     });
-//     const updates = [];
-//     for (const stock of stocks) {
-//       const hyperliquidMarket = `xyz:${stock.marketSymbol}`;
+    const prices = Object.entries(data).map(([tokenAddress, tokenData]) => ({
+      tokenAddress,
+      price: tokenData.stockData.price,
+    }));
+    for (const priceData of prices) {
+      if (updateDailyPrice) {
+        await prisma.stocks.update({
+          where: {
+            tokenAddress: priceData.tokenAddress,
+          },
+          data: {
+            marketOpenPrice: priceData.price.toString(),
+          },
+        });
+      } else {
+        await prisma.stocks.update({
+          where: {
+            tokenAddress: priceData.tokenAddress,
+          },
+          data: {
+            price: priceData.price.toString(),
+          },
+        });
+      }
+    }
+  }
+  return;
+}
 
-//       const market = marketMap.get(hyperliquidMarket);
-
-//       if (!market) {
-//         console.warn(`Hyperliquid market not found: ${hyperliquidMarket}`);
-//         continue;
-//       }
-
-//       const { context } = market;
-
-//       const markPx = Number(context.markPx);
-//       const prevDayPx = Number(context.prevDayPx);
-
-//       if (
-//         !Number.isFinite(markPx) ||
-//         !Number.isFinite(prevDayPx) ||
-//         prevDayPx === 0
-//       ) {
-//         console.warn(`Invalid price data for ${stock.marketSymbol}`, {
-//           markPx: context.markPx,
-//           prevDayPx: context.prevDayPx,
-//         });
-
-//         continue;
-//       }
-//       const changeInPrice = ((markPx - prevDayPx) / prevDayPx) * 100;
-
-//       updates.push(
-//         prisma.perpStocks.update({
-//           where: {
-//             id: stock.id,
-//           },
-//           data: {
-//             price: markPx.toString(),
-//             changeInPrice: changeInPrice.toFixed(4),
-//           },
-//         }),
-//       );
-//     }
-//     if (updates.length === 0) {
-//       console.log("No stocks needed updating");
-//       return;
-//     }
-
-//     await prisma.$transaction(updates);
-
-//     console.log(`Successfully updated ${updates.length} perp stocks`);
-//   } catch (error) {
-//     console.log("error: ", error);
-//   }
-// }
 async function updatePerpStockPrice() {
   try {
     const response = await fetch(HYPERLIQUID_INFO_URL, {
@@ -361,6 +326,15 @@ interface HyperliquidAsset {
   maxLeverage: number;
 }
 
+interface TokenPriceData {
+  createdAt: string;
+  usdPrice: number;
+  blockId: number;
+  decimals: number;
+  priceChange24h?: number;
+  stockData: any;
+}
+
 type HyperliquidResponse = [
   {
     universe: HyperliquidAsset[];
@@ -369,3 +343,11 @@ type HyperliquidResponse = [
   },
   AssetContext[],
 ];
+
+(async () => {
+  try {
+    updateETFPrice(false);
+  } catch (error) {
+    console.error("Error executing async code:", error);
+  }
+})();

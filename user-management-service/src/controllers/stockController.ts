@@ -111,35 +111,6 @@ export class StockController {
     }
   };
 
-  public getLatestBuy = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { stockAddress } = req.query;
-
-      if (!stockAddress || typeof stockAddress !== "string") {
-        res.status(400).json({
-          success: false,
-          message: "stockAddress is required",
-        });
-        return;
-      }
-
-      const trades = await this.stockService.getLatestBuy(stockAddress);
-
-      res.status(200).json({
-        success: true,
-        message: "Latest 3 buys fetched successfully",
-        data: trades,
-      });
-    } catch (error) {
-      console.error("Get latest buys error:", error);
-
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  };
-
   public getIndexFunds = async (req: Request, res: Response): Promise<void> => {
     try {
       const indexFunds = await this.stockService.getIndexFunds();
@@ -204,6 +175,35 @@ export class StockController {
       });
     } catch (error) {
       console.error("can not fetch perp stocks:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
+
+  public getLatestBuy = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { stockAddress } = req.query;
+
+      if (!stockAddress || typeof stockAddress !== "string") {
+        res.status(400).json({
+          success: false,
+          message: "stockAddress is required",
+        });
+        return;
+      }
+
+      const trades = await this.stockService.getLatestBuy(stockAddress);
+
+      res.status(200).json({
+        success: true,
+        message: "Latest 3 buys fetched successfully",
+        data: trades,
+      });
+    } catch (error) {
+      console.error("Get latest buys error:", error);
+
       res.status(500).json({
         success: false,
         message: "Internal server error",

@@ -30,6 +30,7 @@
     "ethers": "^6.17.0",
     "express": "^5.2.1",
     "google-auth-library": "^11.1.0",
+    "jose": "^6.2.13",
     "node-cron": "^4.6.0",
     "pg": "^8.23.0",
     "viem": "^2.57.3"

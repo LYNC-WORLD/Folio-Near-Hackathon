@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma";
 import { verifyGoogleIdToken } from "../lib/google";
 import { Chain } from "../generated/enums";
+import { verifyAppleIdToken } from "../lib/apple";
 
 export async function authMiddleware(
   req: Request,
@@ -10,6 +11,7 @@ export async function authMiddleware(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
+    const accountType = req.headers.account_type ?? "google";
 
     if (!authHeader) {
       res.status(401).json({
@@ -18,7 +20,13 @@ export async function authMiddleware(
       });
       return;
     }
-
+    if (!accountType || !(accountType == "apple" || accountType == "google")) {
+      res.status(400).json({
+        success: false,
+        message: "accountType should be apple or google",
+      });
+      return;
+    }
     const [scheme, token] = authHeader.split(" ");
 
     if (scheme !== "Bearer" || !token) {
@@ -28,19 +36,32 @@ export async function authMiddleware(
       });
       return;
     }
+    let user;
+    if (accountType == "apple") {
+      const appleUser = await verifyAppleIdToken(token);
 
-    // 1. Verify Google ID token
-    const googleUser = await verifyGoogleIdToken(token);
+      user = await prisma.user.findUnique({
+        where: {
+          appleSubjectId: appleUser.subjectId,
+        },
+        include: {
+          wallets: true,
+        },
+      });
+    } else {
+      // 1. Verify Google ID token
+      const googleUser = await verifyGoogleIdToken(token);
 
-    // 2. Find your application user
-    const user = await prisma.user.findUnique({
-      where: {
-        googleSubjectId: googleUser.subjectId,
-      },
-      include: {
-        wallets: true,
-      }
-    });
+      // 2. Find your application user
+      user = await prisma.user.findUnique({
+        where: {
+          googleSubjectId: googleUser.subjectId,
+        },
+        include: {
+          wallets: true,
+        },
+      });
+    }
 
     if (!user) {
       res.status(401).json({
@@ -50,7 +71,9 @@ export async function authMiddleware(
       return;
     }
     const { wallets, ...userData } = user;
-    const solanaWallet = wallets.find((wallet) => wallet.chain === Chain.SOLANA);
+    const solanaWallet = wallets.find(
+      (wallet) => wallet.chain === Chain.SOLANA,
+    );
     const ethWallet = wallets.find((wallet) => wallet.chain === Chain.ETH);
 
     // 3. Attach database user to request

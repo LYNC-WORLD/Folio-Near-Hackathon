@@ -2,6 +2,7 @@ node_modules/
 generated/
 dist/
 hyperliquid-integration/
+importantScripts/
 .env
 *.log
 package-lock.json

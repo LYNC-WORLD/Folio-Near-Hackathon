@@ -9,6 +9,8 @@ export class AuthController {
   public createUser = async (req: Request, res: Response): Promise<void> => {
     try {
       const { idToken } = req.body;
+      const requestType = req.headers.account_type;
+      const username = req.body.username;
 
       if(!idToken) {
         res.status(400).json({
@@ -17,7 +19,14 @@ export class AuthController {
         });
         return;
       }
-      const user = await this.authService.getOrCreateUser(idToken);
+      if(!requestType || !(requestType == "apple" || requestType == "google")) {
+        res.status(400).json({
+          success: false,
+          message: "account_type should be apple or google"
+        });
+        return;
+      }
+      const user = await this.authService.getOrCreateUser(idToken, requestType, username);
       if(!user){
         res.status(401).json({
           success: false,

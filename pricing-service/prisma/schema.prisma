@@ -42,7 +42,8 @@ model User {
     userId                  String                   @unique
     email                   String                   @unique
     name                    String
-    googleSubjectId         String                   @unique
+    googleSubjectId         String?                  @unique
+    appleSubjectId          String?                  @unique
     createdAt               DateTime                 @default(now())
     updatedAt               DateTime                 @updatedAt
     wallets                 Wallet[]

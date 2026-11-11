@@ -8,29 +8,52 @@ import {
   deleteUser,
 } from "../lib/privy";
 import { prisma } from "../lib/prisma";
+import { verifyAppleIdToken } from "../lib/apple";
 
 export class AuthService {
-  public async getOrCreateUser(googleAccessToken: string) {
-    if (!googleAccessToken) {
+  public async getOrCreateUser(
+    accessToken: string,
+    accountType: "apple" | "google",
+    user_name: string,
+  ) {
+    if (!accessToken) {
       return;
     }
-    const { subjectId, username, email } =
-      await verifyGoogleIdToken(googleAccessToken);
-
-    const user = await prisma.user.findUnique({
-      where: {
-        email: email,
-      },
-      include: {
-        wallets: true,
-      },
-    });
+    let subjectId, username, email, user;
+    if (accountType == "apple") {
+      const result = await verifyAppleIdToken(accessToken);
+      subjectId = result.subjectId;
+      username = user_name ?? "user";
+      email = result.email;
+      user = await prisma.user.findUnique({
+        where: {
+          appleSubjectId: subjectId,
+        },
+        include: {
+          wallets: true,
+        },
+      });
+    } else {
+      const result = await verifyGoogleIdToken(accessToken);
+      subjectId = result.subjectId;
+      username = result.username;
+      email = result.email;
+      user = await prisma.user.findUnique({
+        where: {
+          googleSubjectId: subjectId,
+        },
+        include: {
+          wallets: true,
+        },
+      });
+    }
 
     if (!user) {
       const newUser = await this.createUserWithWallets(
         subjectId,
         email,
         username,
+        accountType,
       );
       return toLoginResponse(newUser, false);
     }
@@ -45,6 +68,7 @@ export class AuthService {
     subjectId: string,
     email: string,
     username: string,
+    accountType: "apple" | "google",
   ) {
     // Creating user
     const privyUser = await createUser(subjectId, email, username);
@@ -54,37 +78,64 @@ export class AuthService {
         createEVMWallet(walletIdempotencyKey(subjectId, Chain.ETH)),
       ]);
       // saving to db
-      return await prisma.user.create({
-        data: {
-          email: email,
-          userId: privyUser.userId,
-          name: username,
-          googleSubjectId: subjectId,
-          wallets: {
-            create: [
-              {
-                chain: Chain.SOLANA,
-                walletId: solanaWallet.walletId,
-                walletAddress: solanaWallet.address,
-              },
-              {
-                chain: Chain.ETH,
-                walletId: evmWallet.walletId,
-                walletAddress: evmWallet.address,
-              },
-            ],
+      if (accountType == "apple") {
+        return await prisma.user.create({
+          data: {
+            email: email,
+            userId: privyUser.userId,
+            name: username,
+            appleSubjectId: subjectId,
+            wallets: {
+              create: [
+                {
+                  chain: Chain.SOLANA,
+                  walletId: solanaWallet.walletId,
+                  walletAddress: solanaWallet.address,
+                },
+                {
+                  chain: Chain.ETH,
+                  walletId: evmWallet.walletId,
+                  walletAddress: evmWallet.address,
+                },
+              ],
+            },
           },
-        },
-        include: {
-          wallets: true,
-        },
-      });
+          include: {
+            wallets: true,
+          },
+        });
+      } else {
+        return await prisma.user.create({
+          data: {
+            email: email,
+            userId: privyUser.userId,
+            name: username,
+            googleSubjectId: subjectId,
+            wallets: {
+              create: [
+                {
+                  chain: Chain.SOLANA,
+                  walletId: solanaWallet.walletId,
+                  walletAddress: solanaWallet.address,
+                },
+                {
+                  chain: Chain.ETH,
+                  walletId: evmWallet.walletId,
+                  walletAddress: evmWallet.address,
+                },
+              ],
+            },
+          },
+          include: {
+            wallets: true,
+          },
+        });
+      }
     } catch (error) {
       await deleteUser(privyUser.userId).catch(() => {});
       throw error;
     }
   }
-
 }
 
 function walletIdempotencyKey(subjectId: string, chain: Chain) {

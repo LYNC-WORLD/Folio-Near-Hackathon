@@ -7,16 +7,17 @@ export const privy = new PrivyClient({
 });
 
 export async function createUser(
-  googleSubjectId: string,
+  subjectId: string,
   mail: string,
   name: string,
+  accountType: "google" | "apple"
 ) {
   try {
     const user = await privy.users().create({
       linked_accounts: [
         {
-          type: "google_oauth",
-          subject: googleSubjectId,
+          type: accountType == "apple" ? "apple_oauth" :"google_oauth",
+          subject: subjectId,
           email: mail,
           name: name,
         },

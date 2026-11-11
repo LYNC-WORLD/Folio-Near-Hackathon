@@ -37,7 +37,7 @@ export class AuthService {
       const result = await verifyGoogleIdToken(accessToken);
       subjectId = result.subjectId;
       username = result.username;
-      email = result.email;
+      email = result.email == "" ? result.subjectId + "@appleid.com" : result.email;
       user = await prisma.user.findUnique({
         where: {
           googleSubjectId: subjectId,
@@ -71,7 +71,7 @@ export class AuthService {
     accountType: "apple" | "google",
   ) {
     // Creating user
-    const privyUser = await createUser(subjectId, email, username);
+    const privyUser = await createUser(subjectId, email, username, accountType);
     try {
       const [solanaWallet, evmWallet] = await Promise.all([
         createSolanaWallet(walletIdempotencyKey(subjectId, Chain.SOLANA)),

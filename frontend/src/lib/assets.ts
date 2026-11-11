@@ -65,7 +65,7 @@ export function toAsset(s: Stock, category: StockCategory): Asset {
     price: Number(s.price),
     open: open && Number.isFinite(open) ? open : null,
     change: dayChange(s.price, s.marketOpenPrice),
-    imageUrl: s.imageUrl,
+    imageUrl: s.imageUrl??"",
     category,
     kind: category === "pre-ipo" ? "Pre-IPO" : "Stock",
     tags: [category === "pre-ipo" ? "pre-ipo preipo private" : "stock us", preIpo?.category ?? ""]

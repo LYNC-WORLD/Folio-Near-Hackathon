@@ -24,10 +24,9 @@ const TYPE_PARAM: Record<StockCategory, StockType> = {
   "index-fund": "IndexFunds",
 };
 
-export const getStocks = (
-  category: Exclude<StockCategory, "index-fund">,
-  idToken: string,
-) =>
+export type ListCategory = Exclude<StockCategory, "index-fund">;
+
+export const getStocks = (category: ListCategory, idToken: string) =>
   request<StocksResponse>(`/api/stocks/${CATEGORY_PATH[category]}`, {
     token: idToken,
   });

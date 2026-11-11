@@ -17,7 +17,7 @@
 //
 // Answers come from lib/analyst.ts, worked out from your real data.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ComponentRef, useEffect, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Keyboard,
@@ -124,7 +124,7 @@ export function SignalsScreen() {
   const insets = useSafeAreaInsets();
   const splashDone = useSplashDone();
   const reduced = useReducedMotion();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
   const kbOpen = useKeyboardOpen();
   const marketOpen = useUsMarketOpen();

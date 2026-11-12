@@ -17,6 +17,11 @@ export type HomeStackParamList = AssetStackParamList & {
   PerpMarkets: undefined;
   PreIPO: undefined;
   IndexFunds: undefined;
+  IndexFundDetail: { id: string };
+  StockDetail: {
+    symbol: string;
+    category: "us-stock" | "pre-ipo" | "index-fund";
+  };
 };
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 

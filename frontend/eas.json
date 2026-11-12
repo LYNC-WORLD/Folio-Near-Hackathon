@@ -9,8 +9,21 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
-    },
+  "node": "20.18.0",
+  "distribution": "internal",
+  "android": { "buildType": "apk" },
+  "env": { 
+    "EXPO_PUBLIC_API_URL":"https://server-staging.tryfolio.money",
+    "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID":"1037438594396-f69c40aorv78hf8j2c927sjc6j6n609g.apps.googleusercontent.com",
+    "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID":"1037438594396-a10qm1r0p4evjdnptubbj6kk7rbumpta.apps.googleusercontent.com",
+    "EXPO_PUBLIC_CROSSMINT_CLIENT_SIDE_API_KEY":"ck_staging_5TGyrNrN926rhmTW8trzBgnP3gbcYYAZpK2eEfw6hKAFAibyiLNrjVkNGPgA4czz6C6LaQmLCtUGz1LPR49McHjvBoot8cDsUpYDZ3Wm5r76X92zZaoCoK4s5WE8e7geihdtSgWCcjEwCkeXCFMkRFxj5ouZwkNS76r7Shdj4jmHyWHcjqERUg6eY4Q5d6a3EFjJpzsxAvYX5RLTsYMZYf4R",
+    "EXPO_PUBLIC_CROSSMINT_STAGING_SERVER_KEY":"sk_staging_5TGyrNrN926rhmTW8trzBgnP3gbcYYAZpK2eEfw6hKAFAibyiLNsKsWNY6bjTnCp6DZZHjbMTCRcpthv1MgH8tLwTkrz5sznNhULwsf5v2nvkmdfGVN1jnZxBmfzDYAobJTjF6jw4562HLropPmk5KsvAtNun22HBpz6ePccpL8ptKEWkrFTNrGyYgpeiWMPF66v4pPBvgZfSJSKXxcANYLJ",
+    "EXPO_PUBLIC_CROSSMINT_ENV":"staging",
+    "EXPO_PUBLIC_MOONPAY_PK":"pk_test_vq5REesdKu72BEIyWfWcJ3kXUFw9vNG",
+    "EXPO_PUBLIC_MOONPAY_SK":"sk_test_pknn4SD2E8kAsYu092R6Z3gKtn6sp9t",
+    "EXPO_PUBLIC_MOONPAY_ENV":"sandbox"
+  }
+},
     "production": {
       "autoIncrement": true
     }

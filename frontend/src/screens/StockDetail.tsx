@@ -15,7 +15,7 @@
 //   ─────────────── dock ───────────────
 //   [ Sell ][      Buy NVDA      ]     Sell slides in only when you hold some
 
-import { useEffect, useRef, useState } from "react";
+import { ComponentRef, useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -125,8 +125,8 @@ export function StockDetail() {
   const sheet = useSheet();
   const toast = useToast();
 
-  const scrollRef = useRef<ScrollView>(null);
-  const amountRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const amountRef = useRef<ComponentRef<typeof TextInput>>(null);
   const segY = useRef(0);
   const amountY = useRef(0);
 
@@ -171,7 +171,11 @@ export function StockDetail() {
 
   const price = Number(stock.price);
   const isPre = params.category === "pre-ipo";
-  const kind = isPre ? "Pre-IPO" : "Stock";
+  const kind = isPre
+    ? "Pre-IPO"
+    : params.category === "index-fund"
+      ? "ETF"
+      : "Stock";
 
   // position
   const token = tokens?.find(

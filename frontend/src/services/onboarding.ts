@@ -2,7 +2,7 @@ import { request } from "./api/client";
 
 export interface LoginForm {
   interestedStocks: string[];
-  amountToPutIn: number;
+  amountToPutIn: string;
   question1: string;
   question2: string;
 }

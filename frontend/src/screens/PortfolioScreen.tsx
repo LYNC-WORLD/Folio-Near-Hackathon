@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ComponentRef, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -60,7 +60,7 @@ export function PortfolioScreen() {
   const [xfer, setXfer] = useState(false);
   const [xferDir, setXferDir] = useState<"in" | "out">("in");
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
 
   const { user, idToken } = useAuth();
@@ -128,9 +128,13 @@ export function PortfolioScreen() {
     () => fundPositions(fundLots, walletAddress, tokens),
     [fundLots, walletAddress, tokens],
   );
+
   const fundMoves = useMemo(() => {
     const m = new Map<string, number | null>();
-    for (const f of idx.funds) m.set(f.id, toFund(f).change);
+    for (const f of idx.funds) {
+      const fund = toFund(f);
+      m.set(fund.id, fund.change);
+    }
     return m;
   }, [idx.funds]);
 
@@ -149,7 +153,12 @@ export function PortfolioScreen() {
       screen: "StockDetail",
       params: {
         symbol,
-        category: stockType === "PreIPO" ? "pre-ipo" : "us-stock",
+        category:
+          stockType === "PreIPO"
+            ? "pre-ipo"
+            : stockType === "IndexFunds"
+              ? "index-fund"
+              : "us-stock",
       },
       initial: false,
     });
@@ -206,6 +215,8 @@ export function PortfolioScreen() {
       <WithdrawFlow
         spot={bal.spot}
         perp={bal.perp}
+        address={walletAddress ?? undefined}
+        email={user?.email}
         onMoveToSpot={openTransferOut}
         onDone={() => {
           sheet.close();

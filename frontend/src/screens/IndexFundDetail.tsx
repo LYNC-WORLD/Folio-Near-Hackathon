@@ -14,7 +14,7 @@
 //   ─────────────── dock ───────────────
 //   [            Buy GPU Infra            ]
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ComponentRef, useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -51,7 +51,7 @@ import { useToast } from "@/components/Toast";
 import { IndexBuyFlow } from "@/components/trade/IndexBuyFlow";
 import { money, pct } from "@/lib/format";
 import { fundPositions, useFundLots } from "@/lib/fundHoldings";
-import { toFund, type FundHolding } from "@/lib/indexFunds";
+import { isBasket, toFund, type FundHolding } from "@/lib/indexFunds";
 import { cleanAmt, fmtIn } from "@/lib/trade";
 import { hTap } from "@/lib/haptics";
 import { tracks } from "./IndexFundsScreen";
@@ -61,27 +61,37 @@ import type { TabParamList } from "@/navigation/RootTabs";
 type Nav = NativeStackNavigationProp<AssetStackParamList, "IndexFundDetail">;
 
 // allocation bar segments, heaviest first
-const SEG_COLORS = [C.mint, "#2BB27A", "#20855C", "#1A6247", "#164835", "#123527"];
+const SEG_COLORS = [
+  C.mint,
+  "#2BB27A",
+  "#20855C",
+  "#1A6247",
+  "#164835",
+  "#123527",
+];
 
 export function IndexFundDetail() {
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { params } = useRoute<RouteProp<AssetStackParamList, "IndexFundDetail">>();
+  const { params } =
+    useRoute<RouteProp<HomeStackParamList, "IndexFundDetail">>();
   const { funds, loading, error, reload } = useIndexFunds();
-  const raw = funds.find((f) => f.id === params.id);
+  const raw = funds.find((f) => isBasket(f) && f.id === params.id);
   const fund = useMemo(() => (raw ? toFund(raw) : null), [raw]);
-
   const { usdc, tokens, walletAddress, loading: walletLoading } = useWallet();
   const lots = useFundLots();
   const position = useMemo(
-    () => fundPositions(lots, walletAddress, tokens).find((p) => p.fundId === params.id),
+    () =>
+      fundPositions(lots, walletAddress, tokens).find(
+        (p) => p.fundId === params.id,
+      ),
     [lots, walletAddress, tokens, params.id],
   );
   const sheet = useSheet();
   const toast = useToast();
 
-  const scrollRef = useRef<ScrollView>(null);
-  const amountRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const amountRef = useRef<ComponentRef<typeof TextInput>>(null);
   const amountY = useRef(0);
 
   const [input, setInput] = useState("");
@@ -140,9 +150,7 @@ export function IndexFundDetail() {
   }));
 
   const rows = allOpen ? fund.holdings : fund.holdings.slice(0, 5);
-  const topShown = fund.holdings
-    .slice(0, 5)
-    .reduce((t, h) => t + h.weight, 0);
+  const topShown = fund.holdings.slice(0, 5).reduce((t, h) => t + h.weight, 0);
 
   const openBuy = () => {
     amountRef.current?.blur();
@@ -152,9 +160,14 @@ export function IndexFundDetail() {
         amount={amt}
         onFinish={(o, sum) => {
           sheet.close();
-          toast(`${fund.name} is in your Folio`, `${money(sum.spent)} · SETTLED`);
+          toast(
+            `${fund.name} is in your Folio`,
+            `${money(sum.spent)} · SETTLED`,
+          );
           if (o === "folio") {
-            nav.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate("Portfolio");
+            nav
+              .getParent<BottomTabNavigationProp<TabParamList>>()
+              ?.navigate("Portfolio");
             setTimeout(() => nav.popToTop(), 350);
           }
         }}
@@ -225,7 +238,8 @@ export function IndexFundDetail() {
                   key={h.stock.tokenAddress}
                   style={{
                     flex: h.weight,
-                    backgroundColor: SEG_COLORS[Math.min(i, SEG_COLORS.length - 1)],
+                    backgroundColor:
+                      SEG_COLORS[Math.min(i, SEG_COLORS.length - 1)],
                   }}
                 />
               ))}
@@ -236,7 +250,10 @@ export function IndexFundDetail() {
                   <View
                     style={[
                       s.legendDot,
-                      { backgroundColor: SEG_COLORS[Math.min(i, SEG_COLORS.length - 1)] },
+                      {
+                        backgroundColor:
+                          SEG_COLORS[Math.min(i, SEG_COLORS.length - 1)],
+                      },
                     ]}
                   />
                   <Text style={s.legendText}>
@@ -263,7 +280,10 @@ export function IndexFundDetail() {
                 {position.ret != null ? (
                   <View style={{ alignItems: "flex-end", gap: 5 }}>
                     <Text
-                      style={[s.fig, { color: position.ret >= 0 ? C.mint : C.loss }]}
+                      style={[
+                        s.fig,
+                        { color: position.ret >= 0 ? C.mint : C.loss },
+                      ]}
                     >
                       {pct(position.ret)}
                     </Text>
@@ -415,7 +435,10 @@ function InsideRow({
         <Text style={[s.fig, { color: C.ink1 }]}>{h.weight.toFixed(1)}%</Text>
         {h.change != null ? (
           <Text
-            style={[s.fig, { fontSize: 11, color: h.change >= 0 ? C.mint : C.loss }]}
+            style={[
+              s.fig,
+              { fontSize: 11, color: h.change >= 0 ? C.mint : C.loss },
+            ]}
           >
             {pct(h.change)}
           </Text>

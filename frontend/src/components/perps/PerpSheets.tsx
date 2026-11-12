@@ -30,6 +30,8 @@ import {
 import { searchPerps, useTradablePerps } from "@/hooks/useTradablePerps";
 import { HOLD_FROM_LEV, MAX_LEV, usMarketOpen } from "@/lib/perps";
 import { money, sPct } from "@/lib/format";
+import { usePerpSearch } from "@/hooks/usePerpSearch";
+import { Skeleton } from "../ui";
 
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
@@ -315,6 +317,10 @@ export function UnlockSheet({
 }
 
 // =============================================================== market picker
+// =============================================================== market picker
+// Browsing uses useTradablePerps (offset pages). Typing switches to
+// /api/perp-trade/search (page + limit) through usePerpSearch, so a match on any
+// page shows up without pulling every page first.
 export function MarketPickerSheet({
   current,
   onPick,
@@ -325,7 +331,9 @@ export function MarketPickerSheet({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const { height: screenH } = useWindowDimensions();
+  const browse = useTradablePerps();
+  const search = usePerpSearch(q);
+  const searching = search.searching;
   const {
     markets,
     total,
@@ -336,15 +344,13 @@ export function MarketPickerSheet({
     loadingMore,
     loadMoreError,
     loadMore,
-  } = useTradablePerps();
+  } = searching ? search : browse;
 
-  const list = useMemo(() => searchPerps(markets, q), [markets, q]);
-  const searching = q.trim().length > 0;
-
-  // while searching, keep pulling pages so a match on a later page still shows up
-  useEffect(() => {
-    if (searching && hasMore && !loadingMore && !loadMoreError) loadMore();
-  }, [searching, hasMore, loadingMore, loadMoreError, loadMore]);
+  const title = searching
+    ? loading
+      ? "Searching…"
+      : `${total} ${total === 1 ? "match" : "matches"}`
+    : `Long or short any of ${total || markets.length}`;
 
   // infinite scroll: fetch the next page when the user nears the bottom
   const onEndReached = useCallback(() => {
@@ -438,7 +444,7 @@ export function MarketPickerSheet({
     <Sheet onClose={onClose}>
       <View style={{ gap: 6 }}>
         <Lbl>PERP MARKETS</Lbl>
-        <H2>Long or short any of {total || markets.length}</H2>
+        <H2>{title}</H2>
       </View>
 
       <View style={s.search}>
@@ -466,19 +472,113 @@ export function MarketPickerSheet({
         />
       </View>
 
-      <FlatList
-        // fixed height so the list scrolls itself and onEndReached works
-        style={{ height: Math.round(screenH * 0.5), marginTop: -6 }}
-        data={loading || error ? [] : list}
-        keyExtractor={(m) => m.symbol}
-        renderItem={renderItem}
-        ListEmptyComponent={empty}
-        ListFooterComponent={footer}
-        onEndReached={onEndReached}
-        onEndReachedThreshold={0.5}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={{ marginTop: -6 }}>
+        {searching && loading ? (
+          // skeleton rows while a search loads, instead of the old results
+          <View style={{ gap: 8, paddingVertical: 6 }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} height={54} radius={12} />
+            ))}
+          </View>
+        ) : loading ? (
+          <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+        ) : error ? (
+          <Pressable onPress={() => refetch()}>
+            <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+              {searching
+                ? "Couldn't search markets. Tap to retry."
+                : "Couldn't load markets. Tap to retry."}
+            </Text>
+          </Pressable>
+        ) : markets.length ? (
+          <>
+            {markets.map((m, i) => (
+              <Pressable
+                key={m.symbol}
+                onPress={() => {
+                  hTap();
+                  onPick(m.symbol);
+                }}
+                style={[
+                  s.mRow,
+                  i < markets.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: C.hair,
+                  },
+                ]}
+              >
+                <Logo sym={m.symbol} imageUrl={m.imageUrl} size={38} />
+                <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
+                  <View style={[s.rowC, { gap: 7 }]}>
+                    <Text
+                      style={{
+                        fontFamily: FONT.sans800,
+                        fontSize: 15,
+                        color: C.ink1,
+                      }}
+                    >
+                      {m.symbol}
+                    </Text>
+                    {m.symbol === current ? <Tag label="VIEWING" /> : null}
+                  </View>
+                  <Text style={s.sub} numberOfLines={1}>
+                    {/* search results don't include leverage */}
+                    {m.maxLev ? `${m.name} · up to ${m.maxLev}x` : m.name}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end", gap: 3 }}>
+                  <Text
+                    style={{
+                      fontFamily: FONT.mono400,
+                      fontSize: 13,
+                      color: C.ink1,
+                    }}
+                  >
+                    {money(m.mark)}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT.mono400,
+                      fontSize: 11.5,
+                      color: tone(m.change),
+                    }}
+                  >
+                    {sPct(m.change)}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+
+            {loadingMore ? (
+              <ActivityIndicator
+                color={C.mint}
+                style={{ paddingVertical: 14 }}
+              />
+            ) : loadMoreError ? (
+              <Pressable onPress={() => loadMore()}>
+                <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+                  Couldn't load more. Tap to retry.
+                </Text>
+              </Pressable>
+            ) : hasMore ? (
+              <Pressable
+                onPress={() => {
+                  hTap();
+                  loadMore();
+                }}
+              >
+                <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+                  Load more
+                </Text>
+              </Pressable>
+            ) : null}
+          </>
+        ) : (
+          <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+            {searching ? `No match for “${q.trim()}”` : "No markets available."}
+          </Text>
+        )}
+      </View>
     </Sheet>
   );
 }

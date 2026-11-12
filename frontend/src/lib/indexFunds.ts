@@ -1,7 +1,9 @@
-// Index fund maths. The API prices a fund as the average of its stocks, so a
-// unit holds 1/N of each one — a stock's weight is its price over the sum of
-// prices, and a buy splits the USDC by those weights.
-import type { IndexFund, Stock } from "@/types";
+// Index fund maths. A fund is either:
+//  - a basket: the API prices it as the average of its stocks, so a unit holds
+//    1/N of each one — a stock's weight is its price over the sum of prices,
+//    and a buy splits the USDC by those weights; or
+//  - a single tokenized ETF (SPY, QQQ, GLD …): one holding at 100%.
+import type { IndexFund, IndexFundItem, Stock } from "@/types";
 import type { StockCategory } from "@/services";
 import { dayChange } from "./format";
 
@@ -15,6 +17,7 @@ export type FundHolding = {
 };
 
 export type Fund = {
+  /** basket id, or the token address for a single ETF */
   id: string;
   name: string;
   price: number;
@@ -22,39 +25,76 @@ export type Fund = {
   /** heaviest first */
   holdings: FundHolding[];
   hasPreIpo: boolean;
+  kind: "basket" | "etf";
+  /** ETF only */
+  symbol?: string;
+  /** ETF only */
+  imageUrl?: string;
 };
 
 export const stockCategory = (s: Stock): StockCategory =>
-  s.stockType === "PreIPO" ? "pre-ipo" : "us-stock";
+  s.stockType === "PreIPO"
+    ? "pre-ipo"
+    : s.stockType === "IndexFunds"
+      ? "index-fund"
+      : "us-stock";
 
-export function toFund(f: IndexFund): Fund {
-  const prices = f.stocks.map((s) => Number(s.price) || 0);
+export const isBasket = (f: IndexFundItem): f is IndexFund =>
+  Array.isArray((f as IndexFund).stocks);
+
+function basketToFund(f: IndexFund): Fund {
+  const stocks = f.stocks ?? [];
+  const prices = stocks.map((s) => Number(s.price) || 0);
   const sum = prices.reduce((t, p) => t + p, 0);
-  const holdings = f.stocks
+  const holdings = stocks
     .map((s, i) => ({
       stock: s,
       category: stockCategory(s),
       price: prices[i],
       change: dayChange(s.price, s.marketOpenPrice),
-      weight: sum > 0 ? (prices[i] / sum) * 100 : 100 / f.stocks.length,
+      weight: sum > 0 ? (prices[i] / sum) * 100 : 100 / (stocks.length || 1),
     }))
     .sort((a, b) => b.weight - a.weight);
 
   // fund's move today = move of its average price since the open
-  const opens = f.stocks.map((s) => Number(s.marketOpenPrice));
-  const openSum = opens.every((o) => Number.isFinite(o) && o > 0)
-    ? opens.reduce((t, o) => t + o, 0)
-    : 0;
+  const opens = stocks.map((s) => Number(s.marketOpenPrice));
+  const openSum =
+    opens.length > 0 && opens.every((o) => Number.isFinite(o) && o > 0)
+      ? opens.reduce((t, o) => t + o, 0)
+      : 0;
   const change = openSum > 0 ? ((sum - openSum) / openSum) * 100 : null;
 
   return {
     id: f.id,
     name: f.name,
-    price: Number(f.price) || (f.stocks.length ? sum / f.stocks.length : 0),
+    price: Number(f.price) || (stocks.length ? sum / stocks.length : 0),
     change,
     holdings,
     hasPreIpo: holdings.some((h) => h.category === "pre-ipo"),
+    kind: "basket",
   };
+}
+
+function etfToFund(s: Stock): Fund {
+  const price = Number(s.price) || 0;
+  const change = dayChange(s.price, s.marketOpenPrice);
+  return {
+    id: s.tokenAddress,
+    name: s.name,
+    price,
+    change,
+    holdings: [
+      { stock: s, category: stockCategory(s), price, change, weight: 100 },
+    ],
+    hasPreIpo: false,
+    kind: "etf",
+    symbol: s.symbol,
+    imageUrl: s.imageUrl,
+  };
+}
+
+export function toFund(item: IndexFundItem): Fund {
+  return isBasket(item) ? basketToFund(item) : etfToFund(item);
 }
 
 /** "GPU Infra" → "GPU", "AI prestock" → "AIP" */
@@ -86,7 +126,8 @@ export function splitBuy(fund: Fund, amount: number): Leg[] {
 export function searchFunds(funds: Fund[], raw: string): Fund[] {
   const v = raw.trim().toLowerCase();
   if (!v) return [];
-  if ("index funds".startsWith(v) || v === "index fund" || v === "fund") return funds;
+  if ("index funds".startsWith(v) || v === "index fund" || v === "fund" || v === "etf")
+    return funds;
   return funds.filter(
     (f) =>
       f.name.toLowerCase().includes(v) ||

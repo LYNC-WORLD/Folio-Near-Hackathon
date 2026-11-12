@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { getStocks, type StockCategory } from "@/services";
+import { getStocks, ListCategory } from "@/services";
 import { useAuth } from "@/context";
 
-export function useStocks(category: StockCategory) {
+export function useStocks(category: ListCategory) {
   const { idToken } = useAuth();
 
   const query = useQuery({

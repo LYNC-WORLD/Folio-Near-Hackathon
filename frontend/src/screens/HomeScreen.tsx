@@ -2,16 +2,18 @@
 //
 //   [mark] Folio                          (S)
 //   [ search ……………………… ]  Cancel          ← sticks to the top while scrolling
-//   ● AVAILABLE ANYWHERE   USDC $440        ← balance counts up
+//   USDC WALLET $440                        ← balance counts up
 //   POPULAR NOW     three cards
+//   PERPS           long or short
 //   COLLECTIONS     US stocks / Pre-IPOs / Index funds
 //   TRENDING        top movers today
 //
 // Tapping search swaps the page for RECENT + BROWSE BY THEME, then live
 // results grouped by collection as you type.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import {
+  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -25,27 +27,22 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Path } from "react-native-svg";
 import {
-  CompositeNavigationProp,
   useNavigation,
   useScrollToTop,
+  type CompositeNavigationProp,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
 import { useIndexFunds, useStocks } from "@/hooks";
 import { useWallet } from "@/context/WalletContext";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useAuth } from "@/context";
-import type { HomeStackParamList } from "@/navigation/HomeStack"; // use the file where TabParamList actually lives
+import type { HomeStackParamList } from "@/navigation/HomeStack";
+import type { TabParamList } from "@/navigation/RootTabs";
 import { useTabBarSpace } from "@/navigation/TabBar";
 import { C, FONT, TYPE, em } from "@/theme";
-import {
-  Badge,
-  Chip,
-  Mark,
-  PressScale,
-  Rise,
-  Skeleton,
-} from "@/components/ui";
+import { Badge, Chip, Mark, PressScale, Rise, Skeleton } from "@/components/ui";
 import { AssetRow } from "@/components/AssetRow";
 import { SearchBar } from "@/components/SearchBar";
 import { useSplashDone } from "@/components/SplashIntro";
@@ -60,11 +57,8 @@ import { searchFunds, toFund, type Fund } from "@/lib/indexFunds";
 import { loadRecents, saveRecents, withRecent } from "@/lib/recentSearches";
 import { money, pct } from "@/lib/format";
 import { hTap } from "@/lib/haptics";
-import { Dimensions } from "react-native";
 import type { TradablePerp } from "@/hooks/useTradablePerps";
 import { PerpStrip } from "@/components/perps/PerpStrip";
-import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import type { TabParamList } from "@/navigation/RootTabs";
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<HomeStackParamList>,
@@ -83,25 +77,19 @@ export function HomeScreen() {
   const splashDone = useSplashDone();
   const bottom = useTabBarSpace();
 
-
   const openPerp = (m: TradablePerp) => {
     nav.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate("Trade", {
       symbol: m.symbol,
     });
   };
 
-
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
 
   const us = useStocks("us-stock");
   const pre = useStocks("pre-ipo");
   const idx = useIndexFunds();
-  const {
-    wallet,
-    loading: walletLoading,
-    error: walletError,
-  } = useWallet();
+  const { wallet, loading: walletLoading, error: walletError } = useWallet();
   const usdc = wallet ? wallet.usdc.balance * Number(wallet.usdc.price) : 0;
   const shownUsdc = useCountUp(usdc);
 
@@ -117,12 +105,16 @@ export function HomeScreen() {
   const funds = useMemo(() => idx.funds.map(toFund), [idx.funds]);
 
   // ---------- search ----------
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
   useEffect(() => {
     loadRecents().then(setRecents);
+    return () => {
+      if (exitTimer.current) clearTimeout(exitTimer.current);
+    };
   }, []);
 
   const hits = useMemo(() => searchAssets(all, query), [all, query]);
@@ -149,12 +141,20 @@ export function HomeScreen() {
     if (query.trim()) remember(query);
     nav.navigate("StockDetail", { symbol: a.symbol, category: a.category });
     // prototype resets search when you come back to Home; do it once the push has covered it
-    if (searching) setTimeout(exitSearch, 450);
+    if (searching) exitTimer.current = setTimeout(exitSearch, 450);
   };
   const openFund = (f: Fund) => {
     if (query.trim()) remember(query);
-    nav.navigate("IndexFundDetail", { id: f.id });
-    if (searching) setTimeout(exitSearch, 450);
+    if (f.kind === "etf" && f.symbol) {
+      nav.navigate("StockDetail", { symbol: f.symbol, category: "index-fund" });
+    } else {
+      nav.navigate("IndexFundDetail", { id: f.id });
+    }
+    if (searching) exitTimer.current = setTimeout(exitSearch, 450);
+  };
+  const submitSearch = () => {
+    if (hits[0]) openAsset(hits[0]);
+    else if (fundHits[0]) openFund(fundHits[0]);
   };
 
   // ---------- home content ----------
@@ -213,7 +213,7 @@ export function HomeScreen() {
 
         <View style={s.sticky}>
           <SearchBar
-            ref={inputRef}
+            ref={inputRef as any}
             value={query}
             onChangeText={setQuery}
             active={searching}
@@ -223,11 +223,7 @@ export function HomeScreen() {
               setQuery("");
               inputRef.current?.focus();
             }}
-            onSubmit={() =>
-              hits[0]
-                ? openAsset(hits[0])
-                : fundHits[0] && openFund(fundHits[0])
-            }
+            onSubmit={submitSearch}
           />
           <LinearGradient
             pointerEvents="none"
@@ -325,7 +321,7 @@ export function HomeScreen() {
 
               <Rise
                 when={splashDone}
-                delay={110}
+                delay={140}
                 duration={460}
                 style={s.section}
               >
@@ -425,7 +421,7 @@ export function HomeScreen() {
               query={query}
               hits={hits}
               fundHits={fundHits}
-              loading={loading}
+              loading={loading || idx.loading}
               onOpen={openAsset}
               onOpenFund={openFund}
               onFill={fill}
@@ -436,9 +432,6 @@ export function HomeScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-function truncateName(name: string) {
-  return name.length > 10 ? `${name.slice(0, 10)}...` : name;
 }
 
 // ---------- pieces ----------
@@ -682,7 +675,7 @@ function Results({
                 symbol={f.name}
                 name={f.name}
                 price={f.price}
-                imageUrl=""
+                imageUrl={f.holdings[0]?.stock.imageUrl ?? ""}
                 change={f.change}
                 kind={`Index fund · ${f.holdings.length} stocks`}
                 last={j === fundHits.length - 1}
@@ -726,28 +719,6 @@ function ClockIcon() {
 }
 
 const s = StyleSheet.create({
-  balChip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: C.surface,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  balText: {
-    fontFamily: FONT.mono400,
-    fontSize: 12,
-    fontWeight: 700,
-    letterSpacing: em(10, 0.1),
-    color: C.ink2,
-  },
-  balAmt: {
-    fontFamily: FONT.mono400,
-    fontSize: 12,
-    letterSpacing: 0,
-    color: C.ink1,
-    fontVariant: ["tabular-nums"],
-  },
   safe: { flex: 1, backgroundColor: C.ground },
   page: { paddingTop: 18 },
 
@@ -789,24 +760,31 @@ const s = StyleSheet.create({
   section: { gap: 12 },
 
   chips: { flexDirection: "row", gap: 8, alignItems: "center" },
-  // balChip: {
-  //   height: 34,
-  //   paddingHorizontal: 14,
-  //   borderRadius: 999,
-  //   backgroundColor: C.surface,
-  //   justifyContent: "center",
-  // },
-  // balText: {
-  //   fontFamily: FONT.mono400,
-  //   fontSize: 10,
-  //   letterSpacing: em(10, 0.1),
-  //   color: C.ink2,
-  //   fontVariant: ["tabular-nums"],
-  // },
+  balChip: {
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: C.surface,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  balText: {
+    fontFamily: FONT.mono400,
+    fontSize: 12,
+    letterSpacing: em(12, 0.1),
+    color: C.ink2,
+  },
+  balAmt: {
+    fontFamily: FONT.mono400,
+    fontSize: 12,
+    letterSpacing: 0,
+    color: C.ink1,
+    fontVariant: ["tabular-nums"],
+  },
 
   popGrid: {
     flexDirection: "row",
-    gap: 10,
+    gap: GRID_GAP,
   },
   popCell: {
     width: CARD_WIDTH, // fixed, not flex — guarantees equal + no wrap

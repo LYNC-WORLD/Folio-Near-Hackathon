@@ -120,7 +120,7 @@ export function RecurringBuysScreen() {
         refreshControl={
           <RefreshControl
             refreshing={false}
-            onRefresh={() => reload()}
+            onRefresh={() => void reload()}
             tintColor={C.mint}
             colors={[C.mint]}
             progressBackgroundColor={C.raised}

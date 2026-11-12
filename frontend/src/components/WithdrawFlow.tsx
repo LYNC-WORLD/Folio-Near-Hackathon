@@ -1,13 +1,14 @@
 // src/components/folio/WithdrawFlow.tsx — Withdraw (prototype openWithdraw → wdAmount → wdReview → wdSend)
 //
-//   pick    -> "To a crypto wallet" | "To your bank (coming soon)"   + SPOT / PERP strip
+//   pick    -> "To a crypto wallet" | "To your bank (MoonPay)"   + SPOT / PERP strip
+//   bank    -> BankWithdraw (MoonPay sell widget, then send USDC to MoonPay)
 //   amount  -> % chips, amount, destination address, network rows
 //   review  -> "Check and send" card + irreversible warning
 //   busy    -> "Signing in your wallet"
 //   done    -> check + "$X is on its way"
 //
 // onSend is where the real transfer goes. Return false (or throw) to fail.
-// Until it is wired, a 1.5s mock runs so the whole flow can be tried.
+// Until it is wired, the crypto flow runs a 1.5s mock; the bank flow refuses to send.
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,17 +19,18 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Svg, { Circle, Path, Rect } from "react-native-svg";
-import { hSelect, hTap } from "@/lib/haptics";
+import Svg, { Path, Rect } from "react-native-svg";
+import { hTap } from "@/lib/haptics";
 import { money } from "@/lib/format";
 import { C, em, FONT } from "@/theme";
 import { Body, Btn, CARD, Check, H2, Kv, KvCard, Lbl } from "./perps/PerpUi";
+import { BankWithdraw } from "./BankWithdraw";
 
 // TODO: set these once the chain / fee are final (prototype shows [CHAIN AT LAUNCH])
 const NETWORK = "USDC network";
 const NET_FEE = "Network fee only";
 
-type Step = "pick" | "amount" | "review" | "busy" | "done";
+type Step = "pick" | "amount" | "review" | "busy" | "done" | "bank";
 
 const clean = (t: string) => {
   const x = t.replace(/[^0-9.]/g, "");
@@ -45,12 +47,16 @@ const shortTo = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 export function WithdrawFlow({
   spot,
   perp,
+  address,
+  email,
   onSend,
   onMoveToSpot,
   onDone,
 }: {
   spot: number;
   perp: number;
+  address?: string; // the user's own wallet (MoonPay refund address)
+  email?: string;
   onSend?: (
     amount: number,
     to: string,
@@ -63,7 +69,6 @@ export function WithdrawFlow({
   const [txt, setTxt] = useState(String(Math.min(100, Math.floor(spot)) || ""));
   const [to, setTo] = useState("");
   const [err, setErr] = useState("");
-  const [bankMsg, setBankMsg] = useState(false);
   const alive = useRef(true);
   useEffect(
     () => () => {
@@ -76,6 +81,7 @@ export function WithdrawFlow({
   const addr = to.trim();
   const good = okAddr(addr);
   const bad = amt <= 0 || over || !good;
+  const bankOk = !!address;
 
   const setAmount = (n: number) => {
     setAmt(n);
@@ -102,6 +108,14 @@ export function WithdrawFlow({
     }
   };
 
+  // Used by the bank flow: sends USDC to MoonPay's deposit address.
+  // No mock here, because a fake success would start MoonPay's 48h clock for nothing.
+  const sendToMoonPay = async (toAddr: string, amount: number) => {
+    if (!onSend) throw new Error("Sending is not connected yet.");
+    const res = await Promise.resolve(onSend(amount, toAddr));
+    if (res === false) throw new Error("The transfer didn't go through.");
+  };
+
   const Strip = (
     <View style={s.strip}>
       <Text style={s.stripTxt}>
@@ -112,6 +126,19 @@ export function WithdrawFlow({
       </Text>
     </View>
   );
+
+  // ------------------------------------------------------------ bank
+  if (step === "bank" && address)
+    return (
+      <BankWithdraw
+        spot={spot}
+        address={address}
+        email={email}
+        onBack={() => setStep("pick")}
+        onSend={sendToMoonPay}
+        onDone={onDone}
+      />
+    );
 
   // ------------------------------------------------------------ pick
   if (step === "pick")
@@ -150,23 +177,18 @@ export function WithdrawFlow({
         </Pressable>
         <Pressable
           onPress={() => {
-            hSelect();
-            setBankMsg(true);
+            if (!bankOk) return;
+            hTap();
+            setStep("bank");
           }}
-          style={[s.opt, { opacity: 0.6 }]}
+          style={[s.opt, !bankOk && { opacity: 0.6 }]}
           accessibilityRole="button"
-          accessibilityState={{ disabled: true }}
+          accessibilityState={{ disabled: !bankOk }}
         >
           <View style={{ flex: 1, gap: 6 }}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 9 }}
-            >
-              <Text style={s.optT}>To your bank</Text>
-              <View style={s.badge}>
-                <Text style={s.badgeT}>COMING SOON</Text>
-              </View>
-            </View>
+            <Text style={s.optT}>To your bank</Text>
             <Text style={s.optS}>Cash out as dollars to your account</Text>
+            <Text style={s.tag}>VIA MOONPAY · FEES APPLY</Text>
           </View>
           <View style={s.ico}>
             <Svg
@@ -174,7 +196,7 @@ export function WithdrawFlow({
               height={22}
               viewBox="0 0 20 20"
               fill="none"
-              stroke={C.ink3}
+              stroke={C.mint}
               strokeWidth={1.8}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -183,11 +205,6 @@ export function WithdrawFlow({
             </Svg>
           </View>
         </Pressable>
-        {bankMsg ? (
-          <Text style={s.help}>
-            Bank withdrawals are coming soon. Send to a crypto wallet for now.
-          </Text>
-        ) : null}
         {perp > 0 && onMoveToSpot ? (
           <Pressable
             onPress={onMoveToSpot}
@@ -421,18 +438,6 @@ const s = StyleSheet.create({
     backgroundColor: "#2A303A",
     alignItems: "center",
     justifyContent: "center",
-  },
-  badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: "#2A303A",
-  },
-  badgeT: {
-    fontFamily: FONT.mono400,
-    fontSize: 8.5,
-    letterSpacing: em(8.5, 0.12),
-    color: C.ink3,
   },
   link: { fontFamily: FONT.sans600, fontSize: 13, color: C.mint },
 

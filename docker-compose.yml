@@ -3,7 +3,6 @@ services:
     build:
       context: ./user-management-service
       dockerfile: Dockerfile
-    container_name: user-management-service
     ports:
       - "${SERVER_PORT}:5010"
     env_file:
@@ -14,7 +13,6 @@ services:
     build:
       context: ./pricing-service
       dockerfile: Dockerfile
-    container_name: pricing-service
     env_file:
       - ./pricing-service/.env
     restart: unless-stopped

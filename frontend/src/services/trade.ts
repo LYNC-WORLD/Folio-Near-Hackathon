@@ -19,6 +19,93 @@ export type TradeQuoteResponse = {
   };
 };
 
+export type LimitOrderSide = "above" | "below";
+
+export type CreateLimitOrderPayload = {
+  stockAddress: string;
+  usdcAmount: number;
+  triggerAmount: number;
+  orderSide: LimitOrderSide;
+};
+
+export type GetSpotOrdersPayload = {
+  state: "active" | "past" | null;
+  mint: string | null;
+  limit: number | null;
+  offset: number | null;
+  sort: "updated_at" | "created_at" | "expires_at" | null;
+  dir: "asc" | "desc" | null;
+};
+
+export type CreateLimitOrderResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+  };
+};
+
+export type LimitOrderEvent = {
+  type: string;
+  timestamp: number;
+  txSignature: string;
+  mint: string;
+  amount: string;
+  state: string;
+};
+
+export type LimitOrder = {
+  id: string;
+  userPubkey: string;
+  privyWalletPubkey: string;
+  inputMint: string;
+  remainingInputAmount: string;
+  initialInputAmount: string;
+  outputMint: string;
+  triggerMint: string;
+  expiresAt: number;
+  createdAt: number;
+  updatedAt: number;
+  events: LimitOrderEvent[];
+  orderType: string;
+  orderState: string;
+  rawState: string;
+  triggerCondition: LimitOrderSide;
+  triggerPriceUsd: number;
+  slippageBps: number;
+  fillPercent: number;
+  trailingBps: number | null;
+  highWatermark: number | null;
+  lowWatermark: number | null;
+};
+
+export type SpotOrdersResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    orders: {
+      orders: LimitOrder[];
+      pagination: {
+        total: number;
+        limit: number;
+        offset: number;
+      };
+    };
+  };
+};
+
+export type CancelLimitOrderResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    success: boolean;
+    orderId: string;
+    signature: string;
+    status: string;
+  };
+};
+
+
 export type TradeResult = {
   signature?: string;
   stockAmount?: number;
@@ -51,7 +138,7 @@ export type RecurringBuy = {
   stockAmount: string | null;
   buyDate: string;
   isActive: boolean;
-   stock: RecurringBuyStock;
+  stock: RecurringBuyStock;
 };
 
 export type RecurringBuysResponse = {
@@ -83,7 +170,11 @@ export type CancelRecurringBuyResponse = {
   message: string;
 };
 
-export const getTradeQuote = (side: TradeSide, req: TradeRequest, token: string) =>
+export const getTradeQuote = (
+  side: TradeSide,
+  req: TradeRequest,
+  token: string,
+) =>
   request<TradeQuoteResponse>(`/api/trade/get-quote-${side}`, {
     method: "POST",
     body: req,
@@ -117,11 +208,49 @@ export const startRecurringBuy = (req: RecurringBuyRequest, idToken: string) =>
   });
 
 export const cancelRecurringBuy = (recurringId: string, idToken: string) =>
-  request<CancelRecurringBuyResponse>(
-    "/api/user/cancel-recurring-request",
+  request<CancelRecurringBuyResponse>("/api/user/cancel-recurring-request", {
+    method: "POST",
+    body: { recurringId } satisfies CancelRecurringBuyRequest,
+    token: idToken,
+  });
+
+
+export const createLimitOrder = (
+  idToken: string,
+  payload: CreateLimitOrderPayload,
+) =>
+  request<CreateLimitOrderResponse>(
+    "/api/trade/create-limit-order",
     {
       method: "POST",
-      body: { recurringId } satisfies CancelRecurringBuyRequest,
       token: idToken,
+      body: payload,
     },
   );
+
+export const getSpotOrders = (
+  idToken: string,
+  payload: GetSpotOrdersPayload,
+) =>
+  request<SpotOrdersResponse>(
+    "/api/trade/get-spot-orders",
+    {
+      method: "POST",
+      token: idToken,
+      body: payload,
+    },
+  );
+
+export const cancelLimitOrder = (
+  idToken: string,
+  orderId: string,
+) =>
+  request<CancelLimitOrderResponse>(
+    "/api/trade/cancel-limit-order",
+    {
+      method: "POST",
+      token: idToken,
+      body: { orderId },
+    },
+  );
+

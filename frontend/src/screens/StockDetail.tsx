@@ -1,19 +1,3 @@
-// src/screens/StockDetail.tsx — prototype #s-asset
-//
-//   ‹ Back
-//   NVDA                                 $184.20
-//   NVIDIA · Stock                  +2.1% past year      ← shows the scrubbed price/date while dragging
-//   [ chart, draws itself, pulsing end dot, 1D 1W 1M 1Y All ]
-//   [ YOUR POSITION ]        (if you hold it)
-//   [ RECURRING BUY ]        (if one is on)
-//   ( Buy | Recurring )      sliding thumb
-//   AMOUNT → 25% 50% 75% Max on focus         $440.00 USDC AVAILABLE
-//   [ $ 100                               USDC ]
-//   Recurring only: EVERY MONTH ON THE [1..30], FIRST BUY / THEN / A YEAR AT THIS RATE
-//   PAY WITH USDC · SETTLES TO your wallet
-//   RECENT ACTIVITY
-//   ─────────────── dock ───────────────
-//   [ Sell ][      Buy NVDA      ]     Sell slides in only when you hold some
 
 import { ComponentRef, useEffect, useRef, useState } from "react";
 import {
@@ -49,7 +33,13 @@ import {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useStockDetail } from "@/hooks/useStockDetail";
-import type { Candle, ChartPeriod } from "@/hooks";
+import {
+  useCancelLimitOrder,
+  useCreateLimitOrder,
+  useSpotOrders,
+  type Candle,
+  type ChartPeriod,
+} from "@/hooks";
 import { useWallet } from "@/context/WalletContext";
 import type { AssetStackParamList } from "@/navigation/AssetStackRoutes";
 import { C, EASE, FONT, TYPE, em, h1Size } from "@/theme";
@@ -132,14 +122,31 @@ export function StockDetail() {
 
   const [change, setChange] = useState<ChartChange | null>(null);
   const [scrub, setScrub] = useState<Candle | null>(null);
-  const [mode, setMode] = useState<"buy" | "recurring">("buy");
+  const [mode, setMode] = useState<"buy" | "recurring" | "limit">("buy");
+  const [triggerCondition, setTriggerCondition] = useState<"below" | "above">(
+    "below",
+  );
+  const [targetPrice, setTargetPrice] = useState("");
   const [input, setInput] = useState("");
   const [touched, setTouched] = useState(false);
   const [day, setDay] = useState(defaultDay());
 
+  useEffect(() => {
+    if (stock?.price && !targetPrice) {
+      setTargetPrice((Number(stock.price) * 0.95).toFixed(2));
+    }
+  }, [stock?.price, targetPrice]);
   const balance = usdc?.balance ?? 0;
   const amt = parseFloat(input) || 0;
   const { user, idToken, signOut } = useAuth();
+  const {
+    orders,
+    loading: ordersLoading,
+    reload: reloadOrders,
+  } = useSpotOrders(stock?.tokenAddress ?? null, "active");
+
+  const createOrder = useCreateLimitOrder();
+  const cancelOrder = useCancelLimitOrder();
 
   // Prototype starts at $100 — only when you have it, and only until you type.
   useEffect(() => {
@@ -250,6 +257,70 @@ export function StockDetail() {
             ? `Buy ${money(amt)} every month`
             : `Buy ${stock.symbol}`;
 
+  const target = Number(targetPrice);
+
+  const targetInvalid =
+    !Number.isFinite(target) ||
+    target <= 0 ||
+    (triggerCondition === "below" && target >= price) ||
+    (triggerCondition === "above" && target <= price);
+
+  const limitDisabled =
+    walletLoading || lowBalance || zero || under || over || targetInvalid;
+
+  const limitTitle = needFunds
+    ? "Add funds"
+    : zero
+      ? "Enter an amount"
+      : under
+        ? `Minimum ${money(MIN_BUY)}`
+        : over
+          ? "Amount exceeds balance"
+          : targetInvalid
+            ? "Set a valid target price"
+            : "Create limit order";
+
+  const openLimitOrder = async () => {
+    if (limitDisabled) return;
+
+    amountRef.current?.blur();
+
+    try {
+      await createOrder.mutateAsync({
+        stockAddress: stock.tokenAddress,
+        usdcAmount: amt,
+        triggerAmount: target,
+        orderSide: triggerCondition,
+      });
+
+      toast(
+        "Limit order created",
+        `${money(amt)} USDC · ${triggerCondition === "below" ? "BELOW" : "ABOVE"} ${money(target)}`,
+      );
+
+      await Promise.all([reloadOrders(), reload()]);
+    } catch (error) {
+      toast(
+        "Couldn't create limit order",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    }
+  };
+
+  const handleCancelLimitOrder = async (orderId: string) => {
+    try {
+      await cancelOrder.mutateAsync(orderId);
+
+      toast("Limit order cancelled", "Your order has been cancelled.");
+
+      await reloadOrders();
+    } catch (error) {
+      toast(
+        "Couldn't cancel order",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    }
+  };
   const buyDisabled =
     walletLoading || blockedRec || (!needFunds && (zero || under));
 
@@ -363,6 +434,19 @@ export function StockDetail() {
     );
   };
 
+  const dockTitle = mode === "limit" ? limitTitle : buyTitle;
+
+  const dockDisabled = mode === "limit" ? limitDisabled : buyDisabled;
+
+  const dockAction =
+    mode === "limit"
+      ? needFunds
+        ? openDeposit
+        : openLimitOrder
+      : needFunds
+        ? openDeposit
+        : openBuy;
+
   return (
     <View style={s.safe}>
       <ScrollView
@@ -471,6 +555,7 @@ export function StockDetail() {
           <Segmented
             options={[
               ["buy", "Buy"],
+              ["limit", "Limit"],
               ["recurring", "Recurring"],
             ]}
             value={mode}
@@ -507,6 +592,202 @@ export function StockDetail() {
             }
           />
         </View>
+        {mode === "limit" ? (
+          <Animated.View
+            entering={FadeIn.duration(260)}
+            exiting={FadeOut.duration(160)}
+            style={{ gap: 14 }}
+          >
+            {/* Trigger condition */}
+            <View style={{ gap: 9 }}>
+              <Text style={TYPE.lbl}>BUY WHEN PRICE</Text>
+
+              <View style={s.limitConditionRow}>
+                <Pressable
+                  onPress={() => {
+                    hTap();
+                    setTriggerCondition("below");
+                  }}
+                  style={[
+                    s.limitCondition,
+                    triggerCondition === "below" && s.limitConditionActive,
+                  ]}
+                >
+                  <Ionicons
+                    name="trending-down"
+                    size={17}
+                    color={triggerCondition === "below" ? C.mint : C.ink3}
+                  />
+                  <Text
+                    style={[
+                      s.limitConditionText,
+                      triggerCondition === "below" &&
+                        s.limitConditionTextActive,
+                    ]}
+                  >
+                    Drops to
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    hTap();
+                    setTriggerCondition("above");
+                  }}
+                  style={[
+                    s.limitCondition,
+                    triggerCondition === "above" && s.limitConditionActive,
+                  ]}
+                >
+                  <Ionicons
+                    name="trending-up"
+                    size={17}
+                    color={triggerCondition === "above" ? C.mint : C.ink3}
+                  />
+                  <Text
+                    style={[
+                      s.limitConditionText,
+                      triggerCondition === "above" &&
+                        s.limitConditionTextActive,
+                    ]}
+                  >
+                    Rises to
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Target price */}
+            <View style={{ gap: 9 }}>
+              <View style={s.limitLabelRow}>
+                <Text style={TYPE.lbl}>TARGET PRICE</Text>
+                <Text style={s.limitCurrentPrice}>Current {money(price)}</Text>
+              </View>
+
+              <View style={s.limitPriceInput}>
+                <Text style={s.limitDollar}>$</Text>
+
+                <TextInput
+                  value={targetPrice}
+                  onChangeText={(value) => {
+                    setTargetPrice(value.replace(/[^0-9.]/g, ""));
+                  }}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  placeholderTextColor={C.ink4}
+                  style={s.limitPriceText}
+                  selectTextOnFocus
+                />
+
+                <Text style={s.limitCurrency}>USD</Text>
+              </View>
+
+              {targetInvalid && targetPrice.length > 0 ? (
+                <Text style={s.limitError}>
+                  {triggerCondition === "below"
+                    ? "Target price must be below the current price."
+                    : "Target price must be above the current price."}
+                </Text>
+              ) : (
+                <Text style={s.limitHint}>
+                  Your order triggers when {stock.symbol}{" "}
+                  {triggerCondition === "below" ? "falls to" : "rises to"}{" "}
+                  {targetPrice ? money(target) : "your target price"}.
+                </Text>
+              )}
+            </View>
+
+            {/* Order summary */}
+            <View style={s.limitSummary}>
+              <WashRow
+                k="ORDER TYPE"
+                v={triggerCondition === "below" ? "Buy below" : "Buy above"}
+              />
+              <WashRow k="INVESTMENT" v={money(amt)} />
+              <WashRow k="TARGET PRICE" v={money(target)} last />
+            </View>
+
+            <Text style={s.limitDisclaimer}>
+              Your USDC will be committed to this order. Execution depends on
+              market conditions, available liquidity and slippage.
+            </Text>
+          </Animated.View>
+        ) : null}
+        {mode === "limit" ? (
+          <Animated.View entering={FadeIn.duration(260)} style={{ gap: 10 }}>
+            <View style={s.limitOrdersHeader}>
+              <Text style={TYPE.lbl}>YOUR ACTIVE ORDERS</Text>
+
+              <Pressable onPress={() => reloadOrders()} hitSlop={10}>
+                <Ionicons name="refresh" size={16} color={C.ink3} />
+              </Pressable>
+            </View>
+
+            {ordersLoading ? (
+              <Skeleton height={88} radius={16} />
+            ) : orders.length === 0 ? (
+              <View style={s.limitEmpty}>
+                <Ionicons name="git-branch-outline" size={23} color={C.ink4} />
+                <Text style={s.limitEmptyTitle}>No active limit orders</Text>
+                <Text style={s.limitEmptySub}>
+                  Orders you create will appear here.
+                </Text>
+              </View>
+            ) : (
+              orders.map((order) => {
+                const amount = Number(order.initialInputAmount) / 1_000_000;
+
+                const isBelow = order.triggerCondition === "below";
+
+                return (
+                  <View key={order.id} style={s.limitOrderCard}>
+                    <View style={s.limitOrderTop}>
+                      <View style={s.limitOrderIcon}>
+                        <Ionicons
+                          name={isBelow ? "trending-down" : "trending-up"}
+                          size={17}
+                          color={C.mint}
+                        />
+                      </View>
+
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={s.limitOrderTitle}>
+                          Buy {isBelow ? "below" : "above"}{" "}
+                          {money(order.triggerPriceUsd)}
+                        </Text>
+
+                        <Text style={s.limitOrderSub}>
+                          {money(amount)} USDC · {order.orderState}
+                        </Text>
+                      </View>
+
+                      <Badge label="ACTIVE" />
+                    </View>
+
+                    <View style={s.limitOrderDivider} />
+
+                    <View style={s.limitOrderBottom}>
+                      <Text style={s.limitOrderDate}>
+                        Created {new Date(order.createdAt).toLocaleDateString()}
+                      </Text>
+
+                      <Pressable
+                        onPress={() => handleCancelLimitOrder(order.id)}
+                        disabled={cancelOrder.isPending}
+                        hitSlop={10}
+                        style={s.limitCancel}
+                      >
+                        <Text style={s.limitCancelText}>
+                          {cancelOrder.isPending ? "Cancelling..." : "Cancel"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </Animated.View>
+        ) : null}
         {rep ? (
           <Animated.View
             entering={FadeIn.duration(260)}
@@ -580,9 +861,13 @@ export function StockDetail() {
       <Dock
         held={held > 0}
         locked={isPre && PRE_IPO_LOCKED}
-        buyTitle={buyTitle}
-        buyDisabled={buyDisabled}
-        onBuy={needFunds ? openDeposit : openBuy}
+        buyTitle={dockTitle}
+        buyDisabled={
+          mode === "limit"
+            ? createOrder.isPending || dockDisabled
+            : dockDisabled
+        }
+        onBuy={dockAction}
         onSell={openSell}
         bottom={insets.bottom}
       />
@@ -807,6 +1092,198 @@ const s = StyleSheet.create({
     color: C.ink4,
   },
   hair: { borderBottomWidth: 1, borderBottomColor: C.hair },
+
+  limitConditionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  limitCondition: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.stroke,
+    backgroundColor: C.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  limitConditionActive: {
+    borderColor: C.mint,
+    backgroundColor: C.sunk,
+  },
+
+  limitConditionText: {
+    fontFamily: FONT.sans600,
+    fontSize: 13,
+    color: C.ink3,
+  },
+
+  limitConditionTextActive: {
+    color: C.mint,
+  },
+
+  limitLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  limitCurrentPrice: {
+    fontFamily: FONT.mono400,
+    fontSize: 11,
+    color: C.ink4,
+  },
+
+  limitPriceInput: {
+    height: 64,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.stroke,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+
+  limitDollar: {
+    fontFamily: FONT.mono400,
+    fontSize: 22,
+    color: C.ink3,
+  },
+
+  limitPriceText: {
+    flex: 1,
+    fontFamily: FONT.mono400,
+    fontSize: 25,
+    color: C.ink1,
+    padding: 0,
+  },
+
+  limitCurrency: {
+    fontFamily: FONT.mono400,
+    fontSize: 11,
+    color: C.ink4,
+  },
+
+  limitHint: {
+    fontFamily: FONT.sans400,
+    fontSize: 11,
+    color: C.ink4,
+    lineHeight: 17,
+  },
+
+  limitError: {
+    fontFamily: FONT.sans400,
+    fontSize: 11,
+    color: C.loss,
+  },
+
+  limitSummary: {
+    backgroundColor: C.sunk,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+  },
+
+  limitDisclaimer: {
+    fontFamily: FONT.sans400,
+    fontSize: 11,
+    lineHeight: 17,
+    color: C.ink4,
+  },
+
+  limitOrdersHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  limitEmpty: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 22,
+    alignItems: "center",
+    gap: 8,
+  },
+
+  limitEmptyTitle: {
+    fontFamily: FONT.sans600,
+    fontSize: 14,
+    color: C.ink2,
+  },
+
+  limitEmptySub: {
+    fontFamily: FONT.sans400,
+    fontSize: 12,
+    color: C.ink4,
+  },
+
+  limitOrderCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 15,
+    gap: 12,
+  },
+
+  limitOrderTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+
+  limitOrderIcon: {
+    height: 36,
+    width: 36,
+    borderRadius: 12,
+    backgroundColor: C.sunk,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  limitOrderTitle: {
+    fontFamily: FONT.sans600,
+    fontSize: 14,
+    color: C.ink1,
+  },
+
+  limitOrderSub: {
+    fontFamily: FONT.mono400,
+    fontSize: 11,
+    color: C.ink4,
+  },
+
+  limitOrderDivider: {
+    height: 1,
+    backgroundColor: C.hair,
+  },
+
+  limitOrderBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  limitOrderDate: {
+    fontFamily: FONT.mono400,
+    fontSize: 10,
+    color: C.ink4,
+  },
+
+  limitCancel: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+
+  limitCancelText: {
+    fontFamily: FONT.sans600,
+    fontSize: 12,
+    color: C.loss,
+  },
 
   actRow: {
     minHeight: 58,

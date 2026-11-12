@@ -24,4 +24,6 @@ router.get("/positions", authMiddleware, perpTradeController.getAllPositions);
 
 router.get("/positions-by-symbol/:stock", authMiddleware, perpTradeController.getPositionBySymbol);
 
+router.get("/search", perpTradeController.search);
+
 export { router as perpTradeRoutes };

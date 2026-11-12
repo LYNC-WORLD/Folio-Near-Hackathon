@@ -416,6 +416,61 @@ export class PerpTradeService {
       return;
     }
   }
+
+  public async searchStocks(q: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    const where: any = {
+      AND: [
+        q
+          ? {
+              OR: [
+                {
+                  marketName: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  marketSymbol: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            }
+          : {},
+      ],
+    };
+    const [stocks, total] = await Promise.all([
+      prisma.perpStocks.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          marketName: "asc",
+        },
+        select: {
+          marketName: true,
+          marketSymbol: true,
+          price: true,
+          imageUrl: true,
+          changeInPrice: true,
+        },
+      }),
+
+      prisma.perpStocks.count({ where }),
+    ]);
+    return {
+      stocks,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
+    };
+  }
 }
 
 async function exchangeClientFor(ethereumWalletId: string) {
@@ -440,8 +495,11 @@ function buildTpSlOrders(
   tpsl: TpSlInterface,
 ) {
   const side = isBuy ? 1 : -1;
-  const movedPrice = (base: number, percent: number | undefined, sign: number) =>
-    (base * (100 + (sign * (percent ?? 0)) / leverage)) / 100;
+  const movedPrice = (
+    base: number,
+    percent: number | undefined,
+    sign: number,
+  ) => (base * (100 + (sign * (percent ?? 0)) / leverage)) / 100;
   const triggerOrder = (
     triggerPx: number,
     orderPx: number,

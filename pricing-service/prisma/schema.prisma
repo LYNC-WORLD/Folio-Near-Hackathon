@@ -76,11 +76,13 @@ model Stocks {
     price           String
     name            String
     decimals        Int                   @default(8)
-    symbol          String
+    symbol          String                @unique
     imageUrl        String
     marketOpenPrice String                @default("0")
     stockType       StockType             @default(USStock)
     recurringBuys   RecurringBuyRequest[]
+
+    @@index([stockType])
 }
 
 model Investment {

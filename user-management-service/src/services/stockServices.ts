@@ -108,8 +108,8 @@ export class StockService {
     try {
       const indexFunds = await prisma.stocks.findMany({
         where: {
-          stockType: "IndexFunds"
-        }
+          stockType: "IndexFunds",
+        },
       });
       return indexFunds;
     } catch (error) {
@@ -129,5 +129,67 @@ export class StockService {
     ]);
 
     return { stocks, total };
+  }
+
+  public async searchStocks(
+    q: string,
+    type: "USStock" | "PreIPO" | "IndexFunds" | null,
+    page = 1,
+    limit = 10,
+  ) {
+    const skip = (page - 1) * limit;
+    const where: any = {
+      AND: [
+        q
+          ? {
+              OR: [
+                {
+                  name: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  symbol: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            }
+          : {},
+        type ? { stockType: type } : {},
+      ],
+    };
+    const [stocks, total] = await Promise.all([
+      prisma.stocks.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          name: "asc",
+        },
+        select: {
+          tokenAddress: true,
+          name: true,
+          symbol: true,
+          price: true,
+          imageUrl: true,
+          stockType: true,
+        },
+      }),
+
+      prisma.stocks.count({ where }),
+    ]);
+    return {
+      stocks,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
+    };
   }
 }

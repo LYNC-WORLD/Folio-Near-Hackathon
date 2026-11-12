@@ -35,4 +35,6 @@ router.get("/trades", stockController.getLatestBuy);
 
 router.get("/perp-markets", stockController.getPerpStocks);
 
+router.get("/search", stockController.search);
+
 export { router as stockRoutes };

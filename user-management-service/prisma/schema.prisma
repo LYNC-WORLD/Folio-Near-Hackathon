@@ -81,6 +81,8 @@ model Stocks {
     marketOpenPrice String                @default("0")
     stockType       StockType             @default(USStock)
     recurringBuys   RecurringBuyRequest[]
+
+    @@index([stockType])
 }
 
 model Investment {

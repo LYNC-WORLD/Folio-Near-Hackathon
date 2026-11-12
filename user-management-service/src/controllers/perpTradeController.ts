@@ -332,6 +332,30 @@ export class PerpTradeController {
       });
     }
   };
+
+  public search = async (req: Request, res: Response) => {
+    try {
+      const { q, page, limit } = req.query;
+
+      const result = await this.perpTradeService.searchStocks(
+        q as string,
+        Number(page) || 1,
+        Math.min(Number(limit) || 10, 50),
+      );
+
+      return res.status(200).json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Stock search error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to search stocks",
+      });
+    }
+  };
 }
 
 const isPositive = (value: number) => Number.isFinite(value) && value > 0;

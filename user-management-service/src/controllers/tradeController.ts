@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { TradeService, TradeSwapResult } from "../services/tradeServices";
 import { prisma } from "../lib/prisma";
+import { OrderHistoryParameters } from "../lib/jupiter";
 export class TradeController {
   private tradeService: TradeService;
 
@@ -18,7 +19,10 @@ export class TradeController {
         return;
       }
       const body: getQuoteRequest = req.body;
-      if (invalidAmounts(body.stockAmount, body.usdcAmount) || !body.stockAddress) {
+      if (
+        invalidAmounts(body.stockAmount, body.usdcAmount) ||
+        !body.stockAddress
+      ) {
         res.status(400).json({
           success: false,
           message: "(stockAmount or usdcAmount) and stockAddress is required",
@@ -54,8 +58,7 @@ export class TradeController {
           stockAddress: body.stockAddress,
           stockSymbol: stockDetails.symbol,
           inputUSDC: Number(quote.inAmount) / 1000000,
-          outputStocks:
-            Number(quote.outAmount) / 10 ** stockDetails.decimals,
+          outputStocks: Number(quote.outAmount) / 10 ** stockDetails.decimals,
         },
       });
       return;
@@ -77,7 +80,10 @@ export class TradeController {
         return;
       }
       const body: getQuoteRequest = req.body;
-      if (invalidAmounts(body.stockAmount, body.usdcAmount) || !body.stockAddress) {
+      if (
+        invalidAmounts(body.stockAmount, body.usdcAmount) ||
+        !body.stockAddress
+      ) {
         res.status(400).json({
           success: false,
           message: "(stockAmount or usdcAmount) and stockAddress is required",
@@ -114,8 +120,7 @@ export class TradeController {
           stockAddress: body.stockAddress,
           stockSymbol: stockDetails.symbol,
           outputUSDC: Number(quote.outAmount) / 1000000,
-          inputStocks:
-            Number(quote.inAmount) / 10 ** stockDetails.decimals,
+          inputStocks: Number(quote.inAmount) / 10 ** stockDetails.decimals,
         },
       });
       return;
@@ -129,7 +134,11 @@ export class TradeController {
   };
   public buyStocks = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
+      if (
+        !req.user ||
+        !req.user.solanaWalletId ||
+        !req.user.solanaWalletAddress
+      ) {
         res.status(404).json({
           success: false,
           message: "User not found",
@@ -137,7 +146,10 @@ export class TradeController {
         return;
       }
       const body: getQuoteRequest = req.body;
-      if (invalidAmounts(body.stockAmount, body.usdcAmount) || !body.stockAddress) {
+      if (
+        invalidAmounts(body.stockAmount, body.usdcAmount) ||
+        !body.stockAddress
+      ) {
         res.status(400).json({
           success: false,
           message: "(stockAmount or usdcAmount) and stockAddress is required",
@@ -191,7 +203,11 @@ export class TradeController {
   };
   public sellStocks = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
+      if (
+        !req.user ||
+        !req.user.solanaWalletId ||
+        !req.user.solanaWalletAddress
+      ) {
         res.status(404).json({
           success: false,
           message: "User not found",
@@ -199,7 +215,10 @@ export class TradeController {
         return;
       }
       const body: getQuoteRequest = req.body;
-      if (invalidAmounts(body.stockAmount, body.usdcAmount) || !body.stockAddress) {
+      if (
+        invalidAmounts(body.stockAmount, body.usdcAmount) ||
+        !body.stockAddress
+      ) {
         res.status(400).json({
           success: false,
           message: "(stockAmount or usdcAmount) and stockAddress is required",
@@ -318,111 +337,193 @@ export class TradeController {
       });
     }
   };
-  // public buyIndexFunds = async (req: Request, res: Response): Promise<void> => {
-  //   try {
-  //     if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
-  //       res.status(404).json({
-  //         success: false,
-  //         message: "User not found",
-  //       });
-  //       return;
-  //     }
-  //     const body = req.body as buyOrSellIndexFunds;
-  //     if (invalidAmounts(body.indexFundAmount, body.usdcAmount) || !body.indexFundId) {
-  //       res.status(400).json({
-  //         success: false,
-  //         message:
-  //           "indexFundAmount, usdcAmount and indexFundAddress is required",
-  //       });
-  //       return;
-  //     }
-  //     const responce = await this.tradeService.buyIndexFunds(
-  //       body.indexFundId,
-  //       body.indexFundAmount,
-  //       body.usdcAmount,
-  //       req.user.solanaWalletId,
-  //       req.user.id,
-  //       req.user.solanaWalletAddress,
-  //     );
-  //     if (!responce) {
-  //       res.status(500).json({
-  //         success: false,
-  //         message: "request failed",
-  //       });
-  //       return;
-  //     }
-  //     res.status(200).json({
-  //       success: true,
-  //       message: "index funds bought",
-  //       data: responce,
-  //     });
-  //     return;
-  //   } catch (error) {
-  //     console.log(error);
-  //     res.status(500).json({
-  //       success: false,
-  //       message: "Internal server error",
-  //     });
-  //   }
-  // };
-  // public sellIndexFunds = async (
-  //   req: Request,
-  //   res: Response,
-  // ): Promise<void> => {
-  //   try {
-  //     if (!req.user || !req.user.solanaWalletId || !req.user.solanaWalletAddress) {
-  //       res.status(404).json({
-  //         success: false,
-  //         message: "User not found",
-  //       });
-  //       return;
-  //     }
-  //     const body = req.body as buyOrSellIndexFunds;
-  //     if (invalidAmounts(body.indexFundAmount, body.usdcAmount) || !body.indexFundId) {
-  //       res.status(400).json({
-  //         success: false,
-  //         message:
-  //           "indexFundAmount, usdcAmount and indexFundAddress is required",
-  //       });
-  //       return;
-  //     }
-  //     const responce = await this.tradeService.sellIndexFunds(
-  //       body.indexFundId,
-  //       body.indexFundAmount,
-  //       body.usdcAmount,
-  //       req.user.solanaWalletId,
-  //       req.user.id,
-  //       req.user.solanaWalletAddress,
-  //     );
-  //     if (!responce) {
-  //       res.status(500).json({
-  //         success: false,
-  //         message: "request failed",
-  //       });
-  //       return;
-  //     }
-  //     res.status(200).json({
-  //       success: true,
-  //       message: "Index fund sold",
-  //       data: responce,
-  //     });
-  //     return;
-  //   } catch (error) {
-  //     console.log(error);
-  //     res.status(500).json({
-  //       success: false,
-  //       message: "Internal server error",
-  //     });
-  //   }
-  // };
+  public createLimitOrder = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+      const body: createLimitOrder = req.body;
+      if (
+        !body.stockAddress ||
+        !body.orderSide ||
+        !body.triggerAmount ||
+        !body.usdcAmount
+      ) {
+        res.status(400).json({
+          success: false,
+          message:
+            "tokenAddress, orderSide, triggerAmount and usdcAmount is required",
+        });
+        return;
+      }
+      const stockDetails = await findStock(body.stockAddress);
+      if (!stockDetails) {
+        res.status(404).json({
+          success: false,
+          message: "stock not found",
+        });
+        return;
+      }
+      const order = await this.tradeService.createLimitOrder(
+        req.user.solanaWalletAddress!,
+        req.user.solanaWalletId!,
+        body.stockAddress,
+        body.usdcAmount,
+        body.triggerAmount,
+        body.orderSide,
+      );
+      if (order.success) {
+        res.status(200).json({
+          success: true,
+          message: "order Created",
+          data: {
+            id: order.message,
+          },
+        });
+      }
+      res.status(404).json({
+        success: false,
+        message: order.message,
+      });
+      return;
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
+  public getOpenOrders = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+      const body = req.body;
+      if(!body.orderId){
+                res.status(400).json({
+          success: false,
+          message: "orderId is required",
+        });
+        return;
+      }
+      const order = await this.tradeService.cancelOpenOrder(
+        req.user.solanaWalletAddress!,
+        req.user.solanaWalletId!,
+        body.orderId,
+      );
+      if (order.success) {
+        res.status(200).json({
+          success: true,
+          message: "open orders",
+          data: {
+            ...order.message!,
+          },
+        });
+      }
+      res.status(404).json({
+        success: false,
+        message: order.message,
+      });
+      return;
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
+  public cancelOpenOrder = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+      const body: createLimitOrder = req.body;
+      if (
+        !body.stockAddress ||
+        !body.orderSide ||
+        !body.triggerAmount ||
+        !body.usdcAmount
+      ) {
+        res.status(400).json({
+          success: false,
+          message:
+            "tokenAddress, orderSide, triggerAmount and usdcAmount is required",
+        });
+        return;
+      }
+      const stockDetails = await findStock(body.stockAddress);
+      if (!stockDetails) {
+        res.status(404).json({
+          success: false,
+          message: "stock not found",
+        });
+        return;
+      }
+      const order = await this.tradeService.createLimitOrder(
+        req.user.solanaWalletAddress!,
+        req.user.solanaWalletId!,
+        body.stockAddress,
+        body.usdcAmount,
+        body.triggerAmount,
+        body.orderSide,
+      );
+      if (order.success) {
+        res.status(200).json({
+          success: true,
+          message: "order Created",
+          data: {
+            id: order.message,
+          },
+        });
+      }
+      res.status(404).json({
+        success: false,
+        message: order.message,
+      });
+      return;
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
 }
 
-function respondSwapFailure(res: Response, result: Extract<TradeSwapResult, { status: "failed" }>) {
+function respondSwapFailure(
+  res: Response,
+  result: Extract<TradeSwapResult, { status: "failed" }>,
+) {
   const kind = result.kind;
   if (kind === "unconfirmed") {
     res.status(202).json({
       success: false,
-      message: "Swap submitted but not confirmed yet, check your balance before retrying",
+      message:
+        "Swap submitted but not confirmed yet, check your balance before retrying",
       requestId: result.requestId,
       signature: result.signature,
     });
@@ -493,10 +594,11 @@ interface getQuoteRequest {
   stockAmount: number | undefined;
 }
 
-interface buyOrSellIndexFunds {
-  indexFundId: string;
-  usdcAmount: number | undefined;
-  indexFundAmount: number | undefined;
+interface createLimitOrder {
+  stockAddress: string;
+  usdcAmount: number;
+  triggerAmount: number;
+  orderSide: "above" | "below";
 }
 interface recurringBuyRequest {
   stockAddress: string;

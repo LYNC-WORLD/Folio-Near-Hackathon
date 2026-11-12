@@ -1,7 +1,12 @@
 import { env } from "../config/env";
-import { privy } from "./privy";
+import { privy, signMessage, signTransaction } from "./privy";
+import { VersionedTransaction } from "@solana/web3.js";
 
 const BASE = "https://api.jup.ag";
+
+// const BASE = "https://api.jup.ag/trigger/v2";
+
+const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 export type SwapFailureKind =
   | "insufficient_funds"
@@ -49,7 +54,9 @@ type ExecuteResponse = {
   error?: string;
 };
 
-const NOT_LANDED_EXECUTE_CODES = new Set([-1, -1000, -1004, -2000, -2003, -2004]);
+const NOT_LANDED_EXECUTE_CODES = new Set([
+  -1, -1000, -1004, -2000, -2003, -2004,
+]);
 const UNKNOWN_EXECUTE_CODES = new Set([-1001, -2001]);
 const EXECUTE_ATTEMPTS = 3;
 
@@ -89,7 +96,9 @@ async function jupiterFetch<T>(
     try {
       body = raw ? JSON.parse(raw) : body;
     } catch {}
-    throw new Error(`HTTP_${res.status}: ${body.message || body.error || "no body"}`);
+    throw new Error(
+      `HTTP_${res.status}: ${body.message || body.error || "no body"}`,
+    );
   }
   return res.json() as Promise<T>;
 }
@@ -116,7 +125,10 @@ async function fetchOrder(params: Record<string, string>) {
     if (!(error as Error).message?.includes("market maker")) throw error;
     order = await get(withoutRfq);
   }
-  if (order.router === "jupiterz" && (order.errorCode === 2 || order.errorCode === 3)) {
+  if (
+    order.router === "jupiterz" &&
+    (order.errorCode === 2 || order.errorCode === 3)
+  ) {
     order = await get(withoutRfq);
   }
   if (Number(order.priceImpact) < -MAX_PRICE_IMPACT_PCT) {
@@ -158,8 +170,7 @@ async function orderAndSign(
   outputMint: string,
   amount: string,
 ): Promise<
-  | { failure: SwapResult }
-  | { order: OrderResponse; signedTransaction: string }
+  { failure: SwapResult } | { order: OrderResponse; signedTransaction: string }
 > {
   const order = await fetchOrder({ inputMint, outputMint, amount, taker });
 
@@ -182,12 +193,15 @@ async function orderAndSign(
     };
   }
 
-  const signed = await privy.wallets().solana().signTransaction(walletId, {
-    transaction: order.transaction,
-    authorization_context: {
-      authorization_private_keys: [env.PRIVY_AUTH_KEY!],
-    },
-  });
+  const signed = await privy
+    .wallets()
+    .solana()
+    .signTransaction(walletId, {
+      transaction: order.transaction,
+      authorization_context: {
+        authorization_private_keys: [env.PRIVY_AUTH_KEY!],
+      },
+    });
   return { order, signedTransaction: signed.signed_transaction };
 }
 
@@ -245,13 +259,13 @@ export async function swap(
       };
     }
 
-    console.log("Jupiter swap:", {
-      requestId: order.requestId,
-      router: order.router,
-      code: executed.code,
-      status: executed.status,
-      signature: executed.signature,
-    });
+    // console.log("Jupiter swap:", {
+    //   requestId: order.requestId,
+    //   router: order.router,
+    //   code: executed.code,
+    //   status: executed.status,
+    //   signature: executed.signature,
+    // });
 
     if (executed.status === "Success" && executed.code === 0) {
       return {
@@ -286,4 +300,258 @@ export async function swap(
       error: err.message ?? "swap failed",
     };
   }
+}
+
+async function authenticate(
+  walletAddress: string,
+  walletId: string,
+): Promise<string> {
+  const challengeResponse = await fetch(`${BASE}/auth/challenge`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": env.JUPITER_API_KEY!,
+    },
+    body: JSON.stringify({
+      walletPubkey: walletAddress,
+      type: "message",
+    }),
+  });
+
+  if (!challengeResponse.ok) {
+    throw new Error(`Challenge failed: ${await challengeResponse.text()}`);
+  }
+
+  const { challenge } = await challengeResponse.json();
+
+  const signature = await signMessage(challenge, walletId);
+
+  const verifyResponse = await fetch(`${BASE}/auth/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": env.JUPITER_API_KEY!,
+    },
+    body: JSON.stringify({
+      type: "message",
+      walletPubkey: walletAddress,
+      signature,
+    }),
+  });
+
+  if (!verifyResponse.ok) {
+    throw new Error(`Authentication failed: ${await verifyResponse.text()}`);
+  }
+
+  const { token } = await verifyResponse.json();
+
+  return token;
+}
+
+export async function createLimitOrder(
+  walletAddress: string,
+  walletId: string,
+  tokenAddress: string,
+  usdcAmount: number,
+  triggerAmount: number,
+  orderSide: "above" | "below",
+) {
+  const token = await authenticate(walletAddress, walletId);
+
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": env.JUPITER_API_KEY!,
+    Authorization: `Bearer ${token}`,
+  };
+
+  let vaultResponse = await fetch(`${BASE}/vault`, {
+    headers,
+  });
+
+  if (!vaultResponse.ok) {
+    vaultResponse = await fetch(`${BASE}/vault/register`, {
+      headers,
+    });
+  }
+
+  if (!vaultResponse.ok) {
+    throw new Error(`Vault failed: ${await vaultResponse.text()}`);
+  }
+
+  const depositResponse = await fetch(`${BASE}/deposit/craft`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      inputMint: USDC,
+      outputMint: tokenAddress,
+      userAddress: walletAddress,
+      amount: (usdcAmount * 10 ** 6).toString(),
+      orderType: "price",
+      orderSubType: "single",
+    }),
+  });
+
+  if (!depositResponse.ok) {
+    throw new Error(`Deposit craft failed: ${await depositResponse.text()}`);
+  }
+
+  const deposit = await depositResponse.json();
+
+  if (!deposit.requestId || !deposit.transaction) {
+    throw new Error(`Invalid deposit response: ${JSON.stringify(deposit)}`);
+  }
+
+  const depositSignedTx = await signTransaction(deposit.transaction, walletId);
+
+  const orderResponse = await fetch(`${BASE}/orders/price`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      orderType: "single",
+      depositRequestId: deposit.requestId,
+      depositSignedTx,
+
+      userPubkey: walletAddress,
+
+      inputMint: USDC,
+      outputMint: tokenAddress,
+      inputAmount: (usdcAmount * 10 ** 6).toString(),
+
+      triggerMint: tokenAddress,
+      triggerCondition: orderSide,
+      triggerPriceUsd: triggerAmount,
+
+      slippageBps: 100,
+
+      expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+    }),
+  });
+
+  if (!orderResponse.ok) {
+    throw new Error(`Order creation failed: ${await orderResponse.text()}`);
+  }
+
+  const order = await orderResponse.json();
+
+  if (!order.id) {
+    throw new Error(`Order failed: ${JSON.stringify(order)}`);
+  }
+
+  return order.id as string;
+}
+
+export async function getOpenOrders(
+  walletAddress: string,
+  walletId: string,
+  OrderHistory: OrderHistoryParameters,
+) {
+  const queryParams = new URLSearchParams();
+
+  Object.entries(OrderHistory).forEach(([key, value]) => {
+    if (value !== null) {
+      queryParams.append(key, String(value));
+    }
+  });
+
+  const token = await authenticate(walletAddress, walletId);
+
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": env.JUPITER_API_KEY!,
+    Authorization: `Bearer ${token}`,
+  };
+
+  let orders = await fetch(
+    `${BASE}/orders/history?${OrderHistory.toString()}`,
+    {
+      headers,
+    },
+  );
+
+  const data = await orders.json();
+
+  return data;
+}
+
+export async function cancelLimitOrder(
+  walletAddress: string,
+  walletId: string,
+  orderId: string,
+) {
+  // Step 1: Authenticate with Jupiter
+  const token = await authenticate(walletAddress, walletId);
+
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": env.JUPITER_API_KEY!,
+    Authorization: `Bearer ${token}`,
+  };
+
+  // Step 2: Initiate DCA cancellation
+  const cancelResponse = await fetch(
+    `${BASE}/orders/dca/cancel/${orderId}`,
+    {
+      method: "POST",
+      headers,
+    },
+  );
+
+  if (!cancelResponse.ok) {
+    throw new Error(
+      `DCA cancellation failed: ${await cancelResponse.text()}`,
+    );
+  }
+
+  const cancelData = await cancelResponse.json();
+
+  if (!cancelData.transaction || !cancelData.requestId) {
+    throw new Error(
+      `Invalid cancellation response: ${JSON.stringify(cancelData)}`,
+    );
+  }
+
+  // Step 3: Sign withdrawal transaction using Privy
+  const signedTransaction = await signTransaction(
+    cancelData.transaction,
+    walletId,
+  );
+
+  // Step 4: Confirm cancellation
+  const confirmResponse = await fetch(
+    `${BASE}/orders/dca/confirm-cancel/${orderId}`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        signedTransaction,
+        cancelRequestId: cancelData.requestId,
+      }),
+    },
+  );
+
+  if (!confirmResponse.ok) {
+    throw new Error(
+      `DCA cancellation confirmation failed: ${await confirmResponse.text()}`,
+    );
+  }
+
+  const confirmData = await confirmResponse.json();
+
+  return {
+    success: true,
+    orderId,
+    refundAmount: cancelData.refundAmount,
+    roundsRemaining: cancelData.roundsRemaining,
+    signature: confirmData.txSignature,
+    status: "cancelled",
+  };
+}
+
+export interface OrderHistoryParameters {
+  state: "active" | "past" | null;
+  mint: string | null;
+  limit: number | null;
+  offset: number | null;
+  sort: "updated_at" | "created_at" | "expires_at" | null;
+  dir: "asc" | "desc" | null;
 }

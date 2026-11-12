@@ -14,7 +14,10 @@ router.post("/stock-sell", authMiddleware, tradeController.sellStocks);
 
 router.post("/start-recurring-buy", authMiddleware, tradeController.startRecurringBuy);
 
-// router.post("/buy-index-funds", authMiddleware, tradeController.buyIndexFunds);
-// router.post("/sell-index-funds", authMiddleware, tradeController.sellIndexFunds);
+router.post("/create-limit-order", authMiddleware, tradeController.createLimitOrder);
+
+router.post("/get-spot-orders", authMiddleware, tradeController.getOpenOrders);
+
+router.post("/cancel-limit-order", authMiddleware, tradeController.cancelOpenOrder);
 
 export { router as tradeRoutes };

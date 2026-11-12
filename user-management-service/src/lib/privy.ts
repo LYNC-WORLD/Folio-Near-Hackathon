@@ -1,5 +1,6 @@
 import { PrivyClient } from "@privy-io/node";
 import { env } from "../config/env";
+import bs58 from "bs58";
 
 export const privy = new PrivyClient({
   appId: env.PRIVY_APP_ID!,
@@ -43,6 +44,7 @@ export async function createUser(
     throw error;
   }
 }
+
 export async function deleteUser(userId: string) {
   try {
     await privy.users().delete(userId);
@@ -70,6 +72,7 @@ export async function createSolanaWallet(
     throw error;
   }
 }
+
 export async function createEVMWallet(
   idempotencyKey?: string,
 ): Promise<createWallet> {
@@ -88,6 +91,7 @@ export async function createEVMWallet(
     throw error;
   }
 }
+
 export async function getTransectionResults(
   walletId: string,
   transectionId: string,
@@ -102,6 +106,7 @@ export async function getTransectionResults(
     await sleep(1000);
   }
 }
+
 export async function sendSOl(
   walletId: string,
   solAmount: string,
@@ -121,6 +126,38 @@ export async function sendSOl(
     },
   });
   return response;
+}
+
+export async function signMessage(message: string, walletId: string): Promise<string> {
+  const result = await privy
+    .wallets()
+    .solana()
+    .signMessage(walletId, {
+      message: Buffer.from(message, "utf8"),
+      authorization_context: {
+        authorization_private_keys: [env.PRIVY_AUTH_KEY!],
+      },
+    });
+  const signatureBytes = Buffer.from(result.signature, "base64");
+
+  return bs58.encode(signatureBytes);
+}
+
+export async function signTransaction(
+  transactionBase64: string,
+  walletId: string,
+): Promise<string> {
+  const result = await privy
+    .wallets()
+    .solana()
+    .signTransaction(walletId, {
+      transaction: Buffer.from(transactionBase64, "base64"),
+      authorization_context: {
+        authorization_private_keys: [env.PRIVY_AUTH_KEY!],
+      },
+    });
+
+  return result.signed_transaction;
 }
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

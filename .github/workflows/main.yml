@@ -1,4 +1,3 @@
-
 name: Deploy to Saga Server
 
 on:
@@ -26,14 +25,12 @@ jobs:
               APP_DIR="folio-be"
               BRANCH="main"
               PROJECT="folio-prod"
-
               echo "Deploying PRODUCTION..."
 
             elif [ "${{ github.ref_name }}" = "staging" ]; then
               APP_DIR="folio-be-staging"
               BRANCH="staging"
               PROJECT="folio-staging"
-
               echo "Deploying STAGING..."
 
             else
@@ -41,23 +38,21 @@ jobs:
               exit 1
             fi
 
-            cd "$APP_DIR"
+            cd "/root/$APP_DIR"
 
-            export COMPOSE_PROJECT_NAME="$PROJECT"
-
-            echo "Docker project: $COMPOSE_PROJECT_NAME"
-            echo "Application directory: $APP_DIR"
+            echo "Project: $PROJECT"
+            echo "Directory: $(pwd)"
 
             echo "Pulling latest code..."
             git pull https://${{ secrets.GIT_HUB_USER_NAME }}:${{ secrets.GIT_HUB_SECRET }}@github.com/LYNC-WORLD/folio-backend.git "$BRANCH"
 
             echo "Stopping existing containers..."
-            docker compose down
+            docker compose -p "$PROJECT" down
 
             echo "Building and starting containers..."
-            docker compose up -d --build
+            docker compose -p "$PROJECT" up -d --build --remove-orphans
 
-            echo "Running containers for ${PROJECT}:"
-            docker compose ps
+            echo "Deployment status:"
+            docker compose -p "$PROJECT" ps
 
             echo "Deployment completed successfully."

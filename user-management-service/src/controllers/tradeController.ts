@@ -413,31 +413,25 @@ export class TradeController {
         });
         return;
       }
-      const body = req.body;
-      if(!body.orderId){
-                res.status(400).json({
-          success: false,
-          message: "orderId is required",
-        });
-        return;
-      }
-      const order = await this.tradeService.cancelOpenOrder(
+      const body: OrderHistoryParameters = req.body;
+      const orders = await this.tradeService.getOpenOrders(
         req.user.solanaWalletAddress!,
         req.user.solanaWalletId!,
-        body.orderId,
+        body,
       );
-      if (order.success) {
+      if (orders.success) {
         res.status(200).json({
           success: true,
           message: "open orders",
           data: {
-            ...order.message!,
+            orders: orders.message,
           },
         });
+        return;
       }
       res.status(404).json({
         success: false,
-        message: order.message,
+        message: orders.message,
       });
       return;
     } catch (error) {
@@ -460,42 +454,25 @@ export class TradeController {
         });
         return;
       }
-      const body: createLimitOrder = req.body;
-      if (
-        !body.stockAddress ||
-        !body.orderSide ||
-        !body.triggerAmount ||
-        !body.usdcAmount
-      ) {
-        res.status(400).json({
+      const body = req.body;
+      if(!body.orderId){
+                res.status(400).json({
           success: false,
-          message:
-            "tokenAddress, orderSide, triggerAmount and usdcAmount is required",
+          message: "orderId is required",
         });
         return;
       }
-      const stockDetails = await findStock(body.stockAddress);
-      if (!stockDetails) {
-        res.status(404).json({
-          success: false,
-          message: "stock not found",
-        });
-        return;
-      }
-      const order = await this.tradeService.createLimitOrder(
+      const order = await this.tradeService.cancelOpenOrder(
         req.user.solanaWalletAddress!,
         req.user.solanaWalletId!,
-        body.stockAddress,
-        body.usdcAmount,
-        body.triggerAmount,
-        body.orderSide,
+        body.orderId
       );
       if (order.success) {
         res.status(200).json({
           success: true,
-          message: "order Created",
+          message: "order Cancelled",
           data: {
-            id: order.message,
+            ...order.message!,
           },
         });
       }

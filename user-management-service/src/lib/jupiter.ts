@@ -306,7 +306,7 @@ async function authenticate(
   walletAddress: string,
   walletId: string,
 ): Promise<string> {
-  const challengeResponse = await fetch(`${BASE}/auth/challenge`, {
+  const challengeResponse = await fetch(`${BASE}/trigger/v2/auth/challenge`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -326,7 +326,7 @@ async function authenticate(
 
   const signature = await signMessage(challenge, walletId);
 
-  const verifyResponse = await fetch(`${BASE}/auth/verify`, {
+  const verifyResponse = await fetch(`${BASE}/trigger/v2/auth/verify`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -364,12 +364,12 @@ export async function createLimitOrder(
     Authorization: `Bearer ${token}`,
   };
 
-  let vaultResponse = await fetch(`${BASE}/vault`, {
+  let vaultResponse = await fetch(`${BASE}/trigger/v2/vault`, {
     headers,
   });
 
   if (!vaultResponse.ok) {
-    vaultResponse = await fetch(`${BASE}/vault/register`, {
+    vaultResponse = await fetch(`${BASE}/trigger/v2/vault/register`, {
       headers,
     });
   }
@@ -378,7 +378,7 @@ export async function createLimitOrder(
     throw new Error(`Vault failed: ${await vaultResponse.text()}`);
   }
 
-  const depositResponse = await fetch(`${BASE}/deposit/craft`, {
+  const depositResponse = await fetch(`${BASE}/trigger/v2/deposit/craft`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -403,7 +403,7 @@ export async function createLimitOrder(
 
   const depositSignedTx = await signTransaction(deposit.transaction, walletId);
 
-  const orderResponse = await fetch(`${BASE}/orders/price`, {
+  const orderResponse = await fetch(`${BASE}/trigger/v2/orders/price`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -447,7 +447,7 @@ export async function getOpenOrders(
 ) {
   const queryParams = new URLSearchParams();
 
-  Object.entries(OrderHistory).forEach(([key, value]) => {
+  Object.entries(OrderHistory ?? {}).forEach(([key, value]) => {
     if (value !== null) {
       queryParams.append(key, String(value));
     }
@@ -460,9 +460,9 @@ export async function getOpenOrders(
     "x-api-key": env.JUPITER_API_KEY!,
     Authorization: `Bearer ${token}`,
   };
-
+  
   let orders = await fetch(
-    `${BASE}/orders/history?${OrderHistory.toString()}`,
+    `${BASE}/trigger/v2/orders/history?${(queryParams).toString()}`,
     {
       headers,
     },
@@ -489,7 +489,7 @@ export async function cancelLimitOrder(
 
   // Step 2: Initiate DCA cancellation
   const cancelResponse = await fetch(
-    `${BASE}/orders/dca/cancel/${orderId}`,
+    `${BASE}/trigger/v2/orders/price/cancel/${orderId}`,
     {
       method: "POST",
       headers,
@@ -498,7 +498,7 @@ export async function cancelLimitOrder(
 
   if (!cancelResponse.ok) {
     throw new Error(
-      `DCA cancellation failed: ${await cancelResponse.text()}`,
+      `Order cancellation failed: ${await cancelResponse.text()}`,
     );
   }
 
@@ -518,7 +518,7 @@ export async function cancelLimitOrder(
 
   // Step 4: Confirm cancellation
   const confirmResponse = await fetch(
-    `${BASE}/orders/dca/confirm-cancel/${orderId}`,
+    `${BASE}/trigger/v2/orders/price/confirm-cancel/${orderId}`,
     {
       method: "POST",
       headers,
@@ -531,7 +531,7 @@ export async function cancelLimitOrder(
 
   if (!confirmResponse.ok) {
     throw new Error(
-      `DCA cancellation confirmation failed: ${await confirmResponse.text()}`,
+      `price cancellation confirmation failed: ${await confirmResponse.text()}`,
     );
   }
 

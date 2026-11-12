@@ -313,11 +313,15 @@ export class TradeService {
         triggerAmount,
         orderSide,
       );
+      console.log(responce);
+      
       return {
         success: true,
         message: responce,
       };
     } catch (error) {
+      console.error(error);
+      
       return {
         success: false,
         message: error,
@@ -341,6 +345,7 @@ export class TradeService {
         message: responce,
       };
     } catch (error) {
+      console.error(error);
       return {
         success: false,
         message: error,
@@ -367,6 +372,7 @@ export class TradeService {
         };
       }
     } catch (error) {
+      console.error(error);
       return {
         success: false,
         message: error,

@@ -359,7 +359,7 @@ export class TradeController {
         res.status(400).json({
           success: false,
           message:
-            "tokenAddress, orderSide, triggerAmount and usdcAmount is required",
+            "stockAddress, orderSide, triggerAmount and usdcAmount is required",
         });
         return;
       }
@@ -387,6 +387,7 @@ export class TradeController {
             id: order.message,
           },
         });
+        return;
       }
       res.status(404).json({
         success: false,
@@ -399,12 +400,10 @@ export class TradeController {
         success: false,
         message: "Internal server error",
       });
+      return;
     }
   };
-  public getOpenOrders = async (
-    req: Request,
-    res: Response,
-  ): Promise<void> => {
+  public getOpenOrders = async (req: Request, res: Response): Promise<void> => {
     try {
       if (!req.user) {
         res.status(404).json({
@@ -455,8 +454,8 @@ export class TradeController {
         return;
       }
       const body = req.body;
-      if(!body.orderId){
-                res.status(400).json({
+      if (!body.orderId) {
+        res.status(400).json({
           success: false,
           message: "orderId is required",
         });
@@ -465,7 +464,7 @@ export class TradeController {
       const order = await this.tradeService.cancelOpenOrder(
         req.user.solanaWalletAddress!,
         req.user.solanaWalletId!,
-        body.orderId
+        body.orderId,
       );
       if (order.success) {
         res.status(200).json({
@@ -475,6 +474,7 @@ export class TradeController {
             ...order.message!,
           },
         });
+        return;
       }
       res.status(404).json({
         success: false,

@@ -240,11 +240,11 @@ export function DepositFlow({
   }
 
   const OPTS = [
-    // {
-    //   id: "card" as const,
-    //   t: "Apple Pay or card",
-    //   s: "Buy USDC with a apple Pay or card",
-    // },
+    {
+      id: "card" as const,
+      t: "Apple Pay or card",
+      s: "Buy USDC with a apple Pay or card",
+    },
     {
       id: "crypto" as const,
       t: "Crypto",

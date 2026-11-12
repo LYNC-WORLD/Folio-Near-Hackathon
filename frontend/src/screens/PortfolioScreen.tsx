@@ -215,6 +215,8 @@ export function PortfolioScreen() {
       <WithdrawFlow
         spot={bal.spot}
         perp={bal.perp}
+        address={walletAddress ?? undefined}
+        email={user?.email}
         onMoveToSpot={openTransferOut}
         onDone={() => {
           sheet.close();

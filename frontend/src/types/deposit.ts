@@ -16,8 +16,10 @@ export type IntentToken = {
   decimals: number;
   blockchain: string;
   symbol: string;
+  priceUpdatedAt: String;
   price: number;
   contractAddress?: string | null;
+  coingeckoId: String;
 };
 
 export type IntentQuoteBody = {

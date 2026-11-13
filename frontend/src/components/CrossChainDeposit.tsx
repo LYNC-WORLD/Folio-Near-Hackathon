@@ -1,6 +1,3 @@
-// "Other chains" deposit: swap any supported token on any chain into USDC.
-// token -> amount + destination + refund address -> quote -> send instructions -> live status.
-// We never call /intents/execute: the user sends from their own external wallet.
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -139,8 +136,9 @@ export function CrossChainDeposit({
   const { tokens, loading, error, reload } = useIntentTokens();
 
   const [stage, setStage] = useState<Stage>("token");
+  const [chain, setChain] = useState<string | null>(null); // nothing selected at first
+  const [chainOpen, setChainOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [chain, setChain] = useState<string>("all");
   const [token, setToken] = useState<IntentToken | null>(null);
   const [dest, setDest] = useState<IntentDestination>("SOLANA");
   const [amount, setAmount] = useState("");
@@ -162,30 +160,37 @@ export function CrossChainDeposit({
     }
   }, [shown, refresh]);
 
-  // chains that actually have tokens, biggest first
+  // only chains from CHAIN that actually have tokens, in CHAIN's order
   const chains = useMemo(() => {
     const m = new Map<string, number>();
-    for (const t of tokens) m.set(t.blockchain, (m.get(t.blockchain) ?? 0) + 1);
-    return [...m.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([k]) => k);
+    for (const t of tokens) {
+      if (isSolUsdc(t) || t.symbol.includes("DEPRECATED")) continue;
+      if (!(t.blockchain in CHAIN)) continue;
+      m.set(t.blockchain, (m.get(t.blockchain) ?? 0) + 1);
+    }
+    return Object.keys(CHAIN)
+      .filter((k) => m.has(k))
+      .map((k) => [k, m.get(k)!] as const); // [key, count][]
   }, [tokens]);
 
   const list = useMemo(() => {
+    if (!chain) return [];
     const q = search.trim().toLowerCase();
     const rank = (sym: string) => {
       const i = POPULAR.indexOf(sym);
       return i < 0 ? 99 : i;
     };
     return tokens
-      .filter((t) => !isSolUsdc(t))
-      .filter((t) => chain === "all" || t.blockchain === chain)
+      .filter(
+        (t) =>
+          !isSolUsdc(t) &&
+          !t.symbol.includes("DEPRECATED") &&
+          t.blockchain === chain,
+      )
       .filter(
         (t) =>
           !q ||
           t.symbol.toLowerCase().includes(q) ||
-          chainName(t.blockchain).toLowerCase().includes(q) ||
           (t.contractAddress ?? "").toLowerCase().startsWith(q),
       )
       .sort(
@@ -260,13 +265,19 @@ export function CrossChainDeposit({
   }
 
   // ------------------------------------------------------------ send / status
+
   if (stage === "send" && live && token) {
     const terminal =
-      shown === "SUCCESS" || shown === "REFUNDED" || shown === "FAILED";
+      shown === "SUCCESS" ||
+      shown === "REFUNDED" ||
+      shown === "FAILED" ||
+      shown === "INCOMPLETE_DEPOSIT";
+
     const bad =
       shown === "REFUNDED" ||
       shown === "FAILED" ||
       shown === "INCOMPLETE_DEPOSIT";
+
     return (
       <Step id="xchain-send">
         <Text style={TYPE.h2}>
@@ -284,9 +295,7 @@ export function CrossChainDeposit({
           <Text style={TYPE.body}>
             About {live.amountOutFormatted} USDC landed in {DEST[dest].where}.
           </Text>
-        ) : shown === "REFUNDED" ||
-          shown === "FAILED" ||
-          shown === "INCOMPLETE_DEPOSIT" ? (
+        ) : bad ? (
           <Text style={s.warn}>
             {shown === "INCOMPLETE_DEPOSIT"
               ? "You sent less than the quoted amount, so the swap did not run. Your funds are returned to "
@@ -296,32 +305,52 @@ export function CrossChainDeposit({
           </Text>
         ) : (
           <>
-            <Text style={[TYPE.body, { fontSize: 13.5, marginTop: -6 }]}>
+            <Text style={[TYPE.body, { fontSize: 13, marginTop: -6 }]}>
               Send exactly this amount from your own wallet. You pay the network
               fee on {chainName(token.blockchain)}.
             </Text>
 
-            {!live.depositMemo ? (
-              <View style={s.qr}>
-                <QRCode
-                  value={live.depositAddress!}
-                  size={150}
-                  color="#0A0B0E"
-                  backgroundColor="#FFFFFF"
-                  ecl="M"
-                />
-              </View>
-            ) : null}
+            {/* Compact QR + amount section */}
+            <View style={s.sendSummary}>
+              {!live.depositMemo ? (
+                <View style={s.qrCompact}>
+                  <QRCode
+                    value={live.depositAddress!}
+                    size={112}
+                    color="#0A0B0E"
+                    backgroundColor="#FFFFFF"
+                    ecl="M"
+                  />
+                </View>
+              ) : null}
 
+              <View style={{ flex: 1, gap: 5 }}>
+                <Text style={s.lbl}>SEND EXACTLY</Text>
+
+                <Text style={s.sendAmount}>
+                  {live.amount} {token.symbol}
+                </Text>
+
+                <Text style={s.help}>{chainName(token.blockchain)}</Text>
+
+                <View style={{ gap: 2, marginTop: 5 }}>
+                  <Text style={s.lbl}>YOU RECEIVE</Text>
+                  <Text style={[s.val, { color: C.mint }]}>
+                    ≈ {live.amountOutFormatted} USDC
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Deposit details */}
             <View style={s.card}>
-              <Row k="SEND EXACTLY" v={`${live.amount} ${token.symbol}`} />
-              <Row k="NETWORK" v={chainName(token.blockchain)} />
               <Row
                 k="TO ADDRESS"
                 v={live.depositAddress!}
                 mono
                 onCopy={() => copy(live.depositAddress!, "Address copied")}
               />
+
               {live.depositMemo ? (
                 <Row
                   k="MEMO (REQUIRED)"
@@ -330,20 +359,25 @@ export function CrossChainDeposit({
                   onCopy={() => copy(live.depositMemo!, "Memo copied")}
                 />
               ) : null}
-              <Row k="YOU RECEIVE" v={`≈ ${live.amountOutFormatted} USDC`} />
+
               <Row
                 k="AT LEAST"
                 v={`${(Number(live.minAmountOut) / 1e6).toFixed(2)} USDC`}
               />
+
               <Row k="SLIPPAGE" v={fmtBps(appliedBps)} />
+
               <Row k="ARRIVES IN" v={DEST[dest].title} last />
             </View>
 
+            {/* Memo warning */}
             {live.depositMemo ? (
               <Text style={s.warn}>
                 Include the memo or the transfer cannot be matched.
               </Text>
             ) : null}
+
+            {/* Deadline and refund information */}
             <Text style={s.help}>
               Send before {new Date(live.deadline).toLocaleTimeString()}.
               Sending less than the quoted amount triggers a refund. Closing
@@ -504,52 +538,14 @@ export function CrossChainDeposit({
     );
   }
 
-  // ------------------------------------------------------------ token
+  // ------------------------------------------------------------ token (chain dropdown + assets)
   return (
     <Step id="xchain-token">
       {back}
       <Text style={TYPE.h2}>Deposit from another chain</Text>
       <Text style={[TYPE.body, { fontSize: 13.5, marginTop: -6 }]}>
-        Pick what you will send. It arrives as USDC.
+        Pick a chain, then the token you will send. It arrives as USDC.
       </Text>
-      <TextInput
-        style={s.input}
-        value={search}
-        onChangeText={setSearch}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder="Search token, chain or contract"
-        placeholderTextColor={C.ink4}
-      />
-
-      {chains.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-          style={{ flexGrow: 0 }}
-        >
-          {["all", ...chains].map((c) => {
-            const on = chain === c;
-            return (
-              <Pressable
-                key={c}
-                onPress={() => {
-                  hTap();
-                  setChain(c);
-                }}
-                style={[s.chip, on && s.chipOn]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-              >
-                <Text style={[s.chipT, on && { color: C.ink1 }]}>
-                  {c === "all" ? "All" : chainName(c)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      ) : null}
 
       {loading ? (
         <ActivityIndicator color={C.mint} />
@@ -560,50 +556,138 @@ export function CrossChainDeposit({
         </>
       ) : (
         <>
-          <Text style={s.lbl}>
-            {list.length} {list.length === 1 ? "TOKEN" : "TOKENS"}
-          </Text>
-          <ScrollView
-            style={{ maxHeight: 320 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {list.length === 0 ? (
-              <Text style={TYPE.sub}>No match.</Text>
-            ) : (
-              list.slice(0, 80).map((t, i, a) => (
-                <PressScale
-                  key={t.assetId}
-                  scaleTo={0.985}
-                  onPress={() => {
-                    hTap();
-                    setToken(t);
-                    setAmount("");
-                    setRefundTo("");
-                    setPreview(null);
-                    setErr("");
-                    setStage("amount");
-                  }}
-                  style={[s.tokRow, i < a.length - 1 && s.hair]}
-                  accessibilityRole="button"
+          {/* chain dropdown */}
+          <View>
+            <Pressable
+              onPress={() => {
+                hTap();
+                Keyboard.dismiss();
+                setChainOpen((o) => !o);
+              }}
+              style={[s.dd, chainOpen && s.ddOpen]}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: chainOpen }}
+            >
+              {chain ? (
+                <View style={[s.ddDot, { backgroundColor: tint(chain) }]}>
+                  <Text style={s.ddDotT}>
+                    {chain.slice(0, 3).toUpperCase()}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={[s.ddVal, !chain && { color: C.ink4 }]}>
+                {chain ? chainName(chain) : "Select chain"}
+              </Text>
+              <Text style={s.ddCaret}>{chainOpen ? "⌃" : "⌄"}</Text>
+            </Pressable>
+
+            {chainOpen ? (
+              <View style={s.ddMenu}>
+                <ScrollView
+                  style={{ maxHeight: 280 }}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
                 >
-                  <View style={[s.avatar, { backgroundColor: tint(t.symbol) }]}>
-                    <Text style={s.avatarT}>{t.symbol.slice(0, 3)}</Text>
-                  </View>
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={TYPE.ttl}>{t.symbol}</Text>
-                    <Text style={TYPE.sub}>
-                      {chainName(t.blockchain)}
-                      {t.contractAddress
-                        ? ` · ${short(t.contractAddress, 6, 4)}`
-                        : ""}
-                    </Text>
-                  </View>
-                  <Text style={s.price}>{fmtPrice(t.price)}</Text>
-                </PressScale>
-              ))
-            )}
-          </ScrollView>
+                  {chains.map(([c, count], i, a) => {
+                    const on = chain === c;
+                    return (
+                      <Pressable
+                        key={c}
+                        onPress={() => {
+                          hTap();
+                          setChain(c);
+                          setSearch("");
+                          setChainOpen(false);
+                        }}
+                        style={[s.ddItem, i < a.length - 1 && s.hair]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                      >
+                        <View style={[s.ddDot, { backgroundColor: tint(c) }]}>
+                          <Text style={s.ddDotT}>
+                            {c.slice(0, 3).toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={[s.ddItemT, on && { color: C.mint }]}>
+                          {chainName(c)}
+                        </Text>
+                        <Text style={s.ddCount}>{count}</Text>
+                        {on ? <Text style={{ color: C.mint }}>✓</Text> : null}
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : null}
+          </View>
+
+          {/* assets (hidden while the dropdown is open, so the sheet stays short) */}
+          {!chainOpen ? (
+            !chain ? (
+              <Text style={TYPE.sub}>Select a chain to see its tokens.</Text>
+            ) : (
+              <>
+                <TextInput
+                  style={s.input}
+                  value={search}
+                  onChangeText={setSearch}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder={`Search ${chainName(chain)} token or contract`}
+                  placeholderTextColor={C.ink4}
+                />
+                <Text style={s.lbl}>
+                  {list.length} {list.length === 1 ? "TOKEN" : "TOKENS"}
+                </Text>
+                <ScrollView
+                  style={{ maxHeight: 300 }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {list.length === 0 ? (
+                    <Text style={TYPE.sub}>No match.</Text>
+                  ) : (
+                    list.slice(0, 80).map((t, i, a) => (
+                      <PressScale
+                        key={t.assetId}
+                        scaleTo={0.985}
+                        onPress={() => {
+                          hTap();
+                          setToken(t);
+                          setAmount("");
+                          setRefundTo("");
+                          setPreview(null);
+                          setErr("");
+                          setStage("amount");
+                        }}
+                        style={[s.tokRow, i < a.length - 1 && s.hair]}
+                        accessibilityRole="button"
+                      >
+                        <View
+                          style={[
+                            s.avatar,
+                            { backgroundColor: tint(t.symbol) },
+                          ]}
+                        >
+                          <Text style={s.avatarT}>{t.symbol.slice(0, 3)}</Text>
+                        </View>
+                        <View style={{ flex: 1, gap: 3 }}>
+                          <Text style={TYPE.ttl}>{t.symbol}</Text>
+                          <Text style={TYPE.sub}>
+                            {t.contractAddress
+                              ? short(t.contractAddress, 6, 4)
+                              : "Native coin"}
+                          </Text>
+                        </View>
+                        <Text style={s.price}>{fmtPrice(t.price)}</Text>
+                      </PressScale>
+                    ))
+                  )}
+                </ScrollView>
+              </>
+            )
+          ) : null}
         </>
       )}
     </Step>
@@ -673,6 +757,63 @@ const s = StyleSheet.create({
   row: { gap: 6, paddingVertical: 12 },
   copy: { alignSelf: "flex-start", minHeight: 28, justifyContent: "center" },
 
+  // chain dropdown
+  dd: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+  },
+  sendSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingVertical: 4,
+  },
+
+  qrCompact: {
+    padding: 8,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+  },
+
+  sendAmount: {
+    fontFamily: FONT.sans700,
+    fontSize: 21,
+    color: C.ink1,
+  },
+  ddOpen: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  ddVal: { flex: 1, fontFamily: FONT.sans600, fontSize: 15, color: C.ink1 },
+  ddCaret: { fontFamily: FONT.sans600, fontSize: 16, color: C.ink3 },
+  ddDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ddDotT: { fontFamily: FONT.sans700, fontSize: 9, color: C.ink1 },
+  ddMenu: {
+    backgroundColor: C.surface,
+    borderTopWidth: 1,
+    borderTopColor: C.hair,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    overflow: "hidden",
+  },
+  ddItem: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+  },
+  ddItemT: { flex: 1, fontFamily: FONT.sans600, fontSize: 14, color: C.ink2 },
+  ddCount: { fontFamily: FONT.mono400, fontSize: 11.5, color: C.ink4 },
+
   // token list
   tokRow: {
     minHeight: 62,
@@ -694,16 +835,6 @@ const s = StyleSheet.create({
     color: C.ink2,
     fontVariant: ["tabular-nums"],
   },
-  chip: {
-    height: 32,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: C.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chipOn: { backgroundColor: C.stroke },
-  chipT: { fontFamily: FONT.sans600, fontSize: 12.5, color: C.ink3 },
 
   // amount screen
   hero: { flexDirection: "row", alignItems: "center", gap: 12 },

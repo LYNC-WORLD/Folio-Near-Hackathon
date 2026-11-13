@@ -6,10 +6,6 @@ const router = Router();
 
 const depositController = new DepositController();
 
-router.post("/perp-to-spot", authMiddleware, depositController.createWithdrawRequest);
-
-router.get("/check-withdraw-status", authMiddleware, depositController.checkWithdrawStatus);
-
 router.get("/intents/tokens", authMiddleware, depositController.listIntentTokens);
 router.post("/intents/quote", authMiddleware, depositController.quoteIntentDeposit);
 router.post("/intents/execute", authMiddleware, depositController.executeIntentDeposit);

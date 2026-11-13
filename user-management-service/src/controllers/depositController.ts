@@ -1,112 +1,18 @@
 import { Request, Response } from "express";
-import { DepositService } from "../services/depositServices";
-import { IntentsDepositService } from "../services/intentsDeposit.service";
+import { IntentsTransferService } from "../services/intentsTransfer.service";
 
 export class DepositController {
-  private depositService: DepositService;
-  private intentsDepositService: IntentsDepositService;
+  private intentsTransferService: IntentsTransferService;
   constructor() {
-    this.depositService = new DepositService();
-    this.intentsDepositService = new IntentsDepositService();
+    this.intentsTransferService = new IntentsTransferService();
   }
-
-  public createWithdrawRequest = async (
-    req: Request,
-    res: Response,
-  ): Promise<void> => {
-    try {
-      if (
-        !req.user ||
-        !req.user.solanaWalletId ||
-        !req.user.ethereumWalletId ||
-        !req.user.solanaWalletAddress ||
-        !req.user.ethereumWalletAddress
-      ) {
-        res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-        return;
-      }
-      const body: DepositRequestBody = req.body;
-
-      if (!body.depositAmount) {
-        res.status(400).json({
-          success: false,
-          message: "Deposit amount required",
-        });
-        return;
-      }
-      if (Number(body.depositAmount) < 20) {
-        res.status(400).json({
-          success: false,
-          message: "minimum deposit amount is $20",
-        });
-        return;
-      }
-      const depositRequest = await this.depositService.createWithdrawlRequest(
-        req.user.id,
-        body.depositAmount,
-        req.user.ethereumWalletId,
-        req.user.ethereumWalletAddress,
-        req.user.solanaWalletId,
-        req.user.solanaWalletAddress,
-      );
-      res.status(depositRequest.success ? 200 : 400).json({
-        success: depositRequest.success,
-        message: depositRequest.message,
-      });
-      return;
-    } catch (error) {
-      console.log("login error: ", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  };
-
-  public checkWithdrawStatus = async (
-    req: Request,
-    res: Response,
-  ): Promise<void> => {
-    try {
-      if (
-        !req.user ||
-        !req.user.solanaWalletId ||
-        !req.user.ethereumWalletId ||
-        !req.user.solanaWalletAddress ||
-        !req.user.ethereumWalletAddress
-      ) {
-        res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-        return;
-      }
-      const depositRequest = await this.depositService.checkWithdrawRequest(
-        req.user.id,
-      );
-      res.status(200).json({
-        success: depositRequest,
-        message: "withdraw status",
-      });
-      return;
-    } catch (error) {
-      console.log("login error: ", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  };
 
   public listIntentTokens = async (
     _req: Request,
     res: Response,
   ): Promise<void> => {
     try {
-      const tokens = await this.intentsDepositService.listTokens();
+      const tokens = await this.intentsTransferService.listTokens();
       res.status(200).json({ success: true, data: tokens });
     } catch (error) {
       console.log("intents tokens error: ", error);
@@ -128,15 +34,28 @@ export class DepositController {
         res.status(400).json({ success: false, message: "Bad request" });
         return;
       }
-      if (body.destination !== "SOLANA" && body.destination !== "HYPERLIQUID") {
+      if (
+        body.destination !== "SOLANA" &&
+        body.destination !== "HYPERLIQUID" &&
+        body.destination !== "EXTERNAL"
+      ) {
         res.status(400).json({ success: false, message: "invalid destination" });
         return;
       }
-      const result = await this.intentsDepositService.createQuote({
+      if (body.destination === "EXTERNAL" && (!body.destinationAsset || !body.recipient)) {
+        res.status(400).json({
+          success: false,
+          message: "destinationAsset and recipient are required",
+        });
+        return;
+      }
+      const result = await this.intentsTransferService.createQuote({
         userId: req.user.id,
         originAsset: body.originAsset,
         amount: String(body.amount),
         destination: body.destination,
+        destinationAsset: body.destinationAsset,
+        recipient: body.recipient,
         refundTo: body.refundTo,
         confidential: body.confidential === true,
         dry: body.dry !== false,
@@ -164,12 +83,13 @@ export class DepositController {
         res.status(404).json({ success: false, message: "User not found" });
         return;
       }
-      const depositId = (req.body as { depositId?: string } | undefined)?.depositId;
-      if (!depositId) {
-        res.status(400).json({ success: false, message: "depositId is required" });
+      const body = (req.body ?? {}) as { transferId?: string; depositId?: string };
+      const transferId = body.transferId || body.depositId;
+      if (!transferId) {
+        res.status(400).json({ success: false, message: "transferId is required" });
         return;
       }
-      const result = await this.intentsDepositService.execute(req.user.id, depositId, {
+      const result = await this.intentsTransferService.execute(req.user.id, transferId, {
         solanaWalletId: req.user.solanaWalletId,
         ethereumWalletId: req.user.ethereumWalletId,
       });
@@ -197,12 +117,12 @@ export class DepositController {
         res.status(404).json({ success: false, message: "User not found" });
         return;
       }
-      const depositId = String(req.query.depositId ?? "");
-      if (!depositId) {
-        res.status(400).json({ success: false, message: "depositId is required" });
+      const transferId = String(req.query.transferId ?? req.query.depositId ?? "");
+      if (!transferId) {
+        res.status(400).json({ success: false, message: "transferId is required" });
         return;
       }
-      const result = await this.intentsDepositService.status(req.user.id, depositId);
+      const result = await this.intentsTransferService.status(req.user.id, transferId);
       if (!result.ok) {
         res.status(result.status).json({ success: false, message: result.message });
         return;
@@ -215,14 +135,12 @@ export class DepositController {
   };
 }
 
-interface DepositRequestBody {
-  depositAmount: string;
-}
-
 interface IntentQuoteBody {
   originAsset?: string;
   amount?: string;
-  destination?: "SOLANA" | "HYPERLIQUID";
+  destination?: "SOLANA" | "HYPERLIQUID" | "EXTERNAL";
+  destinationAsset?: string;
+  recipient?: string;
   refundTo?: string;
   confidential?: boolean;
   dry?: boolean;

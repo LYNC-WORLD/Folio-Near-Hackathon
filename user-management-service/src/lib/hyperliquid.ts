@@ -1,16 +1,7 @@
-import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
-import {
-  formatPrice,
-  formatSize,
-  SymbolConverter,
-} from "@nktkas/hyperliquid/utils";
+import { HttpTransport, InfoClient } from "@nktkas/hyperliquid";
 import { Signature, Wallet } from "ethers";
-import { privateKeyToAccount } from "viem/accounts";
 import { privy } from "./privy";
 import { env } from "../config/env";
-import { USDC_MINT, WSOL_MINT } from "./solana";
-import { swap } from "./jupiter";
-import { toBaseUnits } from "./tradeMath";
 import { prisma } from "./prisma";
 import { encrypt } from "../utils/encryption";
 
@@ -18,46 +9,6 @@ export const hyperliquidTransport = new HttpTransport();
 export const hyperliquidInfoClient = new InfoClient({
   transport: hyperliquidTransport,
 });
-
-const HYPERLIQUID_WITHDRAW_URL =
-  "https://api.hyperunit.xyz/gen/hyperliquid/solana/sol";
-
-export async function getWithdrawAddress(solanaAddress: string) {
-  try {
-    const url = `${HYPERLIQUID_WITHDRAW_URL}/${encodeURIComponent(solanaAddress)}`;
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(
-        `Failed to fetch ${solanaAddress} deposit address: ${response.status}`,
-      );
-      return;
-    }
-    const data: depositAddressResponce = await response.json();
-
-    if (data.address === undefined || data.address === null) {
-      console.error(`No address for ${solanaAddress}`);
-      return;
-    }
-    return data.address;
-  } catch (error) {
-    console.error(error);
-    return;
-  }
-}
-
-export async function getHyperliquidSpotBalances(walletAddress: string) {
-  try {
-    const data = await hyperliquidInfoClient.spotClearinghouseState({
-      user: walletAddress,
-    });
-    return data.balances;
-  } catch (error) {
-    console.error("Failed to fetch Hyperliquid spot balances:", error);
-    throw error;
-  }
-}
 
 async function isExchangeOk(response: Response) {
   const body = await response.json().catch(() => undefined);
@@ -255,51 +206,11 @@ export async function makeUnifiedAccount(
   return isExchangeOk(response);
 }
 
-export async function sellUsdcForSol(usdcAmount: string, privateKey: string) {
-  const wallet = privateKeyToAccount(privateKey as `0x${string}`);
-  const converter = await SymbolConverter.create({
-    transport: hyperliquidTransport,
-  });
-  const exchange = new ExchangeClient({
-    transport: hyperliquidTransport,
-    wallet,
-  });
-
-  const mids = await hyperliquidInfoClient.allMids();
-  const mid = parseFloat(mids["SOL"]);
-
-  const price = mid * 1.01;
-
-  const szDecimals = converter.getSzDecimals("SOL")!;
-  const solAmount = Number(usdcAmount) / mid;
-  const result = await exchange.order({
-    orders: [
-      {
-        a: 10156,
-        b: true,
-        p: formatPrice(price, szDecimals),
-        r: false,
-        s: formatSize(solAmount, szDecimals),
-        t: {
-          limit: {
-            tif: "Gtc",
-          },
-        },
-      },
-    ],
-    grouping: "na",
-  });
-
-  console.log("Order result:", result);
-
-  return { responce: result, price: mid };
-}
-
-export async function sendSolToSpot(
-  withdrawAddress: string,
+export async function sendHyperliquidUsdc(
   ethWalletId: string,
   amount: string,
-) {
+  destination: string,
+): Promise<{ ok: boolean; txHash: string | null }> {
   const nonce = Date.now();
   const signature = await privy
     .wallets()
@@ -314,13 +225,13 @@ export async function sendSolToSpot(
             verifyingContract: "0x0000000000000000000000000000000000000000",
           },
           message: {
-            destination: withdrawAddress,
-            sourceDex: "spot",
-            destinationDex: "spot",
-            token: "USOL:0x49b67c39f5566535de22b29b0e51e685",
-            amount: amount,
+            destination,
+            sourceDex: "",
+            destinationDex: "",
+            token: "USDC",
+            amount,
             fromSubAccount: "",
-            nonce: nonce,
+            nonce,
             type: "sendAsset",
             signatureChainId: "0xa4b1",
             hyperliquidChain: "Mainnet",
@@ -354,19 +265,19 @@ export async function sendSolToSpot(
   const parsed = Signature.from(signature.signature);
   const body = {
     action: {
-      amount: amount,
-      destination: withdrawAddress,
-      destinationDex: "spot",
+      amount,
+      destination,
+      destinationDex: "",
       fromSubAccount: "",
       hyperliquidChain: "Mainnet",
-      nonce: nonce,
+      nonce,
       signatureChainId: "0xa4b1",
-      sourceDex: "spot",
-      token: "USOL:0x49b67c39f5566535de22b29b0e51e685",
+      sourceDex: "",
+      token: "USDC",
       type: "sendAsset",
     },
     expiresAfter: null,
-    nonce: nonce,
+    nonce,
     signature: {
       r: parsed.r,
       s: parsed.s,
@@ -374,38 +285,12 @@ export async function sendSolToSpot(
     },
     vaultAddress: null,
   };
-  console.log(body);
 
   const response = await fetch("https://api.hyperliquid.xyz/exchange", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return response;
-}
-
-export async function spotSolToUsdc(
-  depositAmount: string,
-  solanaAddress: string,
-  solanaWalletId: string,
-) {
-  const swapResult = await swap(
-    solanaWalletId,
-    solanaAddress,
-    WSOL_MINT,
-    USDC_MINT,
-    toBaseUnits(Number(depositAmount), 9),
-  );
-  if (!swapResult.succeeded || !swapResult.outputAmount) {
-    return { success: false, message: "sol to usdc swap failed" };
-  } else {
-    return { success: true, message: "USDC sent to wallet" };
-  }
-}
-
-interface depositAddressResponce {
-  address?: string;
-  [key: string]: any;
+  const ok = await isExchangeOk(response);
+  return { ok, txHash: ok ? `hl:${nonce}` : null };
 }

@@ -116,6 +116,10 @@ export function meetsMinimum(amount: number, token: OneClickToken): boolean {
   return notionalUsd(amount, token) + 1e-9 >= MIN_NOTIONAL_USD;
 }
 
+export function isHyperliquidUsdc(token: OneClickToken): boolean {
+  return token.assetId === HYPERLIQUID_USDC_ASSET;
+}
+
 export function privySendChain(token: OneClickToken): "solana" | "ethereum" | null {
   if (token.symbol !== "USDC") return null;
   if (token.blockchain === "sol" && token.contractAddress === SOLANA_USDC_MINT) {

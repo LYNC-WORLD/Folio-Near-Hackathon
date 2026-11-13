@@ -1,6 +1,6 @@
 import { IntentsDestination } from "../generated/client";
 import { prisma } from "../lib/prisma";
-import { ensureHyperliquidTradingAccount } from "../lib/hyperliquid";
+import { ensureHyperliquidTradingAccount, sendHyperliquidUsdc } from "../lib/hyperliquid";
 import { sendUsdc, walletAction } from "../lib/privy";
 import {
   DEFAULT_SLIPPAGE_BPS,
@@ -10,6 +10,7 @@ import {
   OneClickToken,
   getStatus,
   getTokens,
+  isHyperliquidUsdc,
   meetsMinimum,
   privySendChain,
   quote,
@@ -25,7 +26,9 @@ export type QuoteInput = {
   userId: string;
   originAsset: string;
   amount: string;
-  destination: "SOLANA" | "HYPERLIQUID";
+  destination: "SOLANA" | "HYPERLIQUID" | "EXTERNAL";
+  destinationAsset?: string;
+  recipient?: string;
   refundTo: string;
   confidential: boolean;
   dry: boolean;
@@ -40,7 +43,7 @@ function deadlineIn(minutes: number): string {
   return new Date(Date.now() + minutes * 60_000).toISOString();
 }
 
-function publicDeposit(row: {
+function publicTransfer(row: {
   id: string;
   originAsset: string;
   destinationAsset: string;
@@ -56,7 +59,7 @@ function publicDeposit(row: {
   createdAt: Date;
 }) {
   return {
-    depositId: row.id,
+    transferId: row.id,
     originAsset: row.originAsset,
     destinationAsset: row.destinationAsset,
     destination: row.destination,
@@ -72,7 +75,7 @@ function publicDeposit(row: {
   };
 }
 
-export class IntentsDepositService {
+export class IntentsTransferService {
   public async listTokens(): Promise<OneClickToken[]> {
     return getTokens();
   }
@@ -89,31 +92,57 @@ export class IntentsDepositService {
     if (slippageBps > 10_000) {
       return { ok: false as const, status: 400, message: "invalid slippage" };
     }
-    const refundTo = input.refundTo.trim();
-    if (!refundTo) {
-      return { ok: false as const, status: 400, message: "refundTo is required" };
-    }
 
     const tokens = await getTokens();
     const origin = tokens.find((token) => token.assetId === input.originAsset);
     if (!origin) {
       return { ok: false as const, status: 400, message: "origin asset is not supported" };
     }
+    const refundTo = isHyperliquidUsdc(origin)
+      ? input.ethereumWalletAddress
+      : input.refundTo.trim();
+    if (!refundTo) {
+      return { ok: false as const, status: 400, message: "refundTo is required" };
+    }
     if (!meetsMinimum(amount, origin)) {
       return { ok: false as const, status: 400, message: "minimum deposit amount is $20" };
     }
 
-    const destinationAsset =
-      input.destination === "HYPERLIQUID"
-        ? HYPERLIQUID_USDC_ASSET
-        : solanaUsdc(tokens)?.assetId;
+    const canExecute = privySendChain(origin) !== null || isHyperliquidUsdc(origin);
+    let destinationAsset: string | undefined;
+    let recipient: string;
+    if (input.destination === "EXTERNAL") {
+      if (!canExecute) {
+        return { ok: false as const, status: 400, message: "origin must be a Folio wallet balance" };
+      }
+      const requested = input.destinationAsset?.trim();
+      const outside = input.recipient?.trim();
+      if (!requested || !outside) {
+        return {
+          ok: false as const,
+          status: 400,
+          message: "destinationAsset and recipient are required",
+        };
+      }
+      if (requested === origin.assetId) {
+        return { ok: false as const, status: 400, message: "destination asset must differ from origin" };
+      }
+      const destToken = tokens.find((token) => token.assetId === requested);
+      if (!destToken) {
+        return { ok: false as const, status: 400, message: "destination asset is not supported" };
+      }
+      destinationAsset = destToken.assetId;
+      recipient = outside;
+    } else if (input.destination === "HYPERLIQUID") {
+      destinationAsset = HYPERLIQUID_USDC_ASSET;
+      recipient = input.ethereumWalletAddress;
+    } else {
+      destinationAsset = solanaUsdc(tokens)?.assetId;
+      recipient = input.solanaWalletAddress;
+    }
     if (!destinationAsset) {
       return { ok: false as const, status: 502, message: "Solana USDC is not available" };
     }
-    const recipient =
-      input.destination === "HYPERLIQUID"
-        ? input.ethereumWalletAddress
-        : input.solanaWalletAddress;
 
     let priced: OneClickQuote;
     try {
@@ -139,7 +168,6 @@ export class IntentsDepositService {
       priced.amountInUsd,
       priced.amountOutUsd,
     );
-    const canExecute = privySendChain(origin) !== null;
     const quoteExtras = {
       amountOut: priced.amountOut,
       amountOutFormatted: priced.amountOutFormatted,
@@ -171,7 +199,7 @@ export class IntentsDepositService {
       return { ok: false as const, status: 502, message: "quote did not return a deposit address" };
     }
 
-    const row = await prisma.intentsDeposit.create({
+    const row = await prisma.intentsTransfer.create({
       data: {
         userId: input.userId,
         originAsset: origin.assetId,
@@ -190,32 +218,35 @@ export class IntentsDepositService {
     return {
       ok: true as const,
       data: {
-        ...publicDeposit(row),
+        ...publicTransfer(row),
         dry: false,
         ...quoteExtras,
       },
     };
   }
 
-  public async execute(userId: string, depositId: string, wallets: {
+  public async execute(userId: string, transferId: string, wallets: {
     solanaWalletId?: string;
     ethereumWalletId?: string;
   }) {
-    const row = await prisma.intentsDeposit.findFirst({
-      where: { id: depositId, userId },
+    const row = await prisma.intentsTransfer.findFirst({
+      where: { id: transferId, userId },
     });
-    if (!row) return { ok: false as const, status: 404, message: "deposit not found" };
-    if (row.txHash) return { ok: true as const, data: publicDeposit(row) };
+    if (!row) return { ok: false as const, status: 404, message: "transfer not found" };
+    if (row.txHash) return { ok: true as const, data: publicTransfer(row) };
 
     const tokens = await getTokens();
     const origin = tokens.find((token) => token.assetId === row.originAsset);
+    if (origin && isHyperliquidUsdc(origin)) {
+      return this.executeHyperliquidWithdraw(row, wallets.ethereumWalletId);
+    }
     const chain = origin ? privySendChain(origin) : null;
     if (!origin || !chain) {
       return {
         ok: false as const,
         status: 400,
         message: "Send this amount from your own wallet on the origin chain",
-        data: publicDeposit(row),
+        data: publicTransfer(row),
       };
     }
 
@@ -231,28 +262,53 @@ export class IntentsDepositService {
       });
     }
 
-    const updated = await prisma.intentsDeposit.update({
+    const updated = await prisma.intentsTransfer.update({
       where: { id: row.id },
       data: { txHash },
     });
-    return { ok: true as const, data: publicDeposit(updated) };
+    return { ok: true as const, data: publicTransfer(updated) };
   }
 
-  public async status(userId: string, depositId: string) {
-    const row = await prisma.intentsDeposit.findFirst({
-      where: { id: depositId, userId },
+  private async executeHyperliquidWithdraw(
+    row: Parameters<typeof publicTransfer>[0] & { id: string },
+    ethereumWalletId?: string,
+  ) {
+    if (!ethereumWalletId) {
+      return { ok: false as const, status: 404, message: "User not found" };
+    }
+    const wallet = await prisma.wallet.findFirst({
+      where: { walletId: ethereumWalletId },
+      include: { hyperLiquidDetails: true },
     });
-    if (!row) return { ok: false as const, status: 404, message: "deposit not found" };
+    if (!wallet?.hyperLiquidDetails) {
+      return { ok: false as const, status: 400, message: "hyperliquid account is not set up" };
+    }
+    const sent = await sendHyperliquidUsdc(ethereumWalletId, row.amount, row.depositAddress);
+    if (!sent.ok || !sent.txHash) {
+      return { ok: false as const, status: 502, message: "hyperliquid transfer failed" };
+    }
+    const updated = await prisma.intentsTransfer.update({
+      where: { id: row.id },
+      data: { txHash: sent.txHash },
+    });
+    return { ok: true as const, data: publicTransfer(updated) };
+  }
+
+  public async status(userId: string, transferId: string) {
+    const row = await prisma.intentsTransfer.findFirst({
+      where: { id: transferId, userId },
+    });
+    if (!row) return { ok: false as const, status: 404, message: "transfer not found" };
 
     const live = await getStatus(row.depositAddress, row.depositMemo);
-    const updated = await prisma.intentsDeposit.update({
+    const updated = await prisma.intentsTransfer.update({
       where: { id: row.id },
       data: { status: live.status },
     });
     if (updated.destination === "HYPERLIQUID" && updated.status === "SUCCESS") {
       await setupHyperliquidAccount(userId);
     }
-    return { ok: true as const, data: publicDeposit(updated) };
+    return { ok: true as const, data: publicTransfer(updated) };
   }
 }
 

@@ -15,6 +15,7 @@ enum Chain {
 enum IntentsDestination {
     SOLANA
     HYPERLIQUID
+    EXTERNAL
 }
 
 enum StockType {
@@ -63,8 +64,7 @@ model User {
     recurringBuyRequest     RecurringBuyRequest[]
     // indexFundsHoldings      IndexFundsHolding[]
     perpLeaderboardSnapshot PerpLeaderboardSnapshot?
-    withdrawRequests        WithdrawRequest[]
-    intentsDeposits         IntentsDeposit[]
+    intentsTransfers        IntentsTransfer[]
 
     @@index([userId])
 }
@@ -186,7 +186,7 @@ model PerpLeaderboardSnapshot {
     @@index([rank])
 }
 
-model IntentsDeposit {
+model IntentsTransfer {
     id               String             @id @default(cuid())
     userId           String
     originAsset      String
@@ -207,16 +207,3 @@ model IntentsDeposit {
     @@index([userId])
 }
 
-model WithdrawRequest {
-    id                  String   @id @default(cuid())
-    userId              String
-    solanaWalletAddress String
-    solanaWalletId      String
-    withdrawAmount      String
-    withdrawCompleted   Boolean  @default(false)
-    conversionCompleted Boolean  @default(false)
-    createdAt           DateTime @default(now())
-    updatesAt           DateTime @updatedAt
-
-    user User @relation(fields: [userId], references: [id])
-}

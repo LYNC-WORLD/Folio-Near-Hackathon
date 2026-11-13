@@ -283,9 +283,21 @@ export class IntentsTransferService {
     if (!wallet?.hyperLiquidDetails) {
       return { ok: false as const, status: 400, message: "hyperliquid account is not set up" };
     }
-    const sent = await sendHyperliquidUsdc(ethereumWalletId, row.amount, row.depositAddress);
+    let sent = await sendHyperliquidUsdc(ethereumWalletId, row.amount, row.depositAddress);
+    if (!sent.ok) {
+      sent = await sendHyperliquidUsdc(ethereumWalletId, row.amount, row.depositAddress, {
+        sourceDex: "spot",
+        destinationDex: "",
+      });
+    }
     if (!sent.ok || !sent.txHash) {
-      return { ok: false as const, status: 502, message: "hyperliquid transfer failed" };
+      return {
+        ok: false as const,
+        status: 502,
+        message: sent.error
+          ? `hyperliquid transfer failed: ${sent.error}`
+          : "hyperliquid transfer failed",
+      };
     }
     const updated = await prisma.intentsTransfer.update({
       where: { id: row.id },

@@ -10,10 +10,27 @@ export const hyperliquidInfoClient = new InfoClient({
   transport: hyperliquidTransport,
 });
 
-async function isExchangeOk(response: Response) {
+async function readExchange(response: Response): Promise<{
+  ok: boolean;
+  error?: string;
+  body?: unknown;
+}> {
   const body = await response.json().catch(() => undefined);
-  return response.ok && body?.status === "ok";
+  if (response.ok && body?.status === "ok") return { ok: true, body };
+  const error =
+    typeof body?.response === "string"
+      ? body.response
+      : body?.status === "err"
+        ? String(body.response ?? "exchange error")
+        : `http ${response.status}`;
+  return { ok: false, error, body };
 }
+
+async function isExchangeOk(response: Response) {
+  return (await readExchange(response)).ok;
+}
+
+export const HYPERLIQUID_USDC_TOKEN = "USDC:0x6d1e7cde53ba9467b783cb7c530ce054";
 
 export async function createAgentWallet(walletId: string) {
   const wallet = Wallet.createRandom();
@@ -210,8 +227,12 @@ export async function sendHyperliquidUsdc(
   ethWalletId: string,
   amount: string,
   destination: string,
-): Promise<{ ok: boolean; txHash: string | null }> {
+  opts?: { sourceDex?: string; destinationDex?: string },
+): Promise<{ ok: boolean; txHash: string | null; error?: string }> {
   const nonce = Date.now();
+  const sourceDex = opts?.sourceDex ?? "";
+  const destinationDex = opts?.destinationDex ?? "";
+  const token = HYPERLIQUID_USDC_TOKEN;
   const signature = await privy
     .wallets()
     .ethereum()
@@ -226,9 +247,9 @@ export async function sendHyperliquidUsdc(
           },
           message: {
             destination,
-            sourceDex: "",
-            destinationDex: "",
-            token: "USDC",
+            sourceDex,
+            destinationDex,
+            token,
             amount,
             fromSubAccount: "",
             nonce,
@@ -267,13 +288,13 @@ export async function sendHyperliquidUsdc(
     action: {
       amount,
       destination,
-      destinationDex: "",
+      destinationDex,
       fromSubAccount: "",
       hyperliquidChain: "Mainnet",
       nonce,
       signatureChainId: "0xa4b1",
-      sourceDex: "",
-      token: "USDC",
+      sourceDex,
+      token,
       type: "sendAsset",
     },
     expiresAfter: null,
@@ -291,6 +312,10 @@ export async function sendHyperliquidUsdc(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const ok = await isExchangeOk(response);
-  return { ok, txHash: ok ? `hl:${nonce}` : null };
+  const result = await readExchange(response);
+  if (!result.ok) {
+    console.error("hyperliquid sendAsset failed:", result.error, result.body);
+    return { ok: false, txHash: null, error: result.error };
+  }
+  return { ok: true, txHash: `hl:${nonce}` };
 }

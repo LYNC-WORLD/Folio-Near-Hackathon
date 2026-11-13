@@ -21,7 +21,10 @@
     "EXPO_PUBLIC_CROSSMINT_ENV":"staging",
     "EXPO_PUBLIC_MOONPAY_PK":"pk_test_vq5REesdKu72BEIyWfWcJ3kXUFw9vNG",
     "EXPO_PUBLIC_MOONPAY_SK":"sk_test_pknn4SD2E8kAsYu092R6Z3gKtn6sp9t",
-    "EXPO_PUBLIC_MOONPAY_ENV":"sandbox"
+    "EXPO_PUBLIC_MOONPAY_ENV":"sandbox",
+    "EXPO_PUBLIC_TRANSAK_API_KEY":"50c5fcba-07e9-473d-8e4a-1effa6fadbc9",
+"EXPO_PUBLIC_TRANSAK_API_SECRET":"MjQPOoyAVACSpeNLCPqm7A==",
+"EXPO_PUBLIC_TRANSAK_ENV":"staging"
   }
 },
     "production": {

@@ -189,12 +189,7 @@ export function OrderTicketSheet({
     return <TicketBusy side={side} otype={otype} nm={nm} lev={lev} />;
   if (phase === "done" && result)
     return (
-      <TicketDone
-        t={t}
-        result={result}
-        onClose={onClose}
-        onChart={onChart}
-      />
+      <TicketDone t={t} result={result} onClose={onClose} onChart={onChart} />
     );
 
   // ---------------------------------------------------------------- form
@@ -281,7 +276,9 @@ export function OrderTicketSheet({
           )}
         </View>
         {onlyIsolated ? (
-          <Text style={s.sub}>This market trades with isolated margin only.</Text>
+          <Text style={s.sub}>
+            This market trades with isolated margin only.
+          </Text>
         ) : marginMode === "CROSS" ? (
           <Text style={s.sub}>
             Your whole perp balance backs this trade, so liquidation is further
@@ -620,9 +617,7 @@ function TicketBusy({
     <Sheet onClose={() => {}}>
       <View style={{ alignItems: "center", gap: 20, paddingVertical: 14 }}>
         <H2 style={{ fontSize: 19 }}>
-          {otype === "Market"
-            ? "Opening on Hyperliquid"
-            : "Placing your order"}
+          {otype === "Market" ? "Opening on Hyperliquid" : "Placing your order"}
         </H2>
         <ActivityIndicator color={C.mint} />
         <Text style={s.mono}>
@@ -645,10 +640,12 @@ function TicketDone({
   onClose: () => void;
   onChart: () => void;
 }) {
-  const { side, lev, mg, liq, fee, en, opx, tpOn, tp, sl, otype, nm } = t;
+  const { side, lev, mg, liq, fee, en, opx, tpOn, tp, sl, otype, nm, mk } = t;
   const isPos = result.filled;
-  const entry = result.entry ?? en;
+  const isLimit = otype === "Limit";
+  const entry = result.entry || en || mk || 0;
   const col = side > 0 ? C.mint : C.loss;
+
   const rows: [string, string][] = isPos
     ? [
         ["ENTRY", money(entry)],
@@ -658,12 +655,13 @@ function TicketDone({
         ["FEE (EST.)", money(fee)],
       ]
     : [
-        ["PRICE", money(num(opx))],
+        [isLimit ? "PRICE" : "EST. PRICE", money(isLimit ? num(opx) : entry)],
         ["SIDE", sideTxt(side) + " · " + lev + "x"],
         ["MARGIN HELD", money(mg)],
       ];
   if (tpOn && tp) rows.push(["TAKE PROFIT", money(tp)]);
   if (tpOn && sl) rows.push(["STOP LOSS", money(sl)]);
+
   return (
     <Sheet onClose={onClose}>
       <View style={{ alignItems: "center", gap: 14, paddingTop: 6 }}>
@@ -675,8 +673,10 @@ function TicketDone({
         </H2>
         <Body style={{ textAlign: "center", fontSize: 13 }}>
           {isPos
-            ? "It is on your chart with its liquidation line."
-            : `It fills when ${nm} reaches ${money(num(opx))}. Your ${money(mg)} is set aside until then.`}
+            ? "Your position is live on the chart, including its liquidation price."
+            : isLimit
+              ? `Your order will execute when ${nm} reaches ${money(num(opx))}. Your ${money(mg)} margin is reserved until then.`
+              : `Your position is live on the chart, including its liquidation price.`}
         </Body>
       </View>
       <KvCard>

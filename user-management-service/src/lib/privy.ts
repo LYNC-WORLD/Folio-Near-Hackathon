@@ -107,6 +107,31 @@ export async function getTransectionResults(
   }
 }
 
+export async function sendUsdc(
+  chain: "solana" | "ethereum",
+  walletId: string,
+  amount: string,
+  destination: string,
+) {
+  return privy.wallets().transfer(walletId, {
+    source: {
+      chain,
+      asset: "usdc",
+      amount,
+    },
+    destination: {
+      address: destination,
+    },
+    authorization_context: {
+      authorization_private_keys: [env.PRIVY_AUTH_KEY!],
+    },
+  });
+}
+
+export async function walletAction(walletId: string, actionId: string) {
+  return privy.wallets().actions.get(actionId, { wallet_id: walletId });
+}
+
 export async function sendSOl(
   walletId: string,
   solAmount: string,

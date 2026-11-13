@@ -265,14 +265,14 @@ export function DepositFlow({
       t: "Apple Pay or card",
       s: "Buy USDC with Apple Pay or card",
     },
-    {
-      id: "crypto" as const,
-      t: "Crypto",
-      s: "Receive USDC from a crypto wallet",
-    },
+    // {
+    //   id: "crypto" as const,
+    //   t: "Crypto",
+    //   s: "Receive USDC from a crypto wallet",
+    // },
     {
       id: "other" as const,
-      t: "Other chains",
+      t: "Crypto",
       s: "Send ETH, BTC, Base USDC and more",
     },
     {

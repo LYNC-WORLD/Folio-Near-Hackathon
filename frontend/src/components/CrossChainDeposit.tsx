@@ -542,7 +542,7 @@ export function CrossChainDeposit({
   return (
     <Step id="xchain-token">
       {back}
-      <Text style={TYPE.h2}>Deposit from another chain</Text>
+      <Text style={TYPE.h2}>Deposit from Crypto</Text>
       <Text style={[TYPE.body, { fontSize: 13.5, marginTop: -6 }]}>
         Pick a chain, then the token you will send. It arrives as USDC.
       </Text>

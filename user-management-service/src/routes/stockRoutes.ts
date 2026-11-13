@@ -25,7 +25,7 @@ router.get(
 router.get("/index-funds", stockController.getIndexFunds);
 
 router.get(
-  "/index-funds/:indexFundSymbol",
+  "/index-funds/:stockSymbol",
   authMiddleware,
   stockController.getStockBySymbol,
 );

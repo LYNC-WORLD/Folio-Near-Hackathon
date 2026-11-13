@@ -174,11 +174,11 @@ export function TransferSheet({
   const result = phase === "submitted" ? resultRef.current : null;
 
   const { idToken } = useAuth();
-  const { expectedUSDC, loading: quoteLoading } = useDepositQuote(
-    amt,
-    idToken,
-    inb && phase === "form",
-  );
+  const {
+    expectedUSDC,
+    loading: quoteLoading,
+    error: quoteError,
+  } = useDepositQuote(amt, dir, idToken, phase === "form" && ok);
 
   const rot = useSharedValue(dir0 === "out" ? 1 : 0); // counts half-turns
   const swapStyle = useAnimatedStyle(() => ({
@@ -283,8 +283,8 @@ export function TransferSheet({
             <H2 style={{ textAlign: "center" }}>Transfer submitted</H2>
             <Body style={{ textAlign: "center", fontSize: 13 }}>
               Moving {money(amt)} to your {inb ? "perp account" : "spot wallet"}
-              . This can take up to 5 minutes — you can close this now and we'll
-              let you know once it's done.
+              . This usually takes a few minutes. You can close this now and
+              we'll let you know once it's done.
             </Body>
             <Btn label="Close" onPress={onClose} />
           </View>
@@ -387,17 +387,21 @@ export function TransferSheet({
               <Text style={s.k}>USDC</Text>
             </View>
           </View>
-          {inb ? (
+          {ok ? (
             <View style={s.quoteRow}>
               {quoteLoading ? (
                 <>
                   <ActivityIndicator size="small" color={C.ink4} />
                   <Text style={s.quoteT}>Getting quote…</Text>
                 </>
+              ) : quoteError ? (
+                <Text style={[s.quoteT, { color: C.loss }]}>{quoteError}</Text>
               ) : expectedUSDC != null ? (
                 <Text style={s.quoteT}>
-                  ≈ <Text style={s.quoteV}>{expectedUSDC.toFixed(4)} USDC</Text>{" "}
-                  credited to your perp account
+                  ≈ <Text style={s.quoteV}>{expectedUSDC.toFixed(2)} USDC</Text>{" "}
+                  {inb
+                    ? "credited to your perp account"
+                    : "arrives in your spot wallet, after the 0.20 USDC transfer fee"}
                 </Text>
               ) : null}
             </View>
@@ -411,13 +415,13 @@ export function TransferSheet({
           ) : (
             <Text style={s.note}>
               {inb
-                ? "Instant and free. Money in the perp account is margin for your trades. Spot buys cannot use it until you move it back."
-                : "Instant and free. Margin inside open positions stays put until you close them."}
+                ? "Takes a few minutes and may cost a small amount in fees. Money in the perp account is margin for your trades. Spot buys cannot use it until you move it back."
+                : "Takes a few minutes and costs 0.20 USDC. Margin inside open positions stays put until you close them."}{" "}
             </Text>
           )}
 
           <Btn
-            disabled={!ok}
+            disabled={!ok || !!quoteError}
             label={
               over
                 ? `More than you have in your ${inb ? "spot wallet" : "perp account"}`

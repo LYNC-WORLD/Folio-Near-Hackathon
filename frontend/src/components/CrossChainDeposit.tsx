@@ -246,12 +246,11 @@ export function CrossChainDeposit({
           destination: dest,
           refundTo: refundTo.trim(),
           dry: false,
-          // use the slippage the first quote suggested
           slippageBps: preview.suggestedSlippageBps,
         },
         idToken,
       );
-      if (!res.data.depositId || !res.data.depositAddress)
+      if (!res.data.transferId || !res.data.depositAddress)
         throw new Error("No deposit address came back. Try again.");
       refreshed.current = false;
       setLive(res.data);

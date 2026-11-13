@@ -22,13 +22,13 @@ export function useIntentTokens() {
   };
 }
 
-export function useIntentStatus(depositId?: string) {
+export function useIntentStatus(transferId?: string) {
   const { idToken } = useAuth();
   const query = useQuery({
-    queryKey: ["intent-status", depositId],
-    queryFn: () => getIntentStatus(depositId as string, idToken as string),
+    queryKey: ["intent-status", transferId],
+    queryFn: () => getIntentStatus(transferId as string, idToken as string),
     select: (res) => res.data,
-    enabled: !!idToken && !!depositId,
+    enabled: !!idToken && !!transferId,
     refetchInterval: (q) => {
       const s = q.state.data?.data?.status;
       return s && TERMINAL.includes(s) ? false : 5_000;

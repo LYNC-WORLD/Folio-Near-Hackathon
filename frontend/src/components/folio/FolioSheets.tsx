@@ -10,11 +10,10 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import QRCode from "react-native-qrcode-svg";
-import Svg, { Path, Rect } from "react-native-svg";
+import Svg, { Path, Circle, Rect } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context";
 import { useUserTransactions } from "@/hooks/useUserRecords";
-import type { UserTransaction } from "@/services/user";
 import { C, FONT, TYPE, em } from "@/theme";
 import { money } from "@/lib/format";
 import { timeAgo, units } from "@/lib/trade";
@@ -28,6 +27,7 @@ import { Rise } from "@/components/ui/Enter";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Step } from "@/components/trade/SheetParts";
 import { CardDeposit } from "@/components/CardDeposit";
+import { CrossChainDeposit } from "@/components/CrossChainDeposit";
 
 export const shortAddr = (a?: string) =>
   a ? `${a.slice(0, 4)}…${a.slice(-4)}` : "—";
@@ -98,6 +98,21 @@ const DEP_ICONS = {
       <Path d="M4 8h14.5l-3.4-3.4M20 16H5.5l3.4 3.4" />
     </Svg>
   ),
+  other: (
+    <Svg
+      width={26}
+      height={26}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={C.ink1}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Circle cx="12" cy="12" r="9" />
+      <Path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" />
+    </Svg>
+  ),
 };
 
 export function DepositFlow({
@@ -107,7 +122,9 @@ export function DepositFlow({
   address?: string;
   email?: string;
 }) {
-  const [step, setStep] = useState<"menu" | "card" | "crypto" | "exch">("menu");
+  const [step, setStep] = useState<
+    "menu" | "card" | "crypto" | "exch" | "other"
+  >("menu");
   const copy = useCopy();
 
   if (!address) {
@@ -238,17 +255,25 @@ export function DepositFlow({
       </Step>
     );
   }
+  if (step === "other") {
+    return <CrossChainDeposit back={back} copy={copy} />;
+  }
 
   const OPTS = [
     {
       id: "card" as const,
       t: "Apple Pay or card",
-      s: "Buy USDC with a apple Pay or card",
+      s: "Buy USDC with Apple Pay or card",
     },
     {
       id: "crypto" as const,
       t: "Crypto",
       s: "Receive USDC from a crypto wallet",
+    },
+    {
+      id: "other" as const,
+      t: "Other chains",
+      s: "Send ETH, BTC, Base USDC and more",
     },
     {
       id: "exch" as const,

@@ -8,3 +8,4 @@ export * from "./user";
 export * from "./onboarding";
 export * from "./leaderboard";
 export * from "./apple";
+export * from "./deposit";

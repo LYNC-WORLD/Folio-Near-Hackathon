@@ -60,14 +60,12 @@ export function Sheet({
     .activeOffsetY(8)
     .failOffsetX([-20, 20])
     .onUpdate((event) => {
-      // Only allow dragging down
       translateY.value = Math.max(0, event.translationY);
     })
     .onEnd((event) => {
       if (translateY.value > 120 || event.velocityY > 900) {
         runOnJS(onClose)();
       } else {
-        // Snap back if the drag wasn't far enough
         translateY.value = withSpring(0, {
           damping: 22,
           stiffness: 220,
@@ -75,6 +73,54 @@ export function Sheet({
       }
     });
 
+  // Shared sheet content for web and native
+  const content = (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Animated.View
+        entering={FadeIn.duration(180)}
+        exiting={FadeOut.duration(140)}
+        style={s.backdrop}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Close"
+        />
+      </Animated.View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={s.wrap}
+        pointerEvents="box-none"
+      >
+        <Animated.View
+          entering={SlideInDown.duration(280)}
+          style={[s.sheet, { paddingBottom: insets.bottom + 16 }, dragStyle]}
+        >
+          <GestureDetector gesture={panGesture}>
+            <View
+              style={{ paddingVertical: 12 }}
+              accessibilityRole="adjustable"
+              accessibilityLabel="Drag down to close"
+            >
+              <View style={s.grab} />
+            </View>
+          </GestureDetector>
+
+          <View style={{ gap: 18, paddingBottom: 4, flexShrink: 1 }}>
+            {children}
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </GestureHandlerRootView>
+  );
+
+  // WEB: Render inside the app viewport instead of browser-level Modal
+  if (Platform.OS === "web") {
+    return <View style={s.webOverlay}>{content}</View>;
+  }
+
+  // ANDROID / IOS: Keep native Modal behavior
   return (
     <Modal
       transparent
@@ -82,50 +128,7 @@ export function Sheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      {/* A React Native Modal is rendered in a separate native root. Keep the
-          gesture root inside it so the pull-down handler receives its touches. */}
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Animated.View
-          entering={FadeIn.duration(180)}
-          exiting={FadeOut.duration(140)}
-          style={s.backdrop}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onClose}
-            accessibilityLabel="Close"
-          />
-        </Animated.View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={s.wrap}
-          pointerEvents="box-none"
-        >
-          <Animated.View
-            entering={SlideInDown.duration(280)}
-            style={[
-              s.sheet,
-              { paddingBottom: insets.bottom + 16 },
-              dragStyle,
-            ]}
-          >
-            <GestureDetector gesture={panGesture}>
-              <View
-                style={{ paddingVertical: 12 }}
-                accessibilityRole="adjustable"
-                accessibilityLabel="Drag down to close"
-              >
-                <View style={s.grab} />
-              </View>
-            </GestureDetector>
-
-            <View style={{ gap: 18, paddingBottom: 4 }}>
-              {children}
-            </View>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </GestureHandlerRootView>
+      {content}
     </Modal>
   );
 }
@@ -628,6 +631,12 @@ const s = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 16,
     backgroundColor: CARD,
+  },
+  webOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 9999,
+    overflow: "hidden",
   },
   kv: { flexDirection: "row", alignItems: "center", minHeight: 38, gap: 12 },
   kvK: {

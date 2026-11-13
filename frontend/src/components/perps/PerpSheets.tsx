@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
+  ScrollView,
   Pressable,
   StyleSheet,
   Text,
@@ -32,7 +32,6 @@ import { HOLD_FROM_LEV, MAX_LEV, usMarketOpen } from "@/lib/perps";
 import { money, sPct } from "@/lib/format";
 import { usePerpSearch } from "@/hooks/usePerpSearch";
 import { Skeleton } from "../ui";
-
 
 const tone = (n: number) => (n >= 0 ? C.mint : C.loss);
 function Logo({
@@ -366,7 +365,7 @@ export function MarketPickerSheet({
         }}
         style={[
           s.mRow,
-          index < list.length - 1 && {
+          index < markets.length - 1 && {
             borderBottomWidth: 1,
             borderBottomColor: C.hair,
           },
@@ -404,18 +403,18 @@ export function MarketPickerSheet({
         </View>
       </Pressable>
     ),
-    [current, list.length, onPick]
+    [current, markets.length, onPick],
   );
 
   const footer = loadingMore ? (
-  <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
-) : loadMoreError ? (
-  <Pressable onPress={() => loadMore()}>
-    <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
-      Couldn't load more. Tap to retry.
-    </Text>
-  </Pressable>
-) : undefined;
+    <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
+  ) : loadMoreError ? (
+    <Pressable onPress={() => loadMore()}>
+      <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
+        Couldn't load more. Tap to retry.
+      </Text>
+    </Pressable>
+  ) : undefined;
 
   const empty = loading ? (
     <ActivityIndicator color={C.mint} style={{ paddingVertical: 14 }} />
@@ -491,7 +490,12 @@ export function MarketPickerSheet({
             </Text>
           </Pressable>
         ) : markets.length ? (
-          <>
+          <ScrollView
+            style={{ maxHeight: 420 }}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {markets.map((m, i) => (
               <Pressable
                 key={m.symbol}
@@ -572,7 +576,7 @@ export function MarketPickerSheet({
                 </Text>
               </Pressable>
             ) : null}
-          </>
+          </ScrollView>
         ) : (
           <Text style={[s.sub, { paddingVertical: 14, fontSize: 13.5 }]}>
             {searching ? `No match for “${q.trim()}”` : "No markets available."}

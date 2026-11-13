@@ -45,7 +45,7 @@ export type IntentQuote = {
   deadline: string;
   confidential: boolean;
   canExecute: boolean;
-  depositId?: string;
+  transferId?: string;
   depositAddress?: string;
   depositMemo?: string | null;
   recipient?: string;
@@ -60,7 +60,7 @@ export type IntentQuote = {
 };
 
 export type IntentDeposit = {
-  depositId: string;
+  transferId: string;
   originAsset: string;
   destinationAsset: string;
   destination: IntentDestination;

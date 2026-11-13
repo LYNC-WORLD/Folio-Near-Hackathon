@@ -148,7 +148,7 @@ export function CrossChainDeposit({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const { status } = useIntentStatus(live?.depositId);
+  const { status } = useIntentStatus(live?.transferId);
   const shown: IntentStatus | null = status ?? live?.status ?? null;
 
   // refresh balances once when the swap lands
@@ -251,7 +251,7 @@ export function CrossChainDeposit({
         },
         idToken,
       );
-      if (!res.data.depositId || !res.data.depositAddress)
+      if (!res.data.transferId || !res.data.depositAddress)
         throw new Error("No deposit address came back. Try again.");
       refreshed.current = false;
       setLive(res.data);

@@ -19,15 +19,15 @@ export const quoteIntent = (body: IntentQuoteBody, idToken: string) =>
     token: idToken,
   });
 
-export const executeIntent = (depositId: string, idToken: string) =>
+export const executeIntent = (transferId: string, idToken: string) =>
   request<ApiRes<IntentDeposit>>("/api/deposit/intents/execute", {
     method: "POST",
-    body: { depositId },
+    body: { transferId },
     token: idToken,
   });
 
-export const getIntentStatus = (depositId: string, idToken: string) =>
+export const getIntentStatus = (transferId: string, idToken: string) =>
   request<ApiRes<IntentDeposit>>(
-    `/api/deposit/intents/status?depositId=${encodeURIComponent(depositId)}`,
+    `/api/deposit/intents/status?transferId=${encodeURIComponent(transferId)}`,
     { token: idToken },
   );

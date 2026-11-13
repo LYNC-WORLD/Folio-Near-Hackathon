@@ -75,7 +75,7 @@ async function send<T>(
   { method = "GET", body, token, account_type, timeoutMs = 15000 }: RequestOptions,
 ): Promise<T> {
   const resolvedAccountType = account_type ?? getAccountType?.();
-  console.log(resolvedAccountType);
+  // console.log(resolvedAccountType);
   
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

@@ -115,7 +115,7 @@ export async function searchStocks(
   const items = pickList(res);
   if (__DEV__ && items.length === 0) {
     // helps when the response shape differs from what pickList expects
-    console.log("searchStocks: no list found in response", res);
+    // console.log("searchStocks: no list found in response", res);
   }
   return { items, hasMore: pickHasMore(res, page, limit, items.length), page };
 }

@@ -160,7 +160,7 @@ export function CardDeposit({
 
   // Events only arrive in SDK mode.
   const onTransakEvent: OnTransakEvent = (event, data) => {
-    console.log("TRANSAK EVENT:", event, data);
+    // console.log("TRANSAK EVENT:", event, data);
     switch (event) {
       case Events.TRANSAK_WIDGET_INITIALISED:
         setLoading(false);

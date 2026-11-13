@@ -60,6 +60,16 @@ export function PortfolioScreen() {
   const [xfer, setXfer] = useState(false);
   const [xferDir, setXferDir] = useState<"in" | "out">("in");
 
+  // Match the Trade ticket: the floating tab bar should not sit behind a
+  // full-height transfer sheet.
+  useEffect(() => {
+    // Portfolio lives inside PortfolioStack, so the tab bar belongs to its
+    // parent navigator rather than `nav` itself.
+    const tabs = nav.getParent<BottomTabNavigationProp<TabParamList>>();
+    tabs?.setOptions({ tabBarStyle: xfer ? { display: "none" } : undefined });
+    return () => tabs?.setOptions({ tabBarStyle: undefined });
+  }, [nav, xfer]);
+
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
 

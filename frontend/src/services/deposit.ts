@@ -22,7 +22,7 @@ export const quoteIntent = (body: IntentQuoteBody, idToken: string) =>
 export const executeIntent = (transferId: string, idToken: string) =>
   request<ApiRes<IntentDeposit>>("/api/deposit/intents/execute", {
     method: "POST",
-    body: { transferId },
+    body: { depositId:transferId },
     token: idToken,
   });
 

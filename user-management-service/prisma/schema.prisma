@@ -12,6 +12,12 @@ enum Chain {
     ETH
 }
 
+enum IntentsDestination {
+    SOLANA
+    HYPERLIQUID
+    EXTERNAL
+}
+
 enum StockType {
     USStock
     PreIPO
@@ -58,8 +64,7 @@ model User {
     recurringBuyRequest     RecurringBuyRequest[]
     // indexFundsHoldings      IndexFundsHolding[]
     perpLeaderboardSnapshot PerpLeaderboardSnapshot?
-    depositRequests         DepositRequest[]
-    withdrawRequests        WithdrawRequest[]
+    intentsTransfers        IntentsTransfer[]
 
     @@index([userId])
 }
@@ -181,30 +186,24 @@ model PerpLeaderboardSnapshot {
     @@index([rank])
 }
 
-model DepositRequest {
-    id                  String   @id @default(cuid())
-    userId              String
-    walletAddress       String
-    walletId            String
-    depositAmount       String
-    depositCompleted    Boolean  @default(false)
-    conversionCompleted Boolean  @default(false)
-    createdAt           DateTime @default(now())
-    updatesAt           DateTime @updatedAt
+model IntentsTransfer {
+    id               String             @id @default(cuid())
+    userId           String
+    originAsset      String
+    destinationAsset String
+    destination      IntentsDestination
+    amount           String
+    depositAddress   String
+    depositMemo      String?
+    recipient        String
+    refundTo         String
+    confidential     Boolean            @default(false)
+    status           String
+    txHash           String?
+    createdAt        DateTime           @default(now())
+    updatedAt        DateTime           @updatedAt
+    user             User               @relation(fields: [userId], references: [id])
 
-    user User @relation(fields: [userId], references: [id])
+    @@index([userId])
 }
 
-model WithdrawRequest {
-    id                  String   @id @default(cuid())
-    userId              String
-    solanaWalletAddress String
-    solanaWalletId      String
-    withdrawAmount      String
-    withdrawCompleted   Boolean  @default(false)
-    conversionCompleted Boolean  @default(false)
-    createdAt           DateTime @default(now())
-    updatesAt           DateTime @updatedAt
-
-    user User @relation(fields: [userId], references: [id])
-}

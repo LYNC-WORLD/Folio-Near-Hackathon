@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const env = {
+const required = {
   DATABASE_URL: process.env.DATABASE_URL,
   PORT: process.env.PORT ?? "5000",
   RPC_URL: process.env.RPC_URL,
@@ -17,8 +17,15 @@ export const env = {
   CORS_ORIGINS: process.env.CORS_ORIGINS ?? "http://localhost:8081",
 };
 
-for (const [name, value] of Object.entries(env)) {
+for (const [name, value] of Object.entries(required)) {
   if (!value) {
     throw new Error(`${name} is required!!`);
   }
 }
+
+export const env = {
+  ...required,
+  ONE_CLICK_JWT: process.env.ONE_CLICK_JWT ?? "",
+  ONE_CLICK_BASE_URL:
+    process.env.ONE_CLICK_BASE_URL || "https://1click.chaindefuser.com",
+};

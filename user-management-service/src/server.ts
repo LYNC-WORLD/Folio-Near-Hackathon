@@ -2,8 +2,6 @@ import express, { ErrorRequestHandler } from "express";
 import { env } from "./config/env";
 import { startRecurringBuyCron } from "./cron/recurringBuy";
 import { startPerpLeaderboardCron } from "./cron/perpLeaderboard";
-import { startPerpDepositCron } from "./cron/hyperLiquidDepositRequest";
-
 import { authRoute } from "./routes/authRoutes";
 import { stockRoutes } from "./routes/stockRoutes";
 import { tradeRoutes } from "./routes/tradeRoutes";
@@ -11,7 +9,6 @@ import { userRoutes } from "./routes/userRoutes";
 import { perpTradeRoutes } from "./routes/perpTradeRoutes";
 import { leaderboardRoutes } from "./routes/leaderboardRoutes";
 import { depositRoute } from "./routes/depositRoutes";
-import { startPerpWithdrawCron } from "./cron/hyperLiquidWithdrawRequest";
 
 const app = express();
 
@@ -57,8 +54,6 @@ const PORT = env.PORT;
 
 startRecurringBuyCron();
 startPerpLeaderboardCron();
-startPerpDepositCron();
-startPerpWithdrawCron();
 
 app.use("/api/auth", authRoute);
 app.use("/api/stocks", stockRoutes);

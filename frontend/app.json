@@ -14,7 +14,11 @@
       "appleTeamId": "39GQR656YG",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Used to verify your identity when withdrawing."
+        "NSCameraUsageDescription": "Used to verify your identity when buying or withdrawing.",
+        "NSMicrophoneUsageDescription": "Used to verify your identity when buying or withdrawing.",
+        "NSLocationWhenInUseUsageDescription": "Used to confirm where purchases are made.",
+        "NSPhotoLibraryUsageDescription": "Used to upload identity documents.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -24,7 +28,11 @@
         "foregroundImage": "./assets/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/icon.png"

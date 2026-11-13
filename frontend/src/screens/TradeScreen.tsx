@@ -107,6 +107,11 @@ export function TradeScreen() {
   const [locked, setLocked] = useState(false);
   const [chartY, setChartY] = useState(0);
 
+  useEffect(() => {
+    nav.setOptions({ tabBarStyle: sheet ? { display: "none" } : undefined });
+    return () => nav.setOptions({ tabBarStyle: undefined });
+  }, [nav, sheet]);
+
   const openTransfer = (o?: TransferOpts) =>
     setSheet({
       t: "transfer",

@@ -82,9 +82,13 @@ const HIGHLIGHT_AS: Record<string, string> = {
   Profile: "Portfolio",
   Groups: "Leaders",
 };
-export function TabBar({ state, navigation }: BottomTabBarProps) {
+export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const focused = state.routes[state.index];
+
+  const tabBarHidden =
+    (descriptors[focused.key]?.options.tabBarStyle as { display?: string } | undefined)
+      ?.display === "none";
   const nestedIndex =
     (focused.state as { index?: number } | undefined)?.index ?? 0;
   const hidden = nestedIndex > 0;
@@ -100,6 +104,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       { translateY: hide.value * (TAB_BAR_HEIGHT + insets.bottom) * 1.1 },
     ],
   }));
+
+  if (tabBarHidden) return null;
 
   return (
     <Animated.View

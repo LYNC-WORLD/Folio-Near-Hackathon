@@ -107,9 +107,18 @@ export function Sheet({
             </View>
           </GestureDetector>
 
-          <View style={{ gap: 18, paddingBottom: 4, flexShrink: 1 }}>
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{
+              gap: 18,
+              paddingBottom: 12,
+            }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
             {children}
-          </View>
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </GestureHandlerRootView>

@@ -63,8 +63,8 @@ Code:
 **Limit orders** | Set a target price for spot buys and sells. |
 **Recurring buys** | Dollar-cost average into any stock, pre-IPO asset, or fund on a daily, weekly, or monthly schedule. |
 **Perp leaderboard** | Traders ranked by PnL computed from Hyperliquid account data, refreshed hourly. |
-**Follow top investors** *(preview)* | Investor profiles and a follow flow. Uses sample data until the social backend ships. |
-**Invest together** *(preview)* | Create groups, propose an asset, discuss it, and commit together. Stored on-device, no money moves yet. |
+**Follow top investors** | Investor profiles and a follow flow. Uses sample data until the social backend ships. |
+**Invest together** | Create groups, propose an asset, discuss it, and commit together. Stored on-device, no money moves yet. |
 
 ### Onboarding
 
@@ -118,10 +118,6 @@ The first-run flow asks four questions, which build the user's investor profile:
 - **Recurring buys** are stored as schedules and executed by a cron job through the same routing layer.
 - **On-chain balances.** Balances are read directly from chain (SOL, SPL, and Token-2022 accounts) and from Hyperliquid.
 - **Pricing.** A separate service writes live prices (every 5 minutes) and daily open prices to Postgres from the xStocks and PreStocks APIs. Charts come from Jupiter's data API.
-
-### Trust model
-
-User wallets are Privy **server wallets** owned by Folio's Privy authorization key, so the backend signs transactions on the user's behalf. This gives users one-tap trading with no seed phrase. It also means Folio is **custodial today**. Each user's funds are held in their own addresses and can be verified on-chain, but Folio holds signing authority. Moving to user-held signers (Privy user-owned wallets or passkeys) is on the roadmap.
 
 ---
 

@@ -107,7 +107,7 @@ const s = StyleSheet.create({
   // Web: a centred column instead of full-bleed
   pageWeb: {
     width: "100%",
-    // maxWidth: 440,
+    maxWidth: 440,
     alignSelf: "center",
     justifyContent: "center",
   },

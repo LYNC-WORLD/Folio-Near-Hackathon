@@ -8,9 +8,7 @@ const HYPERLIQUID_INFO_URL = "https://api.hyperliquid.xyz/info";
 export async function updateStockPrices(): Promise<void> {
   try {
     await Promise.all([
-      updateUSStocksPrice(false),
-      updatePreStocksPrice(false),
-      updateETFPrice(false),
+      updateSpotStockPrice(false),
       updatePerpStockPrice(),
     ]);
     console.log("Stock price update completed");
@@ -22,9 +20,7 @@ export async function updateStockPrices(): Promise<void> {
 export async function updateDailyOpenPrices(): Promise<void> {
   try {
     await Promise.all([
-      updateUSStocksPrice(true),
-      updatePreStocksPrice(true),
-      updateETFPrice(true),
+      updateSpotStockPrice(true)
     ]);
     console.log("[DailyOpenPrice] Update completed");
   } catch (error) {
@@ -32,157 +28,125 @@ export async function updateDailyOpenPrices(): Promise<void> {
   }
 }
 
-async function updateUSStocksPrice(updateDailyPrice: boolean) {
-  const usStocks = await prisma.stocks.findMany({
-    where: { stockType: "USStock" },
+async function updateSpotStockPrice(updateDailyPrice: boolean) {
+  const BATCH_SIZE = 40;
+  const API_TIMEOUT = 15_000;
+
+  const stocks = await prisma.stocks.findMany({
     select: {
       tokenAddress: true,
-      symbol: true,
-      name: true,
     },
   });
-  console.log(`Updating ${usStocks.length} stocks...`);
 
-  for (const stock of usStocks) {
-    try {
-      const url = `${XSTOCKS_API}/public/assets/${encodeURIComponent(
-        stock.symbol,
-      )}/price-data`;
+  const totalStocks = stocks.length;
 
-      const response = await fetch(url);
+  console.log(`Starting price update for ${totalStocks} stocks...`);
 
-      if (!response.ok) {
-        console.error(`Failed to fetch ${stock.symbol}: ${response.status}`);
-        continue;
-      }
-
-      const data = (await response.json()) as XStocksPriceResponse;
-
-      // console.log(`${stock.symbol}:`, data);
-
-      if (data.quote === undefined || data.quote === null) {
-        console.error(`No price returned for ${stock.symbol}`);
-        continue;
-      }
-      await prisma.stocks.update({
-        where: {
-          tokenAddress: stock.tokenAddress,
-        },
-        data: {
-          price: String(data.quote),
-          ...(updateDailyPrice && { marketOpenPrice: String(data.quote) }),
-        },
-      });
-      console.log(`Updated usstock Prices`);
-    } catch (error) {
-      console.error(`Error updating ${stock.symbol}:`, error);
-    }
+  if (totalStocks === 0) {
+    console.log("No stocks found.");
+    return;
   }
-  return;
-}
 
-async function updatePreStocksPrice(updateDailyPrice: boolean) {
-  try {
-    const response = await fetch("https://prestocks.com/api/prestocks");
-    if (!response.ok) {
-      throw new Error(
-        `PreStocks API failed: ${response.status} ${response.statusText}`,
+  const updateField = updateDailyPrice
+    ? "marketOpenPrice"
+    : "price";
+
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let failedCount = 0;
+
+  const totalBatches = Math.ceil(totalStocks / BATCH_SIZE);
+
+  for (let i = 0; i < totalStocks; i += BATCH_SIZE) {
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+
+    const batch = stocks.slice(i, i + BATCH_SIZE);
+
+    try {
+      // 1. Prepare Jupiter API request
+      const addresses = batch
+        .map((stock) => stock.tokenAddress)
+        .join(",");
+
+      const response = await fetch(
+        `${JUPITER_API}${addresses}`,
+        {
+          method: "GET",
+          signal: AbortSignal.timeout(API_TIMEOUT),
+        }
+      );
+
+      // 2. Validate API response
+      if (!response.ok) {
+        throw new Error(
+          `Jupiter API returned ${response.status}: ${response.statusText}`
+        );
+      }
+
+      const data: Record<string, TokenPriceData> =
+        await response.json();
+
+      // 3. Extract and validate prices
+      const priceUpdates = Object.entries(data)
+        .filter(([address, tokenData]) => {
+          const price = tokenData?.stockData?.price;
+
+          return (
+            batch.some(
+              (stock) => stock.tokenAddress === address
+            ) &&
+            typeof price === "number" &&
+            Number.isFinite(price) &&
+            price > 0
+          );
+        })
+        .map(([address, tokenData]) => ({
+          address,
+          price: tokenData.stockData.price.toString(),
+        }));
+
+      if (priceUpdates.length === 0) {
+        skippedCount += batch.length;
+
+        console.warn(
+          `Batch ${batchNumber}/${totalBatches}: No valid prices returned`
+        );
+
+        continue;
+      }
+
+      // 4. Perform a single PostgreSQL bulk update
+      const values = priceUpdates.map(
+        ({ address, price }) =>
+          Prisma.sql`(${address}, ${price})`
+      );
+
+      const result = await prisma.$executeRaw`
+        UPDATE "Stocks" AS s
+        SET ${Prisma.raw(`"${updateField}"`)} = v.price
+        FROM (
+          VALUES ${Prisma.join(values)}
+        ) AS v(address, price)
+        WHERE s."tokenAddress" = v.address
+      `;
+
+      updatedCount += result;
+      skippedCount += batch.length - priceUpdates.length;
+
+      console.log(
+        `Batch ${batchNumber}/${totalBatches}: Updated ${result}/${batch.length} stocks`
+      );
+
+    } catch (error) {
+      failedCount += batch.length;
+
+      console.error(
+        `Batch ${batchNumber}/${totalBatches} failed:`,
+        error
       );
     }
-    const apiStocks = (await response.json()) as PreStock[];
-    const dbStocks = await prisma.stocks.findMany({
-      where: {
-        stockType: "PreIPO",
-      },
-    });
-    const apiStockMap = new Map(
-      apiStocks.map((stock) => [stock.symbol, stock]),
-    );
-    for (const dbStock of dbStocks) {
-      const apiStock = apiStockMap.get(dbStock.symbol);
-
-      if (!apiStock) {
-        console.warn(`No PreStocks data found for ${dbStock.symbol}`);
-        continue;
-      }
-      await prisma.stocks.update({
-        where: {
-          tokenAddress: dbStock.tokenAddress,
-        },
-        data: {
-          price: String(apiStock.tokenPrice),
-          ...(updateDailyPrice && {
-            marketOpenPrice: String(apiStock.tokenPrice),
-          }),
-        },
-      });
-
-      console.log(`Updated ${dbStock.symbol}: ${apiStock.tokenPrice}`);
-    }
-    console.log("PreIPO stock price update completed");
-    console.log(`Found ${dbStocks.length} preIPO stocks in DB`);
-  } catch (error) {
-    console.error(`Error updating prestock prices:`, error);
   }
-  return;
-}
-
-async function updateETFPrice(updateDailyPrice: boolean) {
-  const requestCount = 40;
-  const ETFs = await prisma.stocks.findMany({
-    where: { stockType: "IndexFunds" },
-    select: {
-      tokenAddress: true,
-      symbol: true,
-      name: true,
-    },
-  });
-  console.log(`Updating ${ETFs.length} etf...`);
-
-  while (ETFs.length != 0) {
-    let requestURL = JUPITER_API;
-    let numberOfStocks;
-    if (requestCount < ETFs.length) {
-      numberOfStocks = requestCount;
-    } else {
-      numberOfStocks = ETFs.length;
-    }
-    for (let index = 0; index < numberOfStocks; index++) {
-      requestURL += `${ETFs[ETFs.length - 1].tokenAddress},`;
-      ETFs.pop();
-    }
-
-    const response = await fetch(requestURL);
-
-    const data: Record<string, TokenPriceData> = await response.json();
-
-    const prices = Object.entries(data).map(([tokenAddress, tokenData]) => ({
-      tokenAddress,
-      price: tokenData.stockData.price,
-    }));
-    for (const priceData of prices) {
-      if (updateDailyPrice) {
-        await prisma.stocks.update({
-          where: {
-            tokenAddress: priceData.tokenAddress,
-          },
-          data: {
-            marketOpenPrice: priceData.price.toString(),
-          },
-        });
-      } else {
-        await prisma.stocks.update({
-          where: {
-            tokenAddress: priceData.tokenAddress,
-          },
-          data: {
-            price: priceData.price.toString(),
-          },
-        });
-      }
-    }
-  }
-  return;
+  console.log("Stock price update completed");
 }
 
 async function updatePerpStockPrice() {
@@ -346,7 +310,7 @@ type HyperliquidResponse = [
 
 (async () => {
   try {
-    updateETFPrice(false);
+    updateSpotStockPrice(true);
   } catch (error) {
     console.error("Error executing async code:", error);
   }

@@ -23,6 +23,12 @@ enum StockType {
     IndexFunds
 }
 
+enum StockProvider {
+    XStocks
+    OnDoFinance
+    Backpack
+}
+
 enum TradeType {
     BUY
     SELL
@@ -85,6 +91,7 @@ model Stocks {
     imageUrl        String
     marketOpenPrice String                @default("0")
     stockType       StockType             @default(USStock)
+    stockProvider   StockProvider         @default(XStocks)
     recurringBuys   RecurringBuyRequest[]
 
     @@index([stockType])

@@ -1,48 +1,23 @@
-// src/components/folio/WithdrawFlow.tsx — Withdraw (prototype openWithdraw → wdAmount → wdReview → wdSend)
+// src/components/folio/WithdrawFlow.tsx — Withdraw
 //
-//   pick    -> "To a crypto wallet" | "To your bank (MoonPay)"   + SPOT / PERP strip
-//   bank    -> BankWithdraw (MoonPay sell widget, then send USDC to MoonPay)
-//   amount  -> % chips, amount, destination address, network rows
-//   review  -> "Check and send" card + irreversible warning
-//   busy    -> "Signing in your wallet"
-//   done    -> check + "$X is on its way"
+//   pick   -> "To a crypto wallet" | "To another chain" | "To your bank"   + SPOT / PERP strip
+//   wallet -> WalletWithdraw   (plain USDC to any address, the original flow)
+//   chain  -> ExternalWithdraw (Intents: spot or perp -> any chain or token)
+//   bank   -> BankWithdraw     (MoonPay sell widget, then send USDC to MoonPay)
 //
-// onSend is where the real transfer goes. Return false (or throw) to fail.
-// Until it is wired, the crypto flow runs a 1.5s mock; the bank flow refuses to send.
-import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import Svg, { Path, Rect } from "react-native-svg";
+// onSend is used by the wallet flow and the bank flow. It must send `amount` USDC to `to`.
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { hTap } from "@/lib/haptics";
 import { money } from "@/lib/format";
 import { C, em, FONT } from "@/theme";
-import { Body, Btn, CARD, Check, H2, Kv, KvCard, Lbl } from "./perps/PerpUi";
+import { CARD, H2 } from "./perps/PerpUi";
 import { BankWithdraw } from "./BankWithdraw";
+import { ExternalWithdraw } from "./ExternalWithdraw";
+import { WalletWithdraw } from "./WalletWithdraw";
 
-// TODO: set these once the chain / fee are final (prototype shows [CHAIN AT LAUNCH])
-const NETWORK = "USDC network";
-const NET_FEE = "Network fee only";
-
-type Step = "pick" | "amount" | "review" | "busy" | "done" | "bank";
-
-const clean = (t: string) => {
-  const x = t.replace(/[^0-9.]/g, "");
-  const i = x.indexOf(".");
-  return i < 0 ? x : x.slice(0, i + 1) + x.slice(i + 1).replace(/\./g, "");
-};
-const floor2 = (n: number) => Math.floor(n * 100) / 100;
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-// 0x… (EVM, 42 chars) or a base58 address (32–44 chars)
-const okAddr = (v: string) =>
-  /^0x[0-9a-fA-F]{40}$/.test(v) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v);
-const shortTo = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+type Step = "pick" | "wallet" | "chain" | "bank";
 
 export function WithdrawFlow({
   spot,
@@ -55,7 +30,7 @@ export function WithdrawFlow({
 }: {
   spot: number;
   perp: number;
-  address?: string; // the user's own wallet (MoonPay refund address)
+  address?: string; // the user's own Solana wallet
   email?: string;
   onSend?: (
     amount: number,
@@ -65,342 +40,167 @@ export function WithdrawFlow({
   onDone: () => void;
 }) {
   const [step, setStep] = useState<Step>("pick");
-  const [amt, setAmt] = useState(Math.min(100, Math.floor(spot)));
-  const [txt, setTxt] = useState(String(Math.min(100, Math.floor(spot)) || ""));
-  const [to, setTo] = useState("");
-  const [err, setErr] = useState("");
-  const alive = useRef(true);
-  useEffect(
-    () => () => {
-      alive.current = false;
-    },
-    [],
-  );
+  const ready = !!address;
+  const back = () => setStep("pick");
 
-  const over = amt > spot + 1e-9;
-  const addr = to.trim();
-  const good = okAddr(addr);
-  const bad = amt <= 0 || over || !good;
-  const bankOk = !!address;
-
-  const setAmount = (n: number) => {
-    setAmt(n);
-    setTxt(n ? String(n) : "");
-  };
-
-  const send = async () => {
-    hTap();
-    Keyboard.dismiss();
-    setErr("");
-    setStep("busy");
-    try {
-      await wait(1500); // mock latency: delete when onSend is a real network call
-      const res = await Promise.resolve(onSend ? onSend(amt, addr) : true);
-      if (res === false) throw new Error("The transfer didn't go through.");
-      if (!alive.current) return;
-      setStep("done");
-    } catch (e) {
-      if (!alive.current) return;
-      setErr(
-        e instanceof Error ? e.message : "Something went wrong. Try again.",
-      );
-      setStep("review");
-    }
-  };
-
-  // Used by the bank flow: sends USDC to MoonPay's deposit address.
-  // No mock here, because a fake success would start MoonPay's 48h clock for nothing.
+  // Bank flow: sends USDC to MoonPay's deposit address. No mock, because a fake
+  // success would start MoonPay's 48h clock for nothing.
   const sendToMoonPay = async (toAddr: string, amount: number) => {
     if (!onSend) throw new Error("Sending is not connected yet.");
     const res = await Promise.resolve(onSend(amount, toAddr));
     if (res === false) throw new Error("The transfer didn't go through.");
   };
 
-  const Strip = (
-    <View style={s.strip}>
-      <Text style={s.stripTxt}>
-        SPOT <Text style={s.stripB}>{money(spot)}</Text>
-      </Text>
-      <Text style={s.stripTxt}>
-        PERP <Text style={s.stripB}>{money(perp)}</Text>
-      </Text>
-    </View>
-  );
+  if (step === "wallet")
+    return (
+      <WalletWithdraw
+        spot={spot}
+        perp={perp}
+        onSend={onSend}
+        onBack={back}
+        onDone={onDone}
+      />
+    );
 
-  // ------------------------------------------------------------ bank
+  if (step === "chain" && address)
+    return (
+      <ExternalWithdraw
+        spot={spot}
+        perp={perp}
+        address={address}
+        onBack={back}
+        onDone={onDone}
+      />
+    );
+
   if (step === "bank" && address)
     return (
       <BankWithdraw
         spot={spot}
         address={address}
         email={email}
-        onBack={() => setStep("pick")}
+        onBack={back}
         onSend={sendToMoonPay}
         onDone={onDone}
       />
     );
 
-  // ------------------------------------------------------------ pick
-  if (step === "pick")
-    return (
-      <View style={{ gap: 16 }}>
-        <H2 style={{ textAlign: "center", fontSize: 21 }}>Withdraw</H2>
-        {Strip}
-        <Pressable
-          onPress={() => {
-            hTap();
-            setStep("amount");
-          }}
-          style={s.opt}
-          accessibilityRole="button"
-        >
-          <View style={{ flex: 1, gap: 6 }}>
-            <Text style={s.optT}>To a crypto wallet</Text>
-            <Text style={s.optS}>Send USDC to any address</Text>
-            <Text style={s.tag}>ABOUT A MINUTE · NETWORK FEE ONLY</Text>
-          </View>
-          <View style={s.ico}>
-            <Svg
-              width={22}
-              height={22}
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke={C.mint}
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <Rect x={2.5} y={5} width={15} height={11} rx={2.4} />
-              <Path d="M13.5 10.5h1.5M2.5 8h15" />
-            </Svg>
-          </View>
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            if (!bankOk) return;
-            hTap();
-            setStep("bank");
-          }}
-          style={[s.opt, !bankOk && { opacity: 0.6 }]}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !bankOk }}
-        >
-          <View style={{ flex: 1, gap: 6 }}>
-            <Text style={s.optT}>To your bank</Text>
-            <Text style={s.optS}>Cash out as dollars to your account</Text>
-            <Text style={s.tag}>VIA MOONPAY · FEES APPLY</Text>
-          </View>
-          <View style={s.ico}>
-            <Svg
-              width={22}
-              height={22}
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke={C.mint}
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <Path d="M3 8l7-4 7 4M4.5 8v7M8 8v7M12 8v7M15.5 8v7M3 16.5h14" />
-            </Svg>
-          </View>
-        </Pressable>
-        {perp > 0 && onMoveToSpot ? (
-          <Pressable
-            onPress={onMoveToSpot}
-            style={{
-              alignSelf: "center",
-              minHeight: 40,
-              justifyContent: "center",
-            }}
-          >
-            <Text style={s.link}>
-              Money in your perp account? Move it to spot first ›
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-    );
-
-  // ------------------------------------------------------------ amount
-  if (step === "amount")
-    return (
-      <View style={{ gap: 16 }}>
-        <Pressable onPress={() => setStep("pick")} style={s.back} hitSlop={8}>
-          <Text style={s.backT}>‹ Withdraw</Text>
-        </Pressable>
-        <H2>Send to a crypto wallet</H2>
-
-        <View style={{ gap: 10 }}>
-          <View style={s.row}>
-            <View style={{ flex: 1, gap: 8 }}>
-              <Lbl>AMOUNT</Lbl>
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                {[25, 50, 75, 100].map((v) => (
-                  <Pressable
-                    key={v}
-                    hitSlop={{ top: 8, bottom: 8 }}
-                    onPress={() => {
-                      hTap();
-                      setAmount(floor2((spot * v) / 100));
-                    }}
-                    style={s.pct}
-                  >
-                    <Text style={s.pctT}>{v === 100 ? "Max" : v + "%"}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <View style={{ alignItems: "flex-end", gap: 3 }}>
-              <Text style={s.avail}>{money(spot)}</Text>
-              <Text style={s.availK}>IN SPOT WALLET</Text>
-            </View>
-          </View>
-          <View style={[s.field, over && { borderColor: C.loss }]}>
-            <Text style={s.cur}>$</Text>
-            <TextInput
-              value={txt}
-              onChangeText={(t) => {
-                const c = clean(t);
-                setTxt(c);
-                setAmt(parseFloat(c) || 0);
-              }}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={C.ink4}
-              style={s.input}
-            />
-            <Text style={s.k}>USDC</Text>
-          </View>
-        </View>
-
-        <View style={{ gap: 8 }}>
-          <Lbl>TO ADDRESS</Lbl>
-          <View
-            style={[
-              s.field,
-              { height: 54 },
-              !!addr && !good && { borderColor: C.loss },
-            ]}
-          >
-            <TextInput
-              value={to}
-              onChangeText={setTo}
-              autoCapitalize="none"
-              autoCorrect={false}
-              spellCheck={false}
-              placeholder="Paste address"
-              placeholderTextColor={C.ink4}
-              style={[
-                s.input,
-                { fontFamily: FONT.mono400, fontSize: 14, letterSpacing: 0 },
-              ]}
-            />
-          </View>
-          <Text style={[s.help, !!addr && { color: good ? C.mint : C.loss }]}>
-            {!addr
-              ? "Paste the USDC address from the wallet or exchange you are sending to."
-              : good
-                ? "Looks like a valid address. Check the first and last characters."
-                : "That is not a valid address. Check it and try again."}
-          </Text>
-        </View>
-
-        <View>
-          {[
-            ["NETWORK", NETWORK],
-            ["NETWORK FEE", NET_FEE],
-            ["ARRIVES", "About a minute"],
-          ].map(([k, v], i, a) => (
-            <View key={k} style={[s.kv, i < a.length - 1 && s.hair]}>
-              <Text style={s.kvK}>{k}</Text>
-              <Text style={s.kvV}>{v}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Btn
-          disabled={bad}
-          label={over ? "More than you have in your spot wallet" : "Review"}
-          onPress={() => {
-            hTap();
-            Keyboard.dismiss();
-            setStep("review");
-          }}
-        />
-      </View>
-    );
-
-  // ------------------------------------------------------------ review
-  if (step === "review")
-    return (
-      <View style={{ gap: 16 }}>
-        <Pressable onPress={() => setStep("amount")} style={s.back} hitSlop={8}>
-          <Text style={s.backT}>‹ Edit</Text>
-        </Pressable>
-        <H2>Check and send</H2>
-        <KvCard>
-          <Kv k="AMOUNT" v={`${money(amt)} USDC`} />
-          <Kv k="TO" v={shortTo(addr)} />
-          <Kv k="NETWORK" v={NETWORK} />
-          <Kv k="NETWORK FEE" v={NET_FEE} />
-          <Kv k="SPOT WALLET AFTER" v={money(spot - amt)} last />
-        </KvCard>
-        {err ? (
-          <View style={s.coach}>
-            <Text style={s.coachH}>TRANSFER FAILED</Text>
-            <Text style={s.coachT}>{err}</Text>
-          </View>
-        ) : (
-          <Text style={[s.help, { color: C.loss }]}>
-            Crypto transfers cannot be reversed. Sending to the wrong address or
-            network loses the funds.
-          </Text>
-        )}
-        <Btn label={`Send ${money(amt)}`} onPress={send} />
-      </View>
-    );
-
-  // ------------------------------------------------------------ busy
-  if (step === "busy")
-    return (
-      <View style={s.center}>
-        <H2 style={{ fontSize: 19 }}>Signing in your wallet</H2>
-        <ActivityIndicator color={C.mint} size="large" />
-        <Text style={s.mono}>SENDING {money(amt)} USDC</Text>
-        <Text style={[s.mono, { fontSize: 9, marginTop: -8 }]}>
-          DON'T CLOSE THE APP
-        </Text>
-      </View>
-    );
-
-  // ------------------------------------------------------------ done
   return (
     <View style={{ gap: 16 }}>
-      <View style={[s.center, { gap: 14, paddingTop: 6 }]}>
-        <Check />
-        <H2 style={{ textAlign: "center" }}>{money(amt)} is on its way</H2>
-        <Body style={{ textAlign: "center", fontSize: 13 }}>
-          It reaches {shortTo(addr)} in about a minute.
-        </Body>
+      <H2 style={{ textAlign: "center", fontSize: 21 }}>Withdraw</H2>
+      <View style={s.strip}>
+        <Text style={s.stripTxt}>
+          SPOT <Text style={s.stripB}>{money(spot)}</Text>
+        </Text>
+        <Text style={s.stripTxt}>
+          PERP <Text style={s.stripB}>{money(perp)}</Text>
+        </Text>
       </View>
-      <KvCard>
-        <Kv k="SPOT WALLET" v={money(spot - amt)} />
-        <Kv k="PERP ACCOUNT" v={money(perp)} last />
-      </KvCard>
-      <Btn label="Done" onPress={onDone} />
+
+      <Opt
+        title="To a crypto wallet"
+        sub="Send USDC to any address"
+        tag="ABOUT A MINUTE · NETWORK FEE ONLY"
+        onPress={() => setStep("wallet")}
+        icon={
+          <>
+            <Rect x={2.5} y={5} width={15} height={11} rx={2.4} />
+            <Path d="M13.5 10.5h1.5M2.5 8h15" />
+          </>
+        }
+      />
+
+      <Opt
+        title="To another chain"
+        sub="Swap and send to any chain or token"
+        tag="FROM SPOT OR PERP · A FEW MINUTES"
+        disabled={!ready}
+        onPress={() => setStep("chain")}
+        icon={
+          <>
+            <Circle cx={10} cy={10} r={7.5} />
+            <Path d="M2.5 10h15M10 2.5c2.4 2.4 2.4 12.6 0 15M10 2.5c-2.4 2.4-2.4 12.6 0 15" />
+          </>
+        }
+      />
+
+      <Opt
+        title="To your bank"
+        sub="Cash out as dollars to your account"
+        tag="VIA MOONPAY · FEES APPLY"
+        disabled={!ready}
+        onPress={() => setStep("bank")}
+        icon={<Path d="M3 8l7-4 7 4M4.5 8v7M8 8v7M12 8v7M15.5 8v7M3 16.5h14" />}
+      />
+
+      {perp > 0 && onMoveToSpot ? (
+        <Pressable
+          onPress={onMoveToSpot}
+          style={{
+            alignSelf: "center",
+            minHeight: 40,
+            justifyContent: "center",
+          }}
+        >
+          <Text style={s.link}>
+            Money in your perp account? Move it to spot first ›
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
+function Opt({
+  title,
+  sub,
+  tag,
+  icon,
+  disabled,
+  onPress,
+}: {
+  title: string;
+  sub: string;
+  tag: string;
+  icon: React.ReactNode;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        if (disabled) return;
+        hTap();
+        onPress();
+      }}
+      style={[s.opt, disabled && { opacity: 0.6 }]}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+    >
+      <View style={{ flex: 1, gap: 6 }}>
+        <Text style={s.optT}>{title}</Text>
+        <Text style={s.optS}>{sub}</Text>
+        <Text style={s.tag}>{tag}</Text>
+      </View>
+      <View style={s.ico}>
+        <Svg
+          width={22}
+          height={22}
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke={C.mint}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {icon}
+        </Svg>
+      </View>
+    </Pressable>
+  );
+}
+
 const s = StyleSheet.create({
-  center: { alignItems: "center", gap: 20, paddingVertical: 14 },
-  mono: {
-    fontFamily: FONT.mono400,
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: C.ink4,
-  },
   strip: { flexDirection: "row", justifyContent: "center", gap: 22 },
   stripTxt: {
     fontFamily: FONT.mono400,
@@ -409,7 +209,6 @@ const s = StyleSheet.create({
     color: C.ink4,
   },
   stripB: { color: C.ink1 },
-
   opt: {
     flexDirection: "row",
     alignItems: "center",
@@ -440,88 +239,4 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   link: { fontFamily: FONT.sans600, fontSize: 13, color: C.mint },
-
-  back: { alignSelf: "flex-start", minHeight: 32, justifyContent: "center" },
-  backT: { fontFamily: FONT.sans600, fontSize: 14, color: C.ink3 },
-  help: {
-    fontFamily: FONT.sans600,
-    fontSize: 12.5,
-    lineHeight: 19,
-    color: C.ink3,
-  },
-
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  pct: {
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: C.stroke,
-    justifyContent: "center",
-  },
-  pctT: { fontFamily: FONT.sans800, fontSize: 12.5, color: C.ink2 },
-  avail: { fontFamily: FONT.mono400, fontSize: 13.5, color: "#E4E8EE" },
-  availK: {
-    fontFamily: FONT.mono400,
-    fontSize: 8.5,
-    letterSpacing: 1.5,
-    color: C.ink4,
-  },
-  k: {
-    fontFamily: FONT.mono400,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    color: C.ink4,
-  },
-  field: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    height: 62,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: CARD,
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  cur: { fontFamily: FONT.sans800, fontSize: 26, color: C.ink3 },
-  input: {
-    flex: 1,
-    height: "100%",
-    color: C.ink1,
-    fontFamily: FONT.sans800,
-    fontSize: 28,
-    letterSpacing: -0.8,
-  },
-
-  kv: { flexDirection: "row", alignItems: "center", minHeight: 44 },
-  hair: { borderBottomWidth: 1, borderBottomColor: C.hair },
-  kvK: {
-    flex: 1,
-    fontFamily: FONT.mono400,
-    fontSize: 10,
-    letterSpacing: em(10, 0.2),
-    color: C.ink4,
-  },
-  kvV: { fontFamily: FONT.mono400, fontSize: 13, color: "#D6DAE0" },
-
-  coach: {
-    gap: 4,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(240,96,77,.10)",
-    borderWidth: 1,
-    borderColor: "rgba(240,96,77,.4)",
-  },
-  coachH: {
-    fontFamily: FONT.mono400,
-    fontSize: 9.5,
-    letterSpacing: 1.6,
-    color: C.loss,
-  },
-  coachT: {
-    fontFamily: FONT.sans600,
-    fontSize: 13,
-    lineHeight: 19,
-    color: C.ink1,
-  },
 });

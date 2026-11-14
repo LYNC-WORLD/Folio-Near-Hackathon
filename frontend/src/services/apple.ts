@@ -62,17 +62,17 @@ export async function signInWithApple(): Promise<GoogleSession | null> {
     });
 
     if (__DEV__) {
-      console.log("APPLE credential", {
-        user: c.user,
-        email: c.email,
-        fullName: c.fullName,
-        hasIdentityToken: !!c.identityToken,
-        hasAuthorizationCode: !!c.authorizationCode,
-        realUserStatus: c.realUserStatus,
-      });
-      console.log("APPLE identityToken", c.identityToken);
+      // console.log("APPLE credential", {
+      //   user: c.user,
+      //   email: c.email,
+      //   fullName: c.fullName,
+      //   hasIdentityToken: !!c.identityToken,
+      //   hasAuthorizationCode: !!c.authorizationCode,
+      //   realUserStatus: c.realUserStatus,
+      // });
+      // console.log("APPLE identityToken", c.identityToken);
       if (c.identityToken) {
-        console.log("APPLE claims", decodeJwt(c.identityToken));
+        // console.log("APPLE claims", decodeJwt(c.identityToken));
       }
     }
 

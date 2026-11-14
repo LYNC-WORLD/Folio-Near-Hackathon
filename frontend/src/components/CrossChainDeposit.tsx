@@ -247,7 +247,6 @@ export function CrossChainDeposit({
           destination: dest,
           refundTo: refundTo.trim(),
           dry: false,
-          // use the slippage the first quote suggested
           slippageBps: preview.suggestedSlippageBps,
         },
         idToken,

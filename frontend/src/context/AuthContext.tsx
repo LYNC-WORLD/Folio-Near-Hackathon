@@ -64,9 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authenticate = useCallback(
     async (g: GoogleSession, method: SignInMethod) => {
-      console.log("[auth] authenticate", method, g.idToken);
+      // console.log("[auth] authenticate", method, g.idToken);
       const res = await loginWithIdToken(g.idToken, method);
-      console.log("[auth] backend login response", res);
+      // console.log("[auth] backend login response", res);
       methodRef.current = method;
       setSignInMethod(method);
       tokenRef.current = g.idToken;
@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (method: SignInMethod) => {
-      console.log("[auth] signIn start", method);
+      // console.log("[auth] signIn start", method);
       setBusy(method);
       setError(null);
       try {
@@ -182,17 +182,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? await signInWithApple()
             : await signInWithGoogle();
 
-        console.log(
-          "[auth] provider result",
-          method,
-          g ? "got session" : "null (cancelled)",
-        );
+        // console.log(
+        //   "[auth] provider result",
+        //   method,
+        //   g ? "got session" : "null (cancelled)",
+        // );
 
         if (!g) return;
         await authenticate(g, method);
-        console.log("[auth] backend login OK");
+        // console.log("[auth] backend login OK");
       } catch (e) {
-        console.log("[auth] FAILED", method, e);
+        // console.log("[auth] FAILED", method, e);
         await (method === "apple" ? signOutApple() : signOutGoogle()).catch(
           () => {},
         );

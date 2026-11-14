@@ -1,4 +1,7 @@
+// UI destinations (the "Other chains" deposit picks one of these).
 export type IntentDestination = "SOLANA" | "HYPERLIQUID";
+// What the quote body accepts. EXTERNAL = send to an outside wallet.
+export type QuoteDestination = IntentDestination | "EXTERNAL";
 
 export type IntentStatus =
   | "PENDING_DEPOSIT"
@@ -17,35 +20,44 @@ export type IntentToken = {
   decimals: number;
   blockchain: string;
   symbol: string;
-  priceUpdatedAt: String;
+  priceUpdatedAt: string;
   price: number;
   contractAddress?: string | null;
-  coingeckoId: String;
+  coingeckoId: string;
 };
 
 export type IntentQuoteBody = {
   originAsset: string;
   amount: string; // human units, e.g. "25"
-  destination: IntentDestination;
+  destination: QuoteDestination;
+  // required on every quote. The server replaces it when origin is Hyperliquid USDC
   refundTo: string;
+  // EXTERNAL only
+  destinationAsset?: string;
+  recipient?: string;
   confidential?: boolean;
-  dry?: boolean;
-  slippageBps?: number;
+  dry?: boolean; // defaults to true on the server
+  slippageBps?: number; // omit, 0 or negative -> server uses 100. Max 10000
 };
 
 export type IntentQuote = {
   dry: boolean;
   originAsset: string;
   destinationAsset: string;
-  destination: IntentDestination;
+  destination: QuoteDestination;
   amount: string;
-  amountOut: string;
+  amountOut: string; // destination base units
   amountOutFormatted: string;
   amountOutUsd: string;
-  minAmountOut: string;
+  amountInUsd: string;
+  minAmountOut: string; // destination base units
   deadline: string;
   confidential: boolean;
+  slippageBps: number;
+  observedSlippageBps: number | null; // null when 1Click omits USD fields
+  suggestedSlippageBps: number; // use this on the next quote for the same route
   canExecute: boolean;
+  // live quotes only (dry: false)
   transferId?: string;
   depositAddress?: string;
   depositMemo?: string | null;
@@ -54,17 +66,13 @@ export type IntentQuote = {
   status?: IntentStatus;
   txHash?: string | null;
   createdAt?: string;
-  amountInUsd?: string;
-  slippageBps?: number;
-  observedSlippageBps?: number;
-  suggestedSlippageBps?: number;
 };
 
 export type IntentDeposit = {
   transferId: string;
   originAsset: string;
   destinationAsset: string;
-  destination: IntentDestination;
+  destination: QuoteDestination;
   amount: string;
   depositAddress: string;
   depositMemo: string | null;
@@ -72,6 +80,6 @@ export type IntentDeposit = {
   refundTo: string;
   confidential: boolean;
   status: IntentStatus;
-  txHash: string | null;
+  txHash: string | null; // "hl:<nonce>" for Hyperliquid origin, null for external-wallet deposits
   createdAt: string;
 };

@@ -116,7 +116,7 @@ export function BankWithdraw({
   function onRedirect(url: string) {
     if (handled.current) return;
     handled.current = true;
-    console.log("MOONPAY SELL REDIRECT:", url);
+    // console.log("MOONPAY SELL REDIRECT:", url);
     const q = Linking.parse(url).queryParams ?? {};
     const deposit = one(q.depositWalletAddress as any);
     if (!deposit) {

@@ -90,7 +90,7 @@ export async function searchPerpMarkets({
   const items = pickList(res);
   if (__DEV__ && items.length === 0) {
     // helps when the response shape differs from what pickList expects
-    console.log("searchPerpMarkets: no list found in response", res);
+    // console.log("searchPerpMarkets: no list found in response", res);
   }
 
   const meta = res?.pagination ?? res?.meta ?? res?.data?.pagination;

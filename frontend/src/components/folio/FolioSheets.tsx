@@ -321,9 +321,9 @@ export function ActivitySheet() {
   const sheet = useSheet();
   const { idToken } = useAuth();
   const q = useUserTransactions(idToken ?? undefined);
-  const list = [...(q.data?.data ?? [])].sort(
-    (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-  );
+  const list = [...(q.data?.data ?? [])]
+    .filter((tx) => Number(tx.amount) > 0) // remove the 0 rows
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
     <Step id="activity">
@@ -352,6 +352,10 @@ export function ActivitySheet() {
         ) : (
           list.map((tx, i) => {
             const sold = String(tx.type).toUpperCase() === "SELL";
+            const price = Number(tx.price);
+            const usd = Number(tx.amount); // amount is already the USD value
+            const shares = price > 0 ? usd / price : 0; // 5 / 208.78 ≈ 0.02395
+
             return (
               <View
                 key={tx.id}
@@ -362,13 +366,12 @@ export function ActivitySheet() {
                     {sold ? "Sold" : "Bought"} · {tx.stock?.symbol}
                   </Text>
                   <Text style={TYPE.sub}>
-                    {units(Number(tx.amount))} at {money(Number(tx.price))} ·{" "}
-                    {timeAgo(tx.createdAt)}
+                    {units(shares)} at {money(price)} · {timeAgo(tx.createdAt)}
                   </Text>
                 </View>
                 <Text style={[s.fig, { color: sold ? C.mint : "#D6DAE0" }]}>
                   {sold ? "+" : "−"}
-                  {money(txUsd(tx))}
+                  {money(usd)}
                 </Text>
               </View>
             );

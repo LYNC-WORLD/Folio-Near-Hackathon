@@ -30,8 +30,8 @@ Folio uses **NEAR Intents** (through the 1 Click API) as its cross-chain money l
 | Flow | Origin | Destination | Status |
 |---|---|---|---|
 | **Cross-chain deposit** | Any token/chain 1 Click supports, sent from the user's external wallet | USDC in the user's Folio Solana wallet (spot) or Hyperliquid account (perps) | In the app |
-| **Folio-wallet transfer** | USDC in the user's Folio Solana or Ethereum wallet, or Hyperliquid USDC | The other Folio venue, or any external address and asset | Backend API |
-| **Confidential mode** | Any of the above | Same, with 1 Click `confidentiality: "basic"` | Backend API |
+| **Folio-wallet transfer** | USDC in the user's Folio Solana or Ethereum wallet, or Hyperliquid USDC | The other Folio venue, or any external address and asset | In the app |
+| **Confidential mode** | Any of the above | Same, with 1 Click `confidentiality: "basic"` | In the app |
 
 How a deposit works:
 

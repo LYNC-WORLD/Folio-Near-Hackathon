@@ -1,16 +1,7 @@
+// Everything here is EXPO_PUBLIC_, so it is bundled into the app and readable
+// by anyone. Never put a secret key here; secrets live in the backend .env.
 export const ENV = {
   API_URL: process.env.EXPO_PUBLIC_API_URL ?? "",
   GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "",
   GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "",
-  EXPO_PUBLIC_CROSSMINT_CLIENT_SIDE_API_KEY: process.env.EXPO_PUBLIC_CROSSMINT_CLIENT_SIDE_API_KEY ?? "",
-  EXPO_PUBLIC_CROSSMINT_SERVER_KEY: process.env.EXPO_PUBLIC_CROSSMINT_SERVER_KEY ?? "",
-  EXPO_PUBLIC_CROSSMINT_STAGING_SERVER_KEY: process.env.EXPO_PUBLIC_CROSSMINT_STAGING_SERVER_KEY ?? "",
-  EXPO_PUBLIC_CROSSMINT_ENV: process.env.EXPO_PUBLIC_CROSSMINT_ENV ?? "staging",
-  EXPO_PUBLIC_MOONPAY_PK: process.env.EXPO_PUBLIC_MOONPAY_PK ?? "",
-  EXPO_PUBLIC_MOONPAY_SK: process.env.EXPO_PUBLIC_MOONPAY_SK ?? "",
-  EXPO_PUBLIC_MOONPAY_ENV: process.env.EXPO_PUBLIC_MOONPAY_ENV ?? "sandbox",
-  EXPO_PUBLIC_TRANSAK_API_KEY: process.env.EXPO_PUBLIC_TRANSAK_API_KEY ?? "",
-  EXPO_PUBLIC_TRANSAK_API_SECRET: process.env.EXPO_PUBLIC_TRANSAK_API_SECRET ?? "",
-  EXPO_PUBLIC_TRANSAK_ENV: process.env.EXPO_PUBLIC_TRANSAK_ENV ?? "staging",
-
 };

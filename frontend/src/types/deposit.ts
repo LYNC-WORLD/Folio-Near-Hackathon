@@ -2,6 +2,7 @@ export type IntentDestination = "SOLANA" | "HYPERLIQUID";
 
 export type IntentStatus =
   | "PENDING_DEPOSIT"
+  | "EXECUTING"
   | "KNOWN_DEPOSIT_TX"
   | "PROCESSING"
   | "SUCCESS"

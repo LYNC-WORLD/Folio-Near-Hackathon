@@ -9,6 +9,7 @@ import { userRoutes } from "./routes/userRoutes";
 import { perpTradeRoutes } from "./routes/perpTradeRoutes";
 import { leaderboardRoutes } from "./routes/leaderboardRoutes";
 import { depositRoute } from "./routes/depositRoutes";
+import { onrampRoutes } from "./routes/onrampRoutes";
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use("/api/perp-trade", perpTradeRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/deposit", depositRoute);
+app.use("/api/onramp", onrampRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });

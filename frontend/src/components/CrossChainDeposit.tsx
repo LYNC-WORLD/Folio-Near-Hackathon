@@ -69,6 +69,7 @@ const DEST: Record<
 
 const STATUS_TXT: Record<IntentStatus, string> = {
   PENDING_DEPOSIT: "Waiting for your transfer",
+  EXECUTING: "Sending from your Folio wallet",
   KNOWN_DEPOSIT_TX: "Transfer seen, confirming",
   PROCESSING: "Swapping to USDC",
   SUCCESS: "USDC has arrived",

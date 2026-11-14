@@ -20,6 +20,9 @@ import {
   toSmallestUnit,
 } from "../lib/oneClick";
 
+// Folio-side status while a send from the user's Folio wallet is in flight.
+const EXECUTING = "EXECUTING";
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type QuoteInput = {
@@ -237,11 +240,9 @@ export class IntentsTransferService {
 
     const tokens = await getTokens();
     const origin = tokens.find((token) => token.assetId === row.originAsset);
-    if (origin && isHyperliquidUsdc(origin)) {
-      return this.executeHyperliquidWithdraw(row, wallets.ethereumWalletId);
-    }
-    const chain = origin ? privySendChain(origin) : null;
-    if (!origin || !chain) {
+    const isHyperliquid = !!origin && isHyperliquidUsdc(origin);
+    const chain = origin && !isHyperliquid ? privySendChain(origin) : null;
+    if (!isHyperliquid && !chain) {
       return {
         ok: false as const,
         status: 400,
@@ -249,12 +250,52 @@ export class IntentsTransferService {
         data: publicTransfer(row),
       };
     }
-
-    const walletId = chain === "solana" ? wallets.solanaWalletId : wallets.ethereumWalletId;
+    const walletId = isHyperliquid || chain === "ethereum"
+      ? wallets.ethereumWalletId
+      : wallets.solanaWalletId;
     if (!walletId) return { ok: false as const, status: 404, message: "User not found" };
 
-    const sent = await sendUsdc(chain, walletId, row.amount, row.depositAddress);
-    const hash = await chainTxHash(walletId, sent.id);
+    // Claim the transfer atomically before moving any money. Without this,
+    // two concurrent requests (double tap, client retry) both pass the
+    // txHash check above and both send funds to the deposit address.
+    const claimed = await prisma.intentsTransfer.updateMany({
+      where: { id: row.id, userId, txHash: null, status: "PENDING_DEPOSIT" },
+      data: { status: EXECUTING },
+    });
+    if (claimed.count === 0) {
+      const current = await prisma.intentsTransfer.findUnique({ where: { id: row.id } });
+      if (current?.txHash) return { ok: true as const, data: publicTransfer(current) };
+      return {
+        ok: false as const,
+        status: 409,
+        message: "This transfer is already being sent",
+        data: current ? publicTransfer(current) : undefined,
+      };
+    }
+    const release = () =>
+      prisma.intentsTransfer
+        .update({ where: { id: row.id }, data: { status: "PENDING_DEPOSIT" } })
+        .catch((error: unknown) => console.error("failed to release intents transfer: ", error));
+
+    if (isHyperliquid) {
+      const result = await this.executeHyperliquidWithdraw(row, walletId).catch(
+        async (error) => {
+          await release();
+          throw error;
+        },
+      );
+      if (!result.ok) await release();
+      return result;
+    }
+
+    let sent: Awaited<ReturnType<typeof sendUsdc>>;
+    try {
+      sent = await sendUsdc(chain!, walletId, row.amount, row.depositAddress);
+    } catch (error) {
+      await release();
+      throw error;
+    }
+    const hash = await chainTxHash(walletId, sent.id).catch(() => null);
     const txHash = hash ?? `privy:${sent.id}`;
     if (hash) {
       await submitDepositTx(row.depositAddress, hash, row.depositMemo).catch((error) => {
@@ -264,7 +305,7 @@ export class IntentsTransferService {
 
     const updated = await prisma.intentsTransfer.update({
       where: { id: row.id },
-      data: { txHash },
+      data: { txHash, status: "PENDING_DEPOSIT" },
     });
     return { ok: true as const, data: publicTransfer(updated) };
   }
@@ -301,7 +342,7 @@ export class IntentsTransferService {
     }
     const updated = await prisma.intentsTransfer.update({
       where: { id: row.id },
-      data: { txHash: sent.txHash },
+      data: { txHash: sent.txHash, status: "PENDING_DEPOSIT" },
     });
     return { ok: true as const, data: publicTransfer(updated) };
   }
@@ -311,6 +352,11 @@ export class IntentsTransferService {
       where: { id: transferId, userId },
     });
     if (!row) return { ok: false as const, status: 404, message: "transfer not found" };
+    // A send is in flight. Don't let a 1Click poll overwrite the claim,
+    // or a second execute could claim the transfer again.
+    if (row.status === EXECUTING && !row.txHash) {
+      return { ok: true as const, data: publicTransfer(row) };
+    }
 
     const live = await getStatus(row.depositAddress, row.depositMemo);
     const updated = await prisma.intentsTransfer.update({

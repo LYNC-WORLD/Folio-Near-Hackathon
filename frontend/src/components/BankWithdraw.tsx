@@ -1,5 +1,6 @@
 // Bank payout via MoonPay off-ramp, embedded in the sheet (react-native-webview).
-// Signed on the client (TEST ONLY: move signing to a backend before production).
+// The widget URL is signed by the backend (POST /api/onramp/moonpay/sell-url),
+// so the MoonPay secret key never ships in the app.
 //
 //   amount -> embedded MoonPay sell widget (login, KYC, bank) -> redirect caught in-app
 //   send   -> user sends USDC to MoonPay's deposit address within 48h
@@ -16,52 +17,18 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import * as Linking from "expo-linking";
-import CryptoJS from "crypto-js";
+import { useAuth } from "@/context";
+import { getMoonpaySellUrl } from "@/services/onramp";
 import { hTap } from "@/lib/haptics";
 import { money } from "@/lib/format";
 import { C, em, FONT } from "@/theme";
 import { Body, Btn, CARD, Check, H2, Kv, KvCard, Lbl } from "./perps/PerpUi";
 
-const MOONPAY_PK = process.env.EXPO_PUBLIC_MOONPAY_PK ?? "";
-const MOONPAY_SK = process.env.EXPO_PUBLIC_MOONPAY_SK ?? ""; // TEST ONLY
+// Not a secret: only decides whether the "test mode" note shows.
 const MOONPAY_ENV =
   (process.env.EXPO_PUBLIC_MOONPAY_ENV as "sandbox" | "production") ??
   "sandbox";
-const SELL_BASE =
-  MOONPAY_ENV === "production"
-    ? "https://sell.moonpay.com"
-    : "https://sell-sandbox.moonpay.com";
 const BG = "#1B2029";
-
-const sign = (query: string) =>
-  CryptoJS.HmacSHA256(query, MOONPAY_SK).toString(CryptoJS.enc.Base64);
-
-function buildSellUrl(opts: {
-  amount: string;
-  refundAddress: string;
-  email?: string;
-  redirectUrl: string;
-  externalId: string;
-}) {
-  if (!MOONPAY_PK || !MOONPAY_SK) throw new Error("Missing MoonPay keys");
-  const params: Record<string, string> = {
-    apiKey: MOONPAY_PK,
-    baseCurrencyCode: "usdc_sol", // USDC on Solana
-    baseCurrencyAmount: opts.amount,
-    refundWalletAddress: opts.refundAddress,
-    redirectURL: opts.redirectUrl,
-    externalTransactionId: opts.externalId,
-    theme: "dark",
-    colorCode: C.mint, // must be a hex string
-  };
-  if (opts.email) params.email = opts.email;
-  const query =
-    "?" +
-    Object.entries(params)
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join("&");
-  return `${SELL_BASE}${query}&signature=${encodeURIComponent(sign(query))}`;
-}
 
 const clean = (t: string) => {
   const x = t.replace(/[^0-9.]/g, "");
@@ -99,6 +66,7 @@ export function BankWithdraw({
   const [tx, setTx] = useState<Tx | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const { idToken } = useAuth();
 
   const alive = useRef(true);
   const handled = useRef(false);
@@ -114,24 +82,32 @@ export function BankWithdraw({
   const over = amt > spot + 1e-9;
   const bad = amt <= 0 || over;
 
-  function openWidget() {
+  async function openWidget() {
     hTap();
     Keyboard.dismiss();
     setErr("");
+    if (!idToken) {
+      setErr("Please sign in again.");
+      return;
+    }
+    setBusy(true);
     try {
-      const url = buildSellUrl({
-        amount: String(amt),
-        refundAddress: address,
-        email,
-        redirectUrl,
-        externalId: `folio-${Date.now()}`,
-      });
+      // the backend sets the refund address to this user's own Folio wallet
+      const res = await getMoonpaySellUrl(
+        { amount: amt, redirectUrl, email, color: String(C.mint) },
+        idToken,
+      );
+      if (!alive.current) return;
+      if (!res.data?.url) throw new Error("Could not start the sale.");
       handled.current = false;
       setLoading(true);
-      setWidgetUrl(url);
+      setWidgetUrl(res.data.url);
       setStep("widget");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not start the sale.");
+      if (alive.current)
+        setErr(e instanceof Error ? e.message : "Could not start the sale.");
+    } finally {
+      if (alive.current) setBusy(false);
     }
   }
 
@@ -309,11 +285,13 @@ export function BankWithdraw({
         </View>
       ) : null}
       <Btn
-        disabled={bad}
+        disabled={bad || busy}
         label={
           over
             ? "More than you have in your spot wallet"
-            : "Continue to MoonPay"
+            : busy
+              ? "Opening MoonPay…"
+              : "Continue to MoonPay"
         }
         onPress={openWidget}
       />

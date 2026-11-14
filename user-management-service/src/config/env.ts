@@ -28,4 +28,13 @@ export const env = {
   ONE_CLICK_JWT: process.env.ONE_CLICK_JWT ?? "",
   ONE_CLICK_BASE_URL:
     process.env.ONE_CLICK_BASE_URL || "https://1click.chaindefuser.com",
+  // optional: card on-ramp and bank off-ramp. Kept on the server so the
+  // secrets never ship inside the app.
+  MOONPAY_PK: process.env.MOONPAY_PK ?? "",
+  MOONPAY_SK: process.env.MOONPAY_SK ?? "",
+  MOONPAY_ENV: process.env.MOONPAY_ENV === "production" ? "production" : "sandbox",
+  TRANSAK_API_KEY: process.env.TRANSAK_API_KEY ?? "",
+  TRANSAK_API_SECRET: process.env.TRANSAK_API_SECRET ?? "",
+  TRANSAK_ENV: process.env.TRANSAK_ENV === "production" ? "production" : "staging",
+  TRANSAK_REFERRER: process.env.TRANSAK_REFERRER || "app.folio.money",
 };

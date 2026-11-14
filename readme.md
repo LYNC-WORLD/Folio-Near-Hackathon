@@ -54,7 +54,7 @@ Code:
 ## Features
 
 |Feature | What it does |
-|---|---|---|
+|---|---|
 | **Deposit from any chain** | Fund spot or perps with USDC from any chain NEAR Intents supports. No manual bridging. |
 **US stocks** | Buy tokenized Apple, Nvidia, Tesla and more (xStocks) in fractional amounts, 24/7. |
 **Pre-IPO shares** | Get exposure to private companies like OpenAI, SpaceX, and Anthropic through PreStocks. |

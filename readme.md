@@ -2,6 +2,8 @@
 
 **Social investing for anyone, anywhere: US stocks, pre-IPO companies, index funds, and perps, funded from any chain through NEAR Intents.**
 
+**🎬 [Watch the demo video](https://x.com/tryfoliomoney/status/2121536584575291489) · 🚀 [Try Folio (beta)](https://beta.tryfolio.money/)**
+
 Folio lets anyone in the world buy tokenized US stocks, pre-IPO companies, index funds, and trade perps on them.
 
 You don't need a brokerage account, a minimum balance, or to live in a particular country.
